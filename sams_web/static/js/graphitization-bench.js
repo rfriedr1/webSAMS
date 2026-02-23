@@ -1,6 +1,7 @@
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
   const STORAGE_KEY = "sams_graph_batch_staging";
+  const LAST_PREP_STORAGE_LOCATION_KEY = "sams_graph_bench_last_prep_storage_location";
 
   const parseJson = (raw, fallback) => {
     try {
@@ -77,12 +78,103 @@
       }
 
       const lookupForm = bench.querySelector("[data-graph-bench-lookup-form]");
-      const lookupInputs = [
-        bench.querySelector("[data-graph-bench-sample-input]"),
-        bench.querySelector("[data-graph-bench-prep-input]"),
-        bench.querySelector("[data-graph-bench-target-input]"),
-      ];
+      const sampleLookupInput = bench.querySelector("[data-graph-bench-sample-input]");
+      const prepLookupInput = bench.querySelector("[data-graph-bench-prep-input]");
+      const targetLookupInput = bench.querySelector("[data-graph-bench-target-input]");
+      const lookupInputs = [sampleLookupInput, prepLookupInput, targetLookupInput];
       if (lookupForm) {
+        const initialSampleLookupValue =
+          sampleLookupInput instanceof HTMLInputElement ? sampleLookupInput.value : "";
+        const lastValidLookupValues = {
+          prep: prepLookupInput instanceof HTMLInputElement ? prepLookupInput.value : "",
+          target: targetLookupInput instanceof HTMLInputElement ? targetLookupInput.value : "",
+        };
+
+        const getDatalistAllowedValues = (input) => {
+          if (!(input instanceof HTMLInputElement)) {
+            return null;
+          }
+          const listId = input.getAttribute("list");
+          if (!listId) {
+            return null;
+          }
+          const datalist = bench.querySelector(`#${CSS.escape(listId)}`);
+          if (!(datalist instanceof HTMLDataListElement)) {
+            return null;
+          }
+          const values = new Set();
+          datalist.querySelectorAll("option").forEach((option) => {
+            const value = (option.getAttribute("value") || "").trim();
+            if (value !== "") {
+              values.add(value);
+            }
+          });
+          return values;
+        };
+
+        const validateLookupField = (input, key) => {
+          if (!(input instanceof HTMLInputElement)) {
+            return true;
+          }
+          const raw = input.value.trim();
+          if (raw === "") {
+            input.setCustomValidity("");
+            return true;
+          }
+          const allowed = getDatalistAllowedValues(input);
+          if (!allowed || allowed.size === 0) {
+            // No option list available: allow, server will resolve/validate.
+            input.setCustomValidity("");
+            lastValidLookupValues[key] = input.value;
+            return true;
+          }
+          if (allowed.has(raw)) {
+            input.setCustomValidity("");
+            lastValidLookupValues[key] = input.value;
+            return true;
+          }
+          input.setCustomValidity(`${key === "prep" ? "Prep #" : "Target #"} must match an existing value.`);
+          input.reportValidity();
+          input.value = lastValidLookupValues[key] || "";
+          input.setCustomValidity("");
+          return false;
+        };
+
+        if (sampleLookupInput instanceof HTMLInputElement) {
+          const clearDependentLookupFieldsIfSampleChanged = () => {
+            if (sampleLookupInput.value === initialSampleLookupValue) {
+              return;
+            }
+            if (prepLookupInput instanceof HTMLInputElement) {
+              prepLookupInput.value = "";
+            }
+            if (targetLookupInput instanceof HTMLInputElement) {
+              targetLookupInput.value = "";
+            }
+            lastValidLookupValues.prep = "";
+            lastValidLookupValues.target = "";
+          };
+          sampleLookupInput.addEventListener("input", clearDependentLookupFieldsIfSampleChanged);
+          sampleLookupInput.addEventListener("change", clearDependentLookupFieldsIfSampleChanged);
+        }
+
+        if (prepLookupInput instanceof HTMLInputElement) {
+          prepLookupInput.addEventListener("change", () => {
+            if (!validateLookupField(prepLookupInput, "prep")) {
+              return;
+            }
+            lookupForm.requestSubmit();
+          });
+        }
+        if (targetLookupInput instanceof HTMLInputElement) {
+          targetLookupInput.addEventListener("change", () => {
+            if (!validateLookupField(targetLookupInput, "target")) {
+              return;
+            }
+            lookupForm.requestSubmit();
+          });
+        }
+
         lookupInputs.forEach((control) => {
           if (!(control instanceof HTMLInputElement)) {
             return;
@@ -92,8 +184,24 @@
               return;
             }
             event.preventDefault();
+            if (control === prepLookupInput && !validateLookupField(prepLookupInput, "prep")) {
+              return;
+            }
+            if (control === targetLookupInput && !validateLookupField(targetLookupInput, "target")) {
+              return;
+            }
             lookupForm.requestSubmit();
           });
+        });
+
+        lookupForm.addEventListener("submit", (event) => {
+          if (prepLookupInput instanceof HTMLInputElement && !validateLookupField(prepLookupInput, "prep")) {
+            event.preventDefault();
+            return;
+          }
+          if (targetLookupInput instanceof HTMLInputElement && !validateLookupField(targetLookupInput, "target")) {
+            event.preventDefault();
+          }
         });
       }
 
@@ -102,6 +210,9 @@
         const dirtyMarkers = installBenchDirtyMarkers(targetForm);
         const prepStorage = targetForm.querySelector("[data-graph-bench-prep-storage]");
         const prepArchived = targetForm.querySelector("[data-graph-bench-prep-archived]");
+        const noLeftoverCheckbox = targetForm.querySelector("[data-graph-bench-no-leftover]");
+        const returnToSenderCheckbox = targetForm.querySelector("[data-graph-bench-return-to-sender]");
+        const storageWarning = targetForm.querySelector("[data-graph-bench-storage-warning]");
 
         const syncPrepArchived = () => {
           if (!(prepStorage instanceof HTMLInputElement) || !(prepArchived instanceof HTMLInputElement)) {
@@ -110,15 +221,90 @@
           prepArchived.checked = prepStorage.value.trim() !== "";
         };
 
+        const getStorageConflictMessages = () => {
+          const messages = [];
+          const hasStorageValue =
+            prepStorage instanceof HTMLInputElement && prepStorage.value.trim() !== "";
+          if (!hasStorageValue) {
+            return messages;
+          }
+          if (noLeftoverCheckbox instanceof HTMLInputElement && noLeftoverCheckbox.checked) {
+            messages.push("No Leftover (Prep'd Material) is checked, so there is nothing to archive.");
+          }
+          if (returnToSenderCheckbox instanceof HTMLInputElement && returnToSenderCheckbox.checked) {
+            messages.push("Prep Return to Sender (project) is checked, so the material should be returned instead of archived.");
+          }
+          return messages;
+        };
+
+        const renderStorageWarning = () => {
+          if (!(storageWarning instanceof HTMLElement)) {
+            return;
+          }
+          const messages = getStorageConflictMessages();
+          if (messages.length === 0) {
+            storageWarning.hidden = true;
+            storageWarning.textContent = "";
+            return;
+          }
+          storageWarning.hidden = false;
+          storageWarning.textContent = messages.join(" ");
+        };
+
+        const rememberPrepStorageLocation = () => {
+          if (!(prepStorage instanceof HTMLInputElement)) {
+            return;
+          }
+          const value = prepStorage.value.trim();
+          if (value === "") {
+            return;
+          }
+          window.sessionStorage.setItem(LAST_PREP_STORAGE_LOCATION_KEY, value);
+        };
+
+        const prefillRememberedPrepStorageLocation = () => {
+          if (!(prepStorage instanceof HTMLInputElement)) {
+            return;
+          }
+          if (prepStorage.value.trim() !== "") {
+            return;
+          }
+          const remembered = (window.sessionStorage.getItem(LAST_PREP_STORAGE_LOCATION_KEY) || "").trim();
+          if (remembered === "") {
+            return;
+          }
+          prepStorage.value = remembered;
+        };
+
         if (prepStorage instanceof HTMLInputElement) {
+          prepStorage.addEventListener("focus", () => {
+            const beforeValue = prepStorage.value;
+            prefillRememberedPrepStorageLocation();
+            if (prepStorage.value !== beforeValue) {
+              syncPrepArchived();
+              renderStorageWarning();
+              dirtyMarkers.refresh();
+            }
+          });
           prepStorage.addEventListener("input", () => {
             syncPrepArchived();
+            renderStorageWarning();
+            rememberPrepStorageLocation();
             dirtyMarkers.refresh();
           });
           prepStorage.addEventListener("change", () => {
             syncPrepArchived();
+            renderStorageWarning();
+            rememberPrepStorageLocation();
             dirtyMarkers.refresh();
           });
+        }
+
+        if (noLeftoverCheckbox instanceof HTMLInputElement) {
+          noLeftoverCheckbox.addEventListener("change", renderStorageWarning);
+        }
+        if (returnToSenderCheckbox instanceof HTMLInputElement) {
+          returnToSenderCheckbox.addEventListener("change", renderStorageWarning);
         }
 
         targetForm.addEventListener("keydown", (event) => {
@@ -156,11 +342,13 @@
         targetForm.addEventListener("reset", () => {
           window.setTimeout(() => {
             syncPrepArchived();
+            renderStorageWarning();
             dirtyMarkers.refresh();
           }, 0);
         });
 
         syncPrepArchived();
+        renderStorageWarning();
         dirtyMarkers.refresh();
       }
 

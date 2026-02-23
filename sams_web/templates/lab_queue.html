@@ -539,6 +539,10 @@
                     <input class="detail-boolean-checkbox" type="checkbox" disabled {% if graph_prep.stop %}checked{% endif %} />
                   </p>
                 </article>
+                <article class="detail-item">
+                  <h4>Graph Batch</h4>
+                  <p>{{ graph_target.graph_batch or 'Not set' }}</p>
+                </article>
               </div>
             </section>
 
@@ -569,12 +573,12 @@
                 <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__p_no_leftover') %} has-error{% endif %}">
                   <input type="hidden" name="graphbench__p_no_leftover" value="0" />
                   {% set graph_p_no_leftover_checked = (graph_values.get('graphbench__p_no_leftover') if 'graphbench__p_no_leftover' in graph_values else graph_prep.p_no_leftover)|string %}
-                  <input type="checkbox" name="graphbench__p_no_leftover" value="1" {% if graph_p_no_leftover_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <input type="checkbox" name="graphbench__p_no_leftover" value="1" data-graph-bench-no-leftover {% if graph_p_no_leftover_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
                   <span>No Leftover (Prep'd Material)</span>
                 </label>
 
                 <label class="prep-bench-checkbox-row is-readonly">
-                  <input type="checkbox" disabled {% if graph_project and (graph_project.prep_return_to_sender or 0) %}checked{% endif %} />
+                  <input type="checkbox" disabled data-graph-bench-return-to-sender {% if graph_project and (graph_project.prep_return_to_sender or 0) %}checked{% endif %} />
                   <span>Prep Return to Sender (project)</span>
                 </label>
 
@@ -597,6 +601,7 @@
                       data-graph-bench-prep-storage
                     />
                     {% if graph_errors.get('graphbench__prep_storage_loc') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__prep_storage_loc'] }}</p>{% endif %}
+                    <p class="prep-bench-field-warning" data-graph-bench-storage-warning hidden></p>
                   </div>
 
                   <label class="prep-bench-checkbox-row is-readonly">

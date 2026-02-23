@@ -92,6 +92,83 @@
       const saveForm = bench.querySelector("[data-prep-bench-save-form]");
 
       if (lookupForm) {
+        const initialSampleLookupValue =
+          scanInput instanceof HTMLInputElement ? scanInput.value : "";
+        let lastValidPrepLookupValue =
+          prepInput instanceof HTMLInputElement ? prepInput.value : "";
+
+        const getDatalistAllowedValues = (input) => {
+          if (!(input instanceof HTMLInputElement)) {
+            return null;
+          }
+          const listId = input.getAttribute("list");
+          if (!listId) {
+            return null;
+          }
+          const datalist = bench.querySelector(`#${CSS.escape(listId)}`);
+          if (!(datalist instanceof HTMLDataListElement)) {
+            return null;
+          }
+          const values = new Set();
+          datalist.querySelectorAll("option").forEach((option) => {
+            const value = (option.getAttribute("value") || "").trim();
+            if (value !== "") {
+              values.add(value);
+            }
+          });
+          return values;
+        };
+
+        const validatePrepLookupField = () => {
+          if (!(prepInput instanceof HTMLInputElement)) {
+            return true;
+          }
+          const raw = prepInput.value.trim();
+          if (raw === "") {
+            prepInput.setCustomValidity("");
+            return true;
+          }
+          const allowed = getDatalistAllowedValues(prepInput);
+          if (!allowed || allowed.size === 0) {
+            prepInput.setCustomValidity("");
+            lastValidPrepLookupValue = prepInput.value;
+            return true;
+          }
+          if (allowed.has(raw)) {
+            prepInput.setCustomValidity("");
+            lastValidPrepLookupValue = prepInput.value;
+            return true;
+          }
+          prepInput.setCustomValidity("Prep # must match an existing value.");
+          prepInput.reportValidity();
+          prepInput.value = lastValidPrepLookupValue || "";
+          prepInput.setCustomValidity("");
+          return false;
+        };
+
+        if (scanInput instanceof HTMLInputElement) {
+          const clearPrepIfSampleChanged = () => {
+            if (scanInput.value === initialSampleLookupValue) {
+              return;
+            }
+            if (prepInput instanceof HTMLInputElement) {
+              prepInput.value = "";
+            }
+            lastValidPrepLookupValue = "";
+          };
+          scanInput.addEventListener("input", clearPrepIfSampleChanged);
+          scanInput.addEventListener("change", clearPrepIfSampleChanged);
+        }
+
+        if (prepInput instanceof HTMLInputElement) {
+          prepInput.addEventListener("change", () => {
+            if (!validatePrepLookupField()) {
+              return;
+            }
+            lookupForm.requestSubmit();
+          });
+        }
+
         [scanInput, prepInput].forEach((control) => {
           if (!(control instanceof HTMLInputElement)) {
             return;
@@ -101,8 +178,17 @@
               return;
             }
             event.preventDefault();
+            if (control === prepInput && !validatePrepLookupField()) {
+              return;
+            }
             lookupForm.requestSubmit();
           });
+        });
+
+        lookupForm.addEventListener("submit", (event) => {
+          if (prepInput instanceof HTMLInputElement && !validatePrepLookupField()) {
+            event.preventDefault();
+          }
         });
       }
 

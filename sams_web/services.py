@@ -444,8 +444,7 @@ class SamsService:
         if target_nr is not None:
             selected_target = next((t for t in prep_targets if t.target_nr == target_nr), None)
         if selected_target is None:
-            open_targets = [t for t in prep_targets if (t.graphitized is None and t.target_pressed is None)]
-            selected_target = open_targets[0] if open_targets else prep_targets[0]
+            selected_target = prep_targets[-1]
 
         project = self.repo.get_project(sample.project_nr) if sample.project_nr else None
         user = self.repo.get_user(project.user_nr) if project and project.user_nr else None

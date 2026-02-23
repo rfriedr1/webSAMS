@@ -59,6 +59,8 @@ def _build_lab_preparation_page_context(
         bench_entry = service.get_preparation_bench_entry(bench_sample_nr, prep_nr=bench_prep_nr)
         if bench_entry is None and bench_error is None:
             bench_error = "Sample or preparation was not found for bench entry."
+        elif bench_entry is not None:
+            bench_prep_nr_raw = str(bench_entry["preparation"].prep_nr)
 
     return {
         "request": request,
@@ -116,7 +118,7 @@ def _build_lab_graphitization_page_context(
     graph_target_nr = parse_positive_int(graph_target_nr_raw) if graph_target_nr_raw else None
 
     graph_bench_entry = None
-    if graph_sample_nr is not None and graph_prep_nr is not None and graph_target_nr is not None:
+    if graph_sample_nr is not None:
         graph_bench_entry = service.get_graphitization_bench_entry(
             graph_sample_nr,
             prep_nr=graph_prep_nr,
@@ -124,6 +126,9 @@ def _build_lab_graphitization_page_context(
         )
         if graph_bench_entry is None and graph_error is None:
             graph_error = "Sample / preparation / target was not found for graphitization bench entry."
+        elif graph_bench_entry is not None:
+            graph_prep_nr_raw = str(graph_bench_entry["preparation"].prep_nr)
+            graph_target_nr_raw = str(graph_bench_entry["target"].target_nr)
 
     return {
         "request": request,
