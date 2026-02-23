@@ -265,6 +265,15 @@
         };
 
         if (storageInput instanceof HTMLInputElement) {
+          storageInput.addEventListener("focus", () => {
+            const beforeValue = storageInput.value;
+            prefillRememberedSampleStorageLocation();
+            if (storageInput.value !== beforeValue) {
+              syncSampleArchived();
+              renderStorageWarning();
+              dirtyMarkers.refresh();
+            }
+          });
           storageInput.addEventListener("input", () => {
             syncSampleArchived();
             renderStorageWarning();
@@ -329,7 +338,6 @@
           }, 0);
         });
 
-        prefillRememberedSampleStorageLocation();
         maybePrefillWeightEnd();
         updateYield();
         syncSampleArchived();
