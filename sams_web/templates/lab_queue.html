@@ -1,0 +1,934 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not bench_entry_enabled %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>{{ title }}</h2>
+    <p>{{ description }}</p>
+  </div>
+
+  {% if show_on_hold_enabled %}
+  <form method="get" action="/lab/preparation" class="inline-form">
+    <label>
+      <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} />
+      include not-to-be-dated samples
+    </label>
+    <button type="submit">Refresh</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if bench_entry_enabled %}
+<section class="panel" id="prep-bench-entry" data-prep-bench>
+  <details class="table-collapsible" open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Preparation Bench Entry</span>
+      <span class="badge table-summary-count">Open</span>
+    </summary>
+    <div style="margin-top: 0.7rem;">
+      <p style="margin: 0 0 0.75rem; color: var(--muted);">Touch-friendly entry screen for preparation weights, dates, and preparation notes.</p>
+
+      <form method="get" action="/lab/preparation" class="prep-bench-lookup-form" data-prep-bench-lookup-form>
+        <input type="hidden" name="show_on_hold" value="{{ 'true' if show_on_hold else 'false' }}" />
+        <label class="prep-bench-lookup-field">
+          <span>Sample #</span>
+          <input
+            type="text"
+            name="bench_sample_nr"
+            value="{{ bench_sample_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Scan barcode or enter sample number"
+            data-prep-bench-scan-input
+          />
+        </label>
+
+        <label class="prep-bench-lookup-field prep-bench-prep-picker">
+          <span>
+            Prep #
+            <span class="prep-bench-lookup-meta">
+              {% if bench_entry and bench_entry.preparations %}
+              ({{ bench_entry.preparations|length }} prep{% if bench_entry.preparations|length != 1 %}s{% endif %})
+              {% else %}
+              (count n/a)
+              {% endif %}
+            </span>
+          </span>
+          {% set prep_lookup_value = bench_prep_nr_query or (bench_entry.preparation.prep_nr if bench_entry else '') %}
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="bench_prep_nr"
+            value="{{ prep_lookup_value }}"
+            inputmode="numeric"
+            autocomplete="off"
+            {% if bench_entry and bench_entry.preparations %}
+            list="prep-bench-prep-options"
+            {% endif %}
+            data-prep-bench-prep-input
+          />
+        </label>
+        {% if bench_entry and bench_entry.preparations %}
+        <datalist id="prep-bench-prep-options">
+          {% for prep_option in bench_entry.preparations %}
+          <option value="{{ prep_option.prep_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+
+        <button type="submit" class="prep-bench-load-button">Load</button>
+      </form>
+
+      {% if bench_saved or bench_notice %}
+      <div class="inline-notice">
+        <strong>{% if bench_saved %}Saved.{% else %}Notice.{% endif %}</strong>
+        {% if bench_notice %}
+        <p>{{ bench_notice }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if bench_error %}
+      <p class="error">{{ bench_error }}</p>
+      {% endif %}
+
+      {% if bench_entry %}
+      {% set bench_sample = bench_entry.sample %}
+      {% set bench_project = bench_entry.project %}
+      {% set bench_user = bench_entry.user %}
+      {% set bench_prep = bench_entry.preparation %}
+      {% set bench_values = bench_form_values or {} %}
+      {% set bench_errors = bench_field_errors or {} %}
+
+      <form method="post" action="/lab/preparation/bench/save" class="prep-bench-form" data-prep-bench-save-form>
+    <input type="hidden" name="bench__sample_nr" value="{{ bench_sample.sample_nr }}" />
+    <input type="hidden" name="bench__prep_nr" value="{{ bench_prep.prep_nr }}" />
+    <input type="hidden" name="bench__show_on_hold" value="{{ '1' if show_on_hold else '0' }}" />
+
+    <div class="prep-bench-layout">
+      <div class="prep-bench-column prep-bench-column-main">
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Sample Context</h4>
+            <span class="badge status-pill">Prep # {{ bench_prep.prep_nr }}</span>
+          </div>
+          <div class="prep-bench-context-grid">
+            <article class="detail-item">
+              <h4>Last Name</h4>
+              <p>
+                {% if bench_user and bench_user.user_nr and bench_user.last_name %}
+                <a href="/users/{{ bench_user.user_nr }}" class="table-link">{{ bench_user.last_name }}</a>
+                {% else %}
+                {{ bench_user.last_name if bench_user and bench_user.last_name else 'Not set' }}
+                {% endif %}
+              </p>
+            </article>
+            <article class="detail-item">
+              <h4>Project</h4>
+              <p>
+                {% if bench_project and bench_project.project_nr and bench_project.project %}
+                <a href="/projects/{{ bench_project.project_nr }}" class="table-link">{{ bench_project.project }}</a>
+                {% else %}
+                {{ bench_project.project if bench_project and bench_project.project else 'Not set' }}
+                {% endif %}
+              </p>
+            </article>
+            <article class="detail-item">
+              <h4>User Label</h4>
+              <p>{{ bench_sample.user_label or 'Not set' }}</p>
+            </article>
+            <article class="detail-item">
+              <h4>User Label #</h4>
+              <p>{{ bench_sample.user_label_nr or 'Not set' }}</p>
+            </article>
+            <article class="detail-item">
+              <h4>Material</h4>
+              <p>{{ bench_sample.material or 'Not set' }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Weights and Dates</h4>
+          </div>
+          <div class="prep-bench-grid">
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_start') %} has-error{% endif %}">
+              <label for="bench-weight-start">Weight Start</label>
+              <input
+                id="bench-weight-start"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_start"
+                value="{{ bench_values['bench__weight_start'] if 'bench__weight_start' in bench_values else (bench_prep.weight_start if bench_prep.weight_start is not none else '') }}"
+                data-prep-bench-weight-start
+              />
+              {% if bench_errors.get('bench__weight_start') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_start'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__prep_start') %} has-error{% endif %}">
+              <label for="bench-prep-start">Prep Start</label>
+              {% set bench_prep_start_value = bench_values['bench__prep_start'] if 'bench__prep_start' in bench_values else ((bench_prep.prep_start.strftime('%Y-%m-%d')) if bench_prep.prep_start else '') %}
+              <input
+                id="bench-prep-start"
+                type="date"
+                name="bench__prep_start"
+                value="{{ bench_prep_start_value }}"
+                data-prep-bench-prep-start
+              />
+              {% if bench_errors.get('bench__prep_start') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_start'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_medium') %} has-error{% endif %}">
+              <label for="bench-weight-medium">Weight Mid</label>
+              <input
+                id="bench-weight-medium"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_medium"
+                value="{{ bench_values['bench__weight_medium'] if 'bench__weight_medium' in bench_values else (bench_prep.weight_medium if bench_prep.weight_medium is not none else '') }}"
+                data-prep-bench-weight-medium
+              />
+              {% if bench_errors.get('bench__weight_medium') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_medium'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_medium_2') %} has-error{% endif %}">
+              <label for="bench-weight-medium-2">Weight Mid 2</label>
+              <input
+                id="bench-weight-medium-2"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_medium_2"
+                value="{{ bench_values['bench__weight_medium_2'] if 'bench__weight_medium_2' in bench_values else (bench_prep.weight_medium_2 if bench_prep.weight_medium_2 is not none else '') }}"
+                data-prep-bench-weight-medium-2
+              />
+              {% if bench_errors.get('bench__weight_medium_2') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_medium_2'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_end') %} has-error{% endif %}">
+              <label for="bench-weight-end">Weight End</label>
+              <input
+                id="bench-weight-end"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_end"
+                value="{{ bench_values['bench__weight_end'] if 'bench__weight_end' in bench_values else (bench_prep.weight_end if bench_prep.weight_end is not none else '') }}"
+                data-prep-bench-weight-end
+              />
+              {% if bench_errors.get('bench__weight_end') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_end'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__prep_end') %} has-error{% endif %}">
+              <label for="bench-prep-end">Prep End</label>
+              {% set bench_prep_end_value = bench_values['bench__prep_end'] if 'bench__prep_end' in bench_values else ((bench_prep.prep_end.strftime('%Y-%m-%d')) if bench_prep.prep_end else '') %}
+              <input
+                id="bench-prep-end"
+                type="date"
+                name="bench__prep_end"
+                value="{{ bench_prep_end_value }}"
+                data-prep-bench-prep-end
+              />
+              {% if bench_errors.get('bench__prep_end') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_end'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field prep-bench-field-readonly prep-bench-field-span-2">
+              <label>Yield (%)</label>
+              {% set bench_yield_value = bench_values['bench__yield_percent_display'] if 'bench__yield_percent_display' in bench_values else (bench_entry.yield_percent if bench_entry.yield_percent is not none else '') %}
+              <div class="prep-bench-readout" data-prep-bench-yield>{{ bench_yield_value or 'Not set' }}</div>
+              <input type="hidden" name="bench__yield_percent_display" value="{{ bench_yield_value or '' }}" data-prep-bench-yield-hidden />
+            </div>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Preparation Steps</h4>
+          </div>
+          <div class="prep-bench-step-edit-grid">
+            {% for step_index in range(1, 6) %}
+            {% set step_field = 'step' ~ step_index ~ '_method' %}
+            {% set field_name = 'bench__' ~ step_field %}
+            {% set step_value = bench_values[field_name] if field_name in bench_values else (bench_prep|attr(step_field) or '') %}
+            <div class="prep-bench-field{% if bench_errors.get(field_name) %} has-error{% endif %}">
+              <label for="prep-bench-{{ step_field }}">Step {{ step_index }} Method</label>
+              <select id="prep-bench-{{ step_field }}" name="{{ field_name }}">
+                <option value="">Not set</option>
+                {% for method_value in bench_method_options or [] %}
+                <option value="{{ method_value }}" {% if step_value|string == method_value|string %}selected{% endif %}>{{ method_value }}</option>
+                {% endfor %}
+              </select>
+              {% if bench_errors.get(field_name) %}<p class="prep-bench-field-error">{{ bench_errors[field_name] }}</p>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <div class="prep-bench-column prep-bench-column-side">
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Flags and Storage</h4>
+          </div>
+          <div class="prep-bench-flag-list">
+            <label class="prep-bench-checkbox-row{% if bench_errors.get('bench__s_no_leftover') %} has-error{% endif %}">
+              <input type="hidden" name="bench__s_no_leftover" value="0" />
+              {% set s_no_leftover_checked = (bench_values.get('bench__s_no_leftover') if 'bench__s_no_leftover' in bench_values else bench_sample.s_no_leftover)|string %}
+              <input
+                type="checkbox"
+                name="bench__s_no_leftover"
+                value="1"
+                {% if s_no_leftover_checked in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %}
+              />
+              <span>No Leftover</span>
+            </label>
+
+            <label class="prep-bench-checkbox-row is-readonly">
+              <input
+                type="checkbox"
+                disabled
+                {% if bench_project and (bench_project.return_to_sender or 0) %}checked{% endif %}
+              />
+              <span>Return to Sender (project)</span>
+            </label>
+
+            <div class="prep-bench-storage-row">
+              <div>
+                <span class="prep-bench-storage-label">Sample Storage Location</span>
+                {% set bench_storage_value = bench_values['bench__s_storage_loc'] if 'bench__s_storage_loc' in bench_values else (bench_sample.s_storage_loc or '') %}
+                <input
+                  type="text"
+                  class="prep-bench-storage-input{% if bench_errors.get('bench__s_storage_loc') %} is-error{% endif %}"
+                  name="bench__s_storage_loc"
+                  value="{{ bench_storage_value }}"
+                  placeholder="Not set"
+                  aria-label="Sample Storage Location"
+                  data-prep-bench-storage-location
+                />
+                {% if bench_errors.get('bench__s_storage_loc') %}<p class="prep-bench-field-error">{{ bench_errors['bench__s_storage_loc'] }}</p>{% endif %}
+              </div>
+              <label class="prep-bench-checkbox-row is-readonly">
+                <input type="checkbox" disabled {% if bench_storage_value|string|trim %}checked{% endif %} data-prep-bench-sample-archived />
+                <span>Sample Archived</span>
+              </label>
+            </div>
+
+            <label class="prep-bench-checkbox-row{% if bench_errors.get('bench__stop') %} has-error{% endif %}">
+              <input type="hidden" name="bench__stop" value="0" />
+              {% set bench_stop_checked = (bench_values.get('bench__stop') if 'bench__stop' in bench_values else bench_prep.stop)|string %}
+              <input
+                type="checkbox"
+                name="bench__stop"
+                value="1"
+                {% if bench_stop_checked in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %}
+              />
+              <span>Discarded</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Preparation Comment</h4>
+          </div>
+          <div class="prep-bench-field{% if bench_errors.get('bench__prep_comment') %} has-error{% endif %}">
+            <label for="bench-prep-comment">Comment</label>
+            <textarea
+              id="bench-prep-comment"
+              name="bench__prep_comment"
+              rows="5"
+              placeholder="Add lab notes for this preparation"
+            >{{ bench_values['bench__prep_comment'] if 'bench__prep_comment' in bench_values else (bench_prep.prep_comment or '') }}</textarea>
+            {% if bench_errors.get('bench__prep_comment') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_comment'] }}</p>{% endif %}
+          </div>
+        </section>
+
+        <section class="prep-bench-actions" data-prep-bench-actions>
+          <button type="submit" name="bench__action" value="save" class="prep-bench-action-primary">Save</button>
+          <button type="submit" name="bench__action" value="save_next" class="prep-bench-action-secondary">Save &amp; Next</button>
+          <button type="reset" class="prep-bench-action-secondary">Cancel</button>
+          <a href="/samples/{{ bench_sample.sample_nr }}/preparations/{{ bench_prep.prep_nr }}" class="prep-bench-link-button">Open Full Preparation</a>
+        </section>
+      </div>
+    </div>
+      </form>
+      {% else %}
+      <p class="table-empty">Scan or enter a sample number to load the active preparation.</p>
+      {% endif %}
+    </div>
+  </details>
+</section>
+{% endif %}
+
+{% if graph_bench_entry_enabled %}
+<section class="panel" id="graph-bench-entry" data-graph-bench {% if request.query_params.get('graph_batch_saved') == 'true' %}data-graph-batch-saved="true"{% endif %}>
+  <details class="table-collapsible" open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Graphitization Bench Entry</span>
+      <span class="badge table-summary-count">Open</span>
+    </summary>
+    <div style="margin-top: 0.7rem;">
+      <p style="margin: 0 0 0.75rem; color: var(--muted);">Touch-friendly entry for graphitization target handling and batch composition.</p>
+
+      <form method="get" action="/lab/graphitization" class="prep-bench-lookup-form graph-bench-lookup-form" data-graph-bench-lookup-form>
+        <label class="prep-bench-lookup-field">
+          <span>Sample #</span>
+          <input
+            type="text"
+            name="graph_sample_nr"
+            value="{{ graph_sample_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Scan barcode or enter sample number"
+            data-graph-bench-sample-input
+          />
+        </label>
+        <label class="prep-bench-lookup-field">
+          <span>Prep #</span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="graph_prep_nr"
+            value="{{ graph_prep_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            data-graph-bench-prep-input
+            {% if graph_bench_entry and graph_bench_entry.preparations %}
+            list="graph-bench-prep-options"
+            {% endif %}
+          />
+        </label>
+        <label class="prep-bench-lookup-field">
+          <span>
+            Target #
+            <span class="prep-bench-lookup-meta">
+              {% if graph_bench_entry and graph_bench_entry.targets %}
+              ({{ graph_bench_entry.targets|length }} target{% if graph_bench_entry.targets|length != 1 %}s{% endif %})
+              {% else %}
+              (count n/a)
+              {% endif %}
+            </span>
+          </span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="graph_target_nr"
+            value="{{ graph_target_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            data-graph-bench-target-input
+            {% if graph_bench_entry and graph_bench_entry.targets %}
+            list="graph-bench-target-options"
+            {% endif %}
+          />
+        </label>
+        {% if graph_bench_entry and graph_bench_entry.preparations %}
+        <datalist id="graph-bench-prep-options">
+          {% for prep_option in graph_bench_entry.preparations %}
+          <option value="{{ prep_option.prep_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+        {% if graph_bench_entry and graph_bench_entry.targets %}
+        <datalist id="graph-bench-target-options">
+          {% for target_option in graph_bench_entry.targets %}
+          <option value="{{ target_option.target_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+        <button type="submit" class="prep-bench-load-button">Load</button>
+      </form>
+
+      {% if graph_saved or graph_notice %}
+      <div class="inline-notice">
+        <strong>{% if graph_saved %}Saved.{% else %}Notice.{% endif %}</strong>
+        {% if graph_notice %}
+        <p>{{ graph_notice }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if graph_batch_notice %}
+      <div class="inline-notice">
+        <strong>Batch Saved.</strong>
+        <p>{{ graph_batch_notice }}</p>
+      </div>
+      {% endif %}
+      {% if graph_batch_error %}
+      <div class="inline-notice inline-notice-error">
+        <strong>Batch Error.</strong>
+        <p>{{ graph_batch_error }}</p>
+      </div>
+      {% endif %}
+      {% if graph_error %}
+      <p class="error">{{ graph_error }}</p>
+      {% endif %}
+
+      {% if graph_bench_entry %}
+      {% set graph_sample = graph_bench_entry.sample %}
+      {% set graph_project = graph_bench_entry.project %}
+      {% set graph_user = graph_bench_entry.user %}
+      {% set graph_prep = graph_bench_entry.preparation %}
+      {% set graph_target = graph_bench_entry.target %}
+      {% set graph_values = graph_form_values or {} %}
+      {% set graph_errors = graph_field_errors or {} %}
+      {% set graph_prep_storage_value = graph_values['graphbench__prep_storage_loc'] if 'graphbench__prep_storage_loc' in graph_values else (graph_sample.prep_storage_loc or '') %}
+
+      <div class="prep-bench-layout">
+        <div class="prep-bench-column prep-bench-column-main">
+          <form method="post" action="/lab/graphitization/bench/save" class="prep-bench-form" data-graph-bench-target-form>
+            <input type="hidden" name="graphbench__sample_nr" value="{{ graph_sample.sample_nr }}" />
+            <input type="hidden" name="graphbench__prep_nr" value="{{ graph_prep.prep_nr }}" />
+            <input type="hidden" name="graphbench__target_nr" value="{{ graph_target.target_nr }}" />
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Sample Context</h4>
+                <span class="badge status-pill">Target # {{ graph_target.target_nr }}</span>
+              </div>
+              <div class="prep-bench-context-grid">
+                <article class="detail-item">
+                  <h4>Last Name</h4>
+                  <p>
+                    {% if graph_user and graph_user.user_nr and graph_user.last_name %}
+                    <a href="/users/{{ graph_user.user_nr }}" class="table-link">{{ graph_user.last_name }}</a>
+                    {% else %}
+                    {{ graph_user.last_name if graph_user and graph_user.last_name else 'Not set' }}
+                    {% endif %}
+                  </p>
+                </article>
+                <article class="detail-item">
+                  <h4>Project</h4>
+                  <p>
+                    {% if graph_project and graph_project.project_nr and graph_project.project %}
+                    <a href="/projects/{{ graph_project.project_nr }}" class="table-link">{{ graph_project.project }}</a>
+                    {% else %}
+                    {{ graph_project.project if graph_project and graph_project.project else 'Not set' }}
+                    {% endif %}
+                  </p>
+                </article>
+                <article class="detail-item">
+                  <h4>User Label</h4>
+                  <p>{{ graph_sample.user_label or 'Not set' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>User Label #</h4>
+                  <p>{{ graph_sample.user_label_nr or 'Not set' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Material</h4>
+                  <p>{{ graph_sample.material or 'Not set' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Prep Weight End</h4>
+                  <p>{{ format_table_cell_value('weight_end', graph_prep.weight_end) or 'Not set' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Prep Discarded</h4>
+                  <p>
+                    <input class="detail-boolean-checkbox" type="checkbox" disabled {% if graph_prep.stop %}checked{% endif %} />
+                  </p>
+                </article>
+              </div>
+            </section>
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Graphitization Entry</h4>
+              </div>
+              {% if graph_target.graph_batch %}
+              <div class="inline-notice inline-notice-error" style="margin-bottom: 0.7rem;">
+                <strong>Already Assigned.</strong>
+                <p>This target is already in graph batch <code>{{ graph_target.graph_batch }}</code> and cannot be added to another batch.</p>
+              </div>
+              {% endif %}
+              <div class="graph-bench-entry-stack">
+                <div class="prep-bench-field{% if graph_errors.get('graphbench__weight_combustion') %} has-error{% endif %}">
+                  <label for="graphbench-weight-combustion">Weight Combustion</label>
+                  <input
+                    id="graphbench-weight-combustion"
+                    type="number"
+                    step="any"
+                    inputmode="decimal"
+                    name="graphbench__weight_combustion"
+                    value="{{ graph_values['graphbench__weight_combustion'] if 'graphbench__weight_combustion' in graph_values else (graph_target.weight_combustion if graph_target.weight_combustion is not none else '') }}"
+                  />
+                  {% if graph_errors.get('graphbench__weight_combustion') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__weight_combustion'] }}</p>{% endif %}
+                </div>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__p_no_leftover') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__p_no_leftover" value="0" />
+                  {% set graph_p_no_leftover_checked = (graph_values.get('graphbench__p_no_leftover') if 'graphbench__p_no_leftover' in graph_values else graph_prep.p_no_leftover)|string %}
+                  <input type="checkbox" name="graphbench__p_no_leftover" value="1" {% if graph_p_no_leftover_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>No Leftover (Prep'd Material)</span>
+                </label>
+
+                <label class="prep-bench-checkbox-row is-readonly">
+                  <input type="checkbox" disabled {% if graph_project and (graph_project.prep_return_to_sender or 0) %}checked{% endif %} />
+                  <span>Prep Return to Sender (project)</span>
+                </label>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__c_n_isotop_a_moved') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__c_n_isotop_a_moved" value="0" />
+                  {% set graph_cn_moved_checked = (graph_values.get('graphbench__c_n_isotop_a_moved') if 'graphbench__c_n_isotop_a_moved' in graph_values else graph_sample.c_n_isotop_a_moved)|string %}
+                  <input type="checkbox" name="graphbench__c_n_isotop_a_moved" value="1" {% if graph_cn_moved_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>Moved to CN Analysis</span>
+                </label>
+
+                <div class="graph-bench-storage-inline-row">
+                  <div class="prep-bench-field{% if graph_errors.get('graphbench__prep_storage_loc') %} has-error{% endif %}">
+                    <label for="graphbench-prep-storage-loc">Prep Storage Location</label>
+                    <input
+                      id="graphbench-prep-storage-loc"
+                      type="text"
+                      name="graphbench__prep_storage_loc"
+                      value="{{ graph_prep_storage_value }}"
+                      placeholder="Not set"
+                      data-graph-bench-prep-storage
+                    />
+                    {% if graph_errors.get('graphbench__prep_storage_loc') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__prep_storage_loc'] }}</p>{% endif %}
+                  </div>
+
+                  <label class="prep-bench-checkbox-row is-readonly">
+                    <input type="checkbox" disabled {% if graph_prep_storage_value|string|trim %}checked{% endif %} data-graph-bench-prep-archived />
+                    <span>Prep'd Archived</span>
+                  </label>
+                </div>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__stop') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__stop" value="0" />
+                  {% set graph_stop_checked = (graph_values.get('graphbench__stop') if 'graphbench__stop' in graph_values else graph_target.stop)|string %}
+                  <input type="checkbox" name="graphbench__stop" value="1" {% if graph_stop_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>Discarded</span>
+                </label>
+
+                <div class="prep-bench-field{% if graph_errors.get('graphbench__target_comment') %} has-error{% endif %}">
+                  <label for="graphbench-target-comment">Target Comment</label>
+                  <textarea id="graphbench-target-comment" name="graphbench__target_comment" rows="4" placeholder="Add graphitization notes">{{ graph_values['graphbench__target_comment'] if 'graphbench__target_comment' in graph_values else (graph_target.target_comment or '') }}</textarea>
+                  {% if graph_errors.get('graphbench__target_comment') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__target_comment'] }}</p>{% endif %}
+                </div>
+              </div>
+            </section>
+
+            <section class="prep-bench-actions" data-graph-bench-target-actions>
+              <button type="submit" name="graphbench__action" value="save" class="prep-bench-action-primary">Save Target</button>
+              <button type="submit" name="graphbench__action" value="save_next" class="prep-bench-action-secondary">Save &amp; Next</button>
+              <button type="reset" class="prep-bench-action-secondary">Cancel</button>
+              <a href="/samples/{{ graph_sample.sample_nr }}/preparations/{{ graph_prep.prep_nr }}/targets/{{ graph_target.target_nr }}" class="prep-bench-link-button">Open Full Target</a>
+            </section>
+          </form>
+        </div>
+
+        <div class="prep-bench-column prep-bench-column-side">
+          <form
+            method="post"
+            action="/lab/graphitization/bench/save-batch"
+            class="prep-bench-form"
+            data-graph-bench-batch-form
+            data-current-target-sample="{{ graph_sample.sample_nr }}"
+            data-current-target-prep="{{ graph_prep.prep_nr }}"
+            data-current-target-target="{{ graph_target.target_nr }}"
+            data-current-target-user-label="{{ graph_sample.user_label or '' }}"
+            data-current-target-has-graph-batch="{% if graph_target.graph_batch %}1{% else %}0{% endif %}"
+            data-current-target-graph-batch="{{ graph_target.graph_batch or '' }}"
+          >
+            <input type="hidden" name="graphbatch__sample_nr" value="{{ graph_sample.sample_nr }}" />
+            <input type="hidden" name="graphbatch__prep_nr" value="{{ graph_prep.prep_nr }}" />
+            <input type="hidden" name="graphbatch__target_nr" value="{{ graph_target.target_nr }}" />
+            <input type="hidden" name="graphbatch__targets_json" value="[]" data-graph-batch-targets-json />
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Graph Batch Builder</h4>
+              </div>
+              <div class="prep-bench-field">
+                <label for="graph-batch-system">Graphitization System</label>
+                <select id="graph-batch-system" data-graph-batch-system>
+                  <option value="">Select system</option>
+                  {% for system_name in graph_batch_system_options or [] %}
+                  <option value="{{ system_name }}">{{ system_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="prep-bench-field" style="margin-top: 0.55rem;">
+                <label for="graph-batch-name">Batch Name</label>
+                <input
+                  id="graph-batch-name"
+                  type="text"
+                  name="graphbatch__batch_name"
+                  value=""
+                  placeholder="graph_YYMMDD_system"
+                  data-graph-batch-name
+                />
+              </div>
+              <div class="prep-bench-flag-list" style="margin-top: 0.65rem;">
+                <button type="button" class="prep-bench-action-secondary" data-graph-batch-add-current>Add Current Target to Batch</button>
+                <button type="button" class="prep-bench-action-secondary" data-graph-batch-clear>Clear Batch</button>
+              </div>
+              <p class="prep-bench-field-error" data-graph-batch-client-error hidden></p>
+            </section>
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Batch Targets</h4>
+                <span class="badge status-pill" data-graph-batch-count>0</span>
+              </div>
+              <div class="table-wrap table-wrap-dashboard graph-batch-staged-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>sample_nr</th>
+                      <th>prep_nr</th>
+                      <th>target_nr</th>
+                      <th>user_label</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody data-graph-batch-staged-body>
+                    <tr data-graph-batch-empty-row>
+                      <td colspan="5" class="table-empty">No targets added to the batch yet.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="graph-bench-batch-save-actions">
+                <button type="submit" class="prep-bench-action-primary">Save Batch Assignments</button>
+              </div>
+            </section>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <p class="table-empty">Load a target to start graphitization bench entry.</p>
+      {% endif %}
+    </div>
+  </details>
+</section>
+{% endif %}
+
+<section class="panel" id="tbl-{{ table_key|replace('_', '-') }}">
+  <details class="table-collapsible" open data-table-filter>
+    <summary class="table-summary">
+      <span class="table-summary-title">{{ table_title }}</span>
+      <span class="badge table-summary-count">{{ rows|length }} rows</span>
+    </summary>
+    {% if rows %}
+    {% set ns = namespace(visible_keys=[]) %}
+    {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
+    {% if table_key == 'waiting_for_meas' %}
+      {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
+    {% endif %}
+    {% for key in rows[0].keys() %}
+      {% if key not in hidden_helper_keys %}
+        {% set _ = ns.visible_keys.append(key) %}
+      {% endif %}
+    {% endfor %}
+    <div class="table-tools">
+      <label class="table-tool-field">
+        Search
+        <input type="search" placeholder="Type to filter rows" data-table-search />
+      </label>
+        <label class="table-tool-field">
+          Column
+          <select data-table-column>
+          <option value="-1">All Columns</option>
+          {% for key in ns.visible_keys %}
+          <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
+          {% endfor %}
+          </select>
+        </label>
+      <button type="button" class="table-tool-clear" data-table-clear>Clear</button>
+      <p class="table-tool-status"><span data-table-visible>{{ rows|length }}</span> / <span data-table-total>{{ rows|length }}</span> shown</p>
+    </div>
+    <div class="table-wrap table-wrap-dashboard">
+      <table>
+        <thead>
+          <tr>
+            {% for key in ns.visible_keys %}
+            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            {% for key in ns.visible_keys %}
+            {% set key_lower = key|string|lower %}
+            {% set value = row.get(key) %}
+            {% set sample_nr_value = row.get("sample_nr") %}
+            {% set prep_nr_value = row.get("prep_nr") %}
+            {% set target_nr_value = row.get("target_nr") %}
+            {% set project_nr_value = row.get("project_nr") %}
+            {% set user_nr_value = row.get("user_nr") %}
+            {% set display_value = format_table_cell_value(key, value) %}
+            <td>
+              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "target_id" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "project" and project_nr_value is not none %}
+              <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "last_name" and user_nr_value is not none %}
+              <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% else %}
+              {{ display_value }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+    {% else %}
+    <p class="table-empty">No rows.</p>
+    {% endif %}
+  </details>
+</section>
+
+{% if table_key == "waiting_for_graph" %}
+<section class="panel" id="graphitization-tools">
+  <details class="table-collapsible">
+    <summary class="table-summary">
+      <span class="table-summary-title">Graphitization Tools</span>
+      <span class="badge table-summary-count">Coming Soon</span>
+    </summary>
+    <div class="cards" style="margin-top: 0.7rem;">
+      <article>
+        <h3>Magazine Planning</h3>
+        <p>Tools for grouping targets into magazines and reviewing assignment readiness will be placed here.</p>
+      </article>
+      <article>
+        <h3>Batch Utilities</h3>
+        <p>Future graphitization batch actions (selection, export, and workflow helpers) will be added here.</p>
+      </article>
+    </div>
+  </details>
+</section>
+{% endif %}
+
+{% if magazine_lookup_enabled %}
+<section class="panel" id="tbl-magazine-targets">
+  <details class="table-collapsible" {% if magazine_query %}open{% endif %}>
+    <summary class="table-summary">
+      <span class="table-summary-title">Magazine Targets</span>
+      <span class="badge table-summary-count">
+        {% if magazine_query %}
+        {{ magazine_rows|length }} rows
+        {% else %}
+        Search
+        {% endif %}
+      </span>
+    </summary>
+
+    <form method="get" action="/lab/analysis" class="inline-form" style="margin-top: 0.6rem;">
+      <label>
+        Magazine
+        <input
+          type="text"
+          name="magazine"
+          value="{{ magazine_query or '' }}"
+          list="analysis-magazine-list"
+          placeholder="e.g. M123"
+          autocomplete="off"
+        />
+      </label>
+      <datalist id="analysis-magazine-list">
+        {% for magazine_value in magazine_options or [] %}
+        <option value="{{ magazine_value }}"></option>
+        {% endfor %}
+      </datalist>
+      <button type="submit">Search</button>
+      {% if magazine_query %}
+      <a href="/lab/analysis">Clear</a>
+      {% endif %}
+    </form>
+    {% if magazine_error %}
+    <p class="error" style="margin-top: 0.45rem;">{{ magazine_error }}</p>
+    {% endif %}
+
+    {% if not magazine_error and magazine_query and magazine_rows %}
+    {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
+    <section data-table-filter style="margin-top: 0.7rem;">
+      <div class="table-tools">
+        <label class="table-tool-field">
+          Search
+          <input type="search" placeholder="Type to filter rows" data-table-search />
+        </label>
+        <label class="table-tool-field">
+          Column
+          <select data-table-column>
+            <option value="-1">All Columns</option>
+            {% for key in visible_magazine_columns %}
+            <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="button" class="table-tool-clear" data-table-clear>Clear</button>
+        <p class="table-tool-status"><span data-table-visible>{{ magazine_rows|length }}</span> / <span data-table-total>{{ magazine_rows|length }}</span> shown</p>
+      </div>
+      <div class="table-wrap table-wrap-horizontal">
+        <table>
+          <thead>
+            <tr>
+              {% for key in visible_magazine_columns %}
+              <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in magazine_rows %}
+            <tr>
+              {% for key in visible_magazine_columns %}
+              {% set key_lower = key|string|lower %}
+              {% set value = row.get(key) %}
+              {% set sample_nr_value = row.get("sample_nr") %}
+              {% set prep_nr_value = row.get("prep_nr") %}
+              {% set target_nr_value = row.get("target_nr") %}
+              {% set project_nr_value = row.get("project_nr") %}
+              {% set user_nr_value = row.get("user_nr") %}
+              {% set display_value = format_table_cell_value(key, value) %}
+              <td>
+                {% if key_lower == "sample_nr" and sample_nr_value is not none %}
+                <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
+                {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
+                <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
+                {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+                <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+                {% elif key_lower == "project" and project_nr_value is not none %}
+                <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
+                {% elif key_lower == "user_last_name" and user_nr_value is not none %}
+                <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+                {% else %}
+                {{ display_value }}
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+    </section>
+    {% elif not magazine_error and magazine_query %}
+    <p class="table-empty" style="margin-top: 0.6rem;">No targets found for magazine "{{ magazine_query }}".</p>
+    {% else %}
+    <p class="table-empty" style="margin-top: 0.6rem;">Enter a magazine value to load all targets assigned to that magazine.</p>
+    {% endif %}
+  </details>
+</section>
+{% endif %}
+{% endblock %}

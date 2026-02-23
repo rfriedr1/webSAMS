@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% from "_detail_fields.html" import render_detail_field_row %}
+
+{% block content %}
+<section class="panel" data-edit-scope data-edit-initial-mode="{{ sample_edit_initial_mode or 'view' }}">
+  <div class="panel-head">
+    <div class="sample-head-row">
+      <h2>Sample {{ sample.sample_nr }}: {{ sample.user_label or 'Unnamed Sample' }}</h2>
+      <div class="sample-quick-nav" aria-label="Sample navigation">
+        {% if previous_sample_nr is not none %}
+        <a
+          href="/samples/{{ previous_sample_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Previous sample"
+          title="Previous sample"
+        >&#x2039;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous sample" title="No previous sample">&#x2039;</span>
+        {% endif %}
+        <form method="get" action="/samples/{{ sample.sample_nr }}" class="sample-quick-nav-jump">
+          <label for="sample-jump-input" class="sr-only">Sample #</label>
+          <input
+            id="sample-jump-input"
+            name="jump_sample"
+            type="number"
+            min="1"
+            max="{{ max_sample_nr if max_sample_nr > 0 else 1 }}"
+            step="1"
+            value="{{ sample.sample_nr }}"
+            aria-label="Jump to sample #"
+          />
+          <span class="sample-quick-nav-jump-total">/ {{ max_sample_nr if max_sample_nr > 0 else sample_count }}</span>
+          <button type="submit">Go</button>
+        </form>
+        {% if next_sample_nr is not none %}
+        <a
+          href="/samples/{{ next_sample_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Next sample"
+          title="Next sample"
+        >&#x203A;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next sample" title="No next sample">&#x203A;</span>
+        {% endif %}
+      </div>
+    </div>
+    {% set sample_back_url = '/search' %}
+    {% if project %}
+    {% set sample_back_url = '/projects/' ~ project.project_nr %}
+    {% endif %}
+    {% if project %}
+    <p>
+      Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
+      {% if project.status %}
+      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
+      {% endif %}
+      {% if user %}| User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>{% endif %}
+    </p>
+    {% elif user %}
+    <p>User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></p>
+    {% endif %}
+    <p class="page-actions">
+      <a href="{{ sample_back_url }}" class="nav-back" data-history-back data-fallback="{{ sample_back_url }}">Back</a>
+    </p>
+    {% if sample_saved %}
+    <div class="result-box">Sample details were saved.</div>
+    {% endif %}
+    {% if sample_save_error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Save failed.</strong>
+      <p>{{ sample_save_error }}</p>
+    </div>
+    {% endif %}
+    <div class="detail-edit-toolbar">
+      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+      <button type="submit" class="detail-edit-save" data-edit-save form="{{ sample_edit_form_id }}" hidden>Save</button>
+      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+    </div>
+    <form id="{{ sample_edit_form_id }}" method="post" action="/samples/{{ sample.sample_nr }}/save" data-detail-edit-form></form>
+  </div>
+
+  <div class="cards sample-identity-cards">
+    <article>
+      <h3>Sample Label</h3>
+      {% set sample_label_error = sample_field_errors.get('sample__user_label') %}
+      {% set sample_label_editor_value = sample_form_values.get('sample__user_label', sample.user_label or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if sample_label_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_label" data-field-kind="text">
+        <div class="detail-field-display" data-field-display>
+          {% if sample.user_label %}
+          {{ sample.user_label }}
+          {% else %}
+          <span class="detail-empty">Not set</span>
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <input
+            type="text"
+            name="sample__user_label"
+            form="{{ sample_edit_form_id }}"
+            value="{{ sample_label_editor_value }}"
+            {% if sample_label_error %}aria-invalid="true"{% endif %}
+            disabled
+          />
+        </div>
+        {% if sample_label_error %}
+        <p class="detail-field-error error">{{ sample_label_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+    <article>
+      <h3>Sample Label #</h3>
+      {% set sample_label_nr_error = sample_field_errors.get('sample__user_label_nr') %}
+      {% set sample_label_nr_editor_value = sample_form_values.get('sample__user_label_nr', sample.user_label_nr or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if sample_label_nr_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_label_nr" data-field-kind="text">
+        <div class="detail-field-display" data-field-display>
+          {% if sample.user_label_nr is not none and sample.user_label_nr != '' %}
+          {{ sample.user_label_nr }}
+          {% else %}
+          <span class="detail-empty">Not set</span>
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <input
+            type="text"
+            name="sample__user_label_nr"
+            form="{{ sample_edit_form_id }}"
+            value="{{ sample_label_nr_editor_value }}"
+            {% if sample_label_nr_error %}aria-invalid="true"{% endif %}
+            disabled
+          />
+        </div>
+        {% if sample_label_nr_error %}
+        <p class="detail-field-error error">{{ sample_label_nr_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+    <article class="sample-identity-description">
+      <h3>Description 1</h3>
+      {% set sample_desc1_error = sample_field_errors.get('sample__user_desc1') %}
+      {% set sample_desc1_editor_value = sample_form_values.get('sample__user_desc1', sample.user_desc1 or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if sample_desc1_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc1" data-field-kind="multiline">
+        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>
+          {% if sample.user_desc1 %}
+          {{ sample.user_desc1 }}
+          {% else %}
+          <span class="detail-empty">Not set</span>
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <textarea
+            name="sample__user_desc1"
+            form="{{ sample_edit_form_id }}"
+            rows="3"
+            {% if sample_desc1_error %}aria-invalid="true"{% endif %}
+            disabled
+          >{{ sample_desc1_editor_value }}</textarea>
+        </div>
+        {% if sample_desc1_error %}
+        <p class="detail-field-error error">{{ sample_desc1_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+    <article class="sample-identity-description">
+      <h3>Description 2</h3>
+      {% set sample_desc2_error = sample_field_errors.get('sample__user_desc2') %}
+      {% set sample_desc2_editor_value = sample_form_values.get('sample__user_desc2', sample.user_desc2 or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if sample_desc2_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc2" data-field-kind="multiline">
+        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>
+          {% if sample.user_desc2 %}
+          {{ sample.user_desc2 }}
+          {% else %}
+          <span class="detail-empty">Not set</span>
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <textarea
+            name="sample__user_desc2"
+            form="{{ sample_edit_form_id }}"
+            rows="3"
+            {% if sample_desc2_error %}aria-invalid="true"{% endif %}
+            disabled
+          >{{ sample_desc2_editor_value }}</textarea>
+        </div>
+        {% if sample_desc2_error %}
+        <p class="detail-field-error error">{{ sample_desc2_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <div class="cards sample-summary-cards">
+    <article>
+      <h3>Type</h3>
+      <p>{{ sample.type or '-' }}</p>
+    </article>
+    <article>
+      <h3>Material</h3>
+      <p>{{ sample.material or '-' }}</p>
+    </article>
+    <article>
+      <h3>Fraction</h3>
+      <p>{{ sample.fraction or '-' }}</p>
+    </article>
+    <article>
+      <h3>Weight</h3>
+      <p>{{ sample.weight if sample.weight is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>C14 Age</h3>
+      <p>{{ sample_c14_age_display if sample_c14_age_display is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>Records</h3>
+      <p>{{ preparations|length }} prep / {{ sample_targets_total }} targets</p>
+    </article>
+  </div>
+
+  <div class="cards sample-comments-cards">
+    <article>
+      <h3>User Comment</h3>
+      {% set user_comment_error = sample_field_errors.get('sample__user_comment') %}
+      {% set user_comment_editor_value = sample_form_values.get('sample__user_comment', sample.user_comment or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if user_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_comment" data-field-kind="multiline">
+        <div class="detail-field-display is-multiline" data-field-display>
+          {% if sample_user_comment_display is none %}
+          <span class="detail-empty">Not set</span>
+          {% else %}
+          {{ sample_user_comment_display }}
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <textarea
+            name="sample__user_comment"
+            form="{{ sample_edit_form_id }}"
+            rows="4"
+            {% if user_comment_error %}aria-invalid="true"{% endif %}
+            disabled
+          >{{ user_comment_editor_value }}</textarea>
+        </div>
+        {% if user_comment_error %}
+        <p class="detail-field-error error">{{ user_comment_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+    <article>
+      <h3>Lab Comment</h3>
+      {% set lab_comment_error = sample_field_errors.get('sample__lab_comment') %}
+      {% set lab_comment_editor_value = sample_form_values.get('sample__lab_comment', sample.lab_comment or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if lab_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="lab_comment" data-field-kind="multiline">
+        <div class="detail-field-display is-multiline" data-field-display>
+          {% if sample_lab_comment_display is none %}
+          <span class="detail-empty">Not set</span>
+          {% else %}
+          {{ sample_lab_comment_display }}
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <textarea
+            name="sample__lab_comment"
+            form="{{ sample_edit_form_id }}"
+            rows="4"
+            {% if lab_comment_error %}aria-invalid="true"{% endif %}
+            disabled
+          >{{ lab_comment_editor_value }}</textarea>
+        </div>
+        {% if lab_comment_error %}
+        <p class="detail-field-error error">{{ lab_comment_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <details class="table-collapsible sample-meta-collapsible" open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Additional Sample Metadata</span>
+      <span class="badge table-summary-count">{{ sample_sections|length }} sections</span>
+    </summary>
+    <div class="sample-meta-body">
+      <div class="sample-section-grid">
+        {% for section in sample_sections %}
+        <article class="sample-section-card">
+          <header class="sample-section-head">
+            <h3>{{ section.title }}</h3>
+            <p>{{ section.description }}</p>
+          </header>
+          <dl class="sample-field-list">
+            {% for row in section.rows %}
+            {{ render_detail_field_row(
+              row,
+              entity='sample',
+              row_class='sample-field-row',
+              form_id=sample_edit_form_id,
+              read_only_fields=sample_read_only_fields,
+              editor_value_overrides=sample_form_values,
+              select_options_by_field=sample_select_options,
+              required_fields=sample_required_fields,
+              field_errors=sample_field_errors
+            ) }}
+            {% endfor %}
+          </dl>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </details>
+
+  <section class="sample-workspace">
+    <div class="panel-head sample-workspace-head">
+      <h3>Preparation and Target Navigation</h3>
+      <p class="sample-workspace-path">Open preparation and target records in dedicated pages.</p>
+    </div>
+
+    <div class="sample-workspace-grid">
+      <section data-table-filter id="sample-preparations">
+        <h3>Preparations ({{ preparations|length }})</h3>
+        <div class="table-wrap sample-detail-table-wrap">
+          <table data-sample-preparations-table>
+            <thead>
+              <tr>
+                <th>Prep #</th>
+                <th>Batch</th>
+                <th>Prep Start</th>
+                <th>Prep End</th>
+                <th>Stop</th>
+                <th>Targets</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prep_row in preparations %}
+              <tr>
+                <td><a href="/samples/{{ sample.sample_nr }}/preparations/{{ prep_row.prep_nr }}">{{ prep_row.prep_nr }}</a></td>
+                <td>{{ prep_row.batch or '' }}</td>
+                <td>{{ prep_row.prep_start or '' }}</td>
+                <td>{{ prep_row.prep_end or '' }}</td>
+                <td>{{ prep_row.stop if prep_row.stop is not none else '' }}</td>
+                <td>{{ targets_by_prep.get(prep_row.prep_nr, 0) }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6">No preparations found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section data-table-filter id="sample-targets">
+        <h3>Target Navigator ({{ sample_targets_total }})</h3>
+
+        <div class="table-wrap sample-detail-table-wrap">
+          <table data-sample-targets-table>
+            <thead>
+              <tr>
+                <th>Prep #</th>
+                <th>Target #</th>
+                <th>Target ID</th>
+                <th>Graph Batch</th>
+                <th>Graphitized</th>
+                <th>FM</th>
+                <th>d13C</th>
+                <th>C14 Age</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for target in targets %}
+              <tr>
+                <td><a href="/samples/{{ sample.sample_nr }}/preparations/{{ target.prep_nr }}">{{ target.prep_nr }}</a></td>
+                <td>
+                  <a href="/samples/{{ sample.sample_nr }}/preparations/{{ target.prep_nr }}/targets/{{ target.target_nr }}">
+                    {{ target.target_nr }}
+                  </a>
+                </td>
+                <td>{{ target.target_id or '' }}</td>
+                <td>{{ target.graph_batch or '' }}</td>
+                <td>{{ target.graphitized or '' }}</td>
+                <td>{{ "%.4f"|format(target.fm) if target.fm is not none else '' }}</td>
+                <td>{{ "%.4f"|format(target.dc13) if target.dc13 is not none else '' }}</td>
+                <td>{{ format_c14_integer(target.c14_age) if target.c14_age is not none else '' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8">No targets found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Lab Queues</h2>
+    <p>Live operational overview of samples across preparation, graphitization, and measurement.</p>
+  </div>
+
+  <form method="get" action="/" class="inline-form">
+    <label>
+      <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} />
+      include not-to-be-dated samples
+    </label>
+    <button type="submit">Refresh</button>
+  </form>
+
+  <div class="cards">
+    <article><h3>Planned</h3><p>{{ counts.planned }}</p></article>
+    <article><h3>In Prep</h3><p>{{ counts.in_prep }}</p></article>
+    <article><h3>Waiting for Graph</h3><p>{{ counts.waiting_for_graph }}</p></article>
+    <article><h3>Waiting for Meas</h3><p>{{ counts.waiting_for_meas }}</p></article>
+    <article><h3>Express</h3><p>{{ counts.waiting_express }}</p></article>
+  </div>
+
+  <details class="kpi-chart kpi-collapsible" open>
+    <summary class="kpi-summary">
+      <span class="kpi-summary-title">Queue Distribution</span>
+      <span class="kpi-summary-hint">Show/Hide</span>
+    </summary>
+    <div class="kpi-collapsible-body">
+      {% for item in queue_chart %}
+      <div class="kpi-row">
+        <div class="kpi-meta">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </div>
+        <div class="kpi-bar">
+          <div class="kpi-fill kpi-fill-{{ item.key }}" style="width: {{ item.pct }}%;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+
+  <h3>Standards Ready for Analysis</h3>
+  <div class="cards cards-standards">
+    {% for item in standards_cards %}
+    <article class="indicator-{{ item.status }}"><h3>{{ item.label }}</h3><p>{{ item.value }}</p></article>
+    {% endfor %}
+  </div>
+
+  <article class="kpi-chart">
+    <h3>Standard Distribution</h3>
+    {% for item in standards_chart %}
+    <div class="kpi-row">
+      <div class="kpi-meta">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+      </div>
+      <div class="kpi-bar">
+        <div class="kpi-fill kpi-fill-threshold-{{ item.status }}" style="width: {{ item.pct }}%;"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Queue Tables</h2>
+    <p>Detailed rows by queue. Jump to a table and expand only what you need.</p>
+  </div>
+  <nav class="table-index" aria-label="Queue table index">
+    {% for name, rows in tables.items() %}
+    <a href="#tbl-{{ name|replace('_', '-') }}">
+      {{ name.replace('_', ' ').title() }}
+      <span>{{ rows|length }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+</section>
+
+{% for name, rows in tables.items() %}
+<section class="panel" id="tbl-{{ name|replace('_', '-') }}">
+  <details class="table-collapsible" {% if loop.first %}open{% endif %} data-table-filter>
+  <summary class="table-summary">
+    <span class="table-summary-title">{{ name.replace('_', ' ').title() }}</span>
+    <span class="badge table-summary-count">{{ rows|length }} rows</span>
+  </summary>
+  {% if rows %}
+  {% set ns = namespace(visible_keys=[]) %}
+  {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
+  {% if name == 'waiting_for_meas' %}
+    {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
+  {% endif %}
+  {% for key in rows[0].keys() %}
+    {% if key not in hidden_helper_keys %}
+      {% set _ = ns.visible_keys.append(key) %}
+    {% endif %}
+  {% endfor %}
+  <div class="table-tools">
+    <label class="table-tool-field">
+      Search
+      <input type="search" placeholder="Type to filter rows" data-table-search />
+    </label>
+      <label class="table-tool-field">
+        Column
+        <select data-table-column>
+          <option value="-1">All Columns</option>
+        {% for key in ns.visible_keys %}
+        <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
+        {% endfor %}
+        </select>
+    </label>
+    <button type="button" class="table-tool-clear" data-table-clear>Clear</button>
+    <p class="table-tool-status"><span data-table-visible>{{ rows|length }}</span> / <span data-table-total>{{ rows|length }}</span> shown</p>
+  </div>
+  <div class="table-wrap table-wrap-dashboard">
+    <table>
+      <thead>
+        <tr>
+          {% for key in ns.visible_keys %}
+          <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for key in ns.visible_keys %}
+          {% set key_lower = key|string|lower %}
+          {% set value = row.get(key) %}
+          {% set sample_nr_value = row.get("sample_nr") %}
+          {% set prep_nr_value = row.get("prep_nr") %}
+          {% set target_nr_value = row.get("target_nr") %}
+          {% set project_nr_value = row.get("project_nr") %}
+          {% set user_nr_value = row.get("user_nr") %}
+          {% set display_value = format_table_cell_value(key, value) %}
+          <td>
+            {% if key_lower == "sample_nr" and sample_nr_value is not none %}
+            <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
+            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% elif key_lower == "target_id" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% elif key_lower == "project" and project_nr_value is not none %}
+            <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% elif key_lower == "last_name" and user_nr_value is not none %}
+            <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+            {% else %}
+            {{ display_value }}
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+  {% else %}
+  <p class="table-empty">No rows.</p>
+  {% endif %}
+  </details>
+</section>
+{% endfor %}
+{% endblock %}

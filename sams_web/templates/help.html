@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Help Center</h2>
+    <p>Reference for key navigation and input shortcuts in SAMS Web.</p>
+  </div>
+
+  <div class="card">
+    <h3>Magic Nav</h3>
+    <p>
+      Magic Nav is the quick jump field in the top bar. Enter an identifier and press <strong>Open</strong> to navigate
+      directly to the related detail page.
+    </p>
+    <p>Magic commands start with <code>/</code> (for example <code>/prep</code>).</p>
+    <ul>
+      {% for rule in magic_nav_rules %}
+      <li><strong>{{ rule.example }}</strong>: {{ rule.description }}</li>
+      {% endfor %}
+      <li><strong>unknown pattern</strong>: patch shows <code>unknown ID</code> and invalid IDs show inline error feedback.</li>
+      <li><strong>validation</strong>: if a matching record is not found, navigation is blocked and an inline message is shown.</li>
+    </ul>
+    <p class="muted">
+      This section is generated from the current Magic Nav routing rules, so it stays aligned when prefixes are added or changed.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Command Palette Shortcut</h3>
+    <p>
+      Use <kbd>Command</kbd> + <kbd>K</kbd> on macOS (or <kbd>Ctrl</kbd> + <kbd>K</kbd> on Windows) to open the
+      command palette from anywhere in the app.
+    </p>
+    <ul>
+      <li><strong>Type to search</strong>: filters available navigation targets and actions shown in the main navigation area.</li>
+      <li><strong>Arrow keys</strong>: move through the suggestions.</li>
+      <li><strong>Enter</strong>: open the selected item.</li>
+      <li><strong>Escape</strong>: close the command palette.</li>
+      <li><strong>Cmd/Ctrl + K again</strong>: toggles the command palette closed.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

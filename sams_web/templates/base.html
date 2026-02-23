@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title or 'SAMS Web' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    {% set active_module = resolve_active_module(request) %}
+
+    <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="topbar-row">
+        <a class="brand" href="/" data-command-link data-command-label="Dashboard">
+          <span class="brand-mark">SAMS</span>
+          <div>
+            <h1>SAMS Web</h1>
+            <p>{{ app_subtitle or 'CEZA C14 Laboratory Information System' }}</p>
+          </div>
+        </a>
+        <div class="topbar-tools">
+          {% set magic_error = request.query_params.get('magic_error') %}
+          {% set magic_value = request.query_params.get('magic_identifier', '') %}
+          <div class="magic-identifier-shell">
+            <form
+              class="magic-identifier-form{% if magic_error %} has-error{% endif %}"
+              method="get"
+              action="/magic/open"
+              data-magic-prefix-labels='{{ magic_identifier_prefix_labels | tojson }}'
+              data-magic-sample-label="{{ magic_identifier_sample_label }}"
+              data-magic-command-labels='{{ magic_identifier_command_labels | tojson }}'
+              data-magic-error="{{ magic_error or '' }}"
+            >
+              <label for="magic-identifier-input" class="magic-identifier-label">Magic Nav</label>
+              <input
+                id="magic-identifier-input"
+                name="magic_identifier"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                placeholder="123, pr123, usr210, /prep"
+                aria-label="Magic Nav"
+                value="{{ magic_value }}"
+              />
+              <span class="magic-identifier-patch" data-magic-identifier-patch hidden></span>
+              <input type="hidden" name="next" value="{{ request.url.path }}" />
+              <button type="submit">Open</button>
+            </form>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button
+            type="button"
+            class="command-palette-trigger"
+            data-command-palette-open
+            title="Quick command (Ctrl/Cmd+K)"
+            aria-label="Open quick command palette"
+          >
+            <span aria-hidden="true">⌘K</span>
+          </button>
+        </div>
+      </div>
+
+      <nav class="main-nav" aria-label="Primary modules">
+        {% for item in main_navigation_items %}
+        <a
+          href="{{ item.href }}"
+          {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
+          class="{% if active_module == item.module %}is-active{% endif %}"
+          data-command-link
+          data-command-label="{{ item.label }}"
+        >{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+
+      {% set active_sub_items = sub_navigation_items.get(active_module, ()) %}
+      {% if active_sub_items %}
+      <nav class="sub-nav" aria-label="{{ active_module|replace('_', ' ') }}">
+        {% for item in active_sub_items %}
+        <a
+          href="{{ item.href }}"
+          {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
+          class="{% if is_subnav_active(request, active_module, item.key) %}is-active{% endif %}"
+          data-command-link
+          data-command-label="{{ item.label }}"
+        >{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+      {% endif %}
+    </header>
+
+    <main class="page">
+      <section class="context-strip" data-context-strip>
+        <nav class="breadcrumbs" aria-label="Breadcrumb" data-breadcrumbs></nav>
+        <div class="quick-access">
+          <button type="button" class="quick-pin-toggle" data-pin-current title="Pin current page" aria-label="Pin current page">
+            <span aria-hidden="true">☆</span>
+            <span class="sr-only">Pin current page</span>
+          </button>
+          <div class="quick-access-group">
+            <span class="quick-access-label">Pinned</span>
+            <div class="quick-access-links" data-pinned-links></div>
+          </div>
+          <div class="quick-access-group">
+            <span class="quick-access-label">Recent</span>
+            <div class="quick-access-links" data-recent-links></div>
+          </div>
+        </div>
+      </section>
+      {% block content %}{% endblock %}
+    </main>
+
+    <section class="command-palette" data-command-palette hidden>
+      <button
+        type="button"
+        class="command-palette-backdrop"
+        data-command-palette-close
+        aria-label="Close command palette"
+      ></button>
+      <div class="command-palette-panel" role="dialog" aria-modal="true" aria-label="Quick command palette">
+        <div class="command-palette-head">
+          <input
+            type="text"
+            placeholder="Type command, page, sample #, pr123, usr210"
+            aria-label="Command search"
+            data-command-palette-input
+          />
+          <button type="button" class="command-palette-close" data-command-palette-close>Esc</button>
+        </div>
+        <p class="command-palette-hint">Use Ctrl/Cmd+K to open quickly.</p>
+        <ul class="command-palette-list" data-command-palette-list></ul>
+      </div>
+    </section>
+    <script src="/static/js/history-back.js"></script>
+    <script src="/static/js/table-tools.js"></script>
+    <script src="/static/js/magic-nav-ui.js"></script>
+    <script src="/static/js/detail-edit-mode.js"></script>
+    <script src="/static/js/preparation-bench.js"></script>
+    <script src="/static/js/graphitization-bench.js"></script>
+    <script src="/static/js/navigation-ui.js"></script>
+    <script id="navigation-command-entries" type="application/json">{{ navigation_command_entries | tojson }}</script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

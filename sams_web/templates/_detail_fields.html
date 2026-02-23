@@ -1,0 +1,184 @@
+{% macro render_detail_field_row(
+  row,
+  entity='record',
+  row_class='',
+  form_id='',
+  read_only_fields=(),
+  editor_value_overrides=None,
+  select_options_by_field=None,
+  required_fields=(),
+  field_errors=None
+) -%}
+{% set kind = row.kind or 'text' %}
+{% set row_classes = 'detail-field-row' %}
+{% if row_class %}
+{% set row_classes = row_classes ~ ' ' ~ row_class %}
+{% endif %}
+{% set field_name = entity ~ '__' ~ row.key %}
+{% set is_read_only = false %}
+{% if row.read_only %}
+{% set is_read_only = true %}
+{% endif %}
+{% if row.key in read_only_fields %}
+{% set is_read_only = true %}
+{% endif %}
+{% if is_read_only %}
+{% set row_classes = row_classes ~ ' is-read-only' %}
+{% endif %}
+{% set editor_value = row.raw_value if row.raw_value is defined else row.value %}
+{% if editor_value_overrides is not none and field_name in editor_value_overrides %}
+{% set editor_value = editor_value_overrides[field_name] %}
+{% endif %}
+{% set date_input_value = editor_value %}
+{% if kind == 'date' and editor_value is not none and editor_value.strftime is defined %}
+{% set date_input_value = editor_value.strftime('%Y-%m-%d') %}
+{% endif %}
+{% set select_options = () %}
+{% if select_options_by_field is not none and field_name in select_options_by_field %}
+{% set select_options = select_options_by_field[field_name] %}
+{% endif %}
+{% set field_error = none %}
+{% if field_errors is not none and field_name in field_errors %}
+{% set field_error = field_errors[field_name] %}
+{% endif %}
+{% set is_required = field_name in required_fields %}
+{% set action_url = row.action_url if row.action_url is defined else none %}
+{% set action_title = row.action_title if row.action_title is defined else 'Open related view' %}
+{% if row.divider_before %}
+<div class="detail-row-divider" aria-hidden="true"></div>
+{% endif %}
+<div
+  class="{{ row_classes }}"
+  data-detail-entity="{{ entity }}"
+  data-field-key="{{ row.key }}"
+  data-field-kind="{{ kind }}"
+>
+  <dt>{{ row.label }}</dt>
+  <dd>
+    <div class="detail-field-shell{% if field_error %} has-error{% endif %}">
+      <div
+        class="detail-field-display{% if kind == 'multiline' %} is-multiline{% endif %}"
+        data-field-display
+      >
+        {% if row.value is none %}
+        <span class="detail-empty">Not set</span>
+        {% elif kind == "email" %}
+        <a href="mailto:{{ row.value }}">{{ row.value }}</a>
+        {% elif kind == "url" %}
+        {% set url = row.value %}
+        {% if "://" not in url %}
+        {% set url = "https://" ~ row.value %}
+        {% endif %}
+        <a href="{{ url }}" target="_blank" rel="noreferrer">{{ row.value }}</a>
+        {% elif kind == "boolean" %}
+        <span class="detail-boolean-check" title="{{ row.value }}">
+          <input
+            class="detail-boolean-checkbox"
+            type="checkbox"
+            disabled
+            aria-label="{{ row.label }}"
+            {% if row.value == 'Yes' %}checked{% endif %}
+          />
+        </span>
+        {% else %}
+        {{ row.value }}
+        {% endif %}
+        {% if action_url %}
+        <a
+          href="{{ action_url }}"
+          class="detail-field-action-link"
+          title="{{ action_title }}"
+          aria-label="{{ action_title }}"
+        >&#128269;</a>
+        {% endif %}
+      </div>
+      {% if not is_read_only %}
+      <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+        {% if select_options %}
+        <select
+          name="{{ field_name }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        >
+          <option value="">{{ "Select value" if is_required else "Not set" }}</option>
+          {% for option_value in select_options %}
+          {% set option_text = option_value|string %}
+          <option value="{{ option_text }}" {% if editor_value is not none and option_text == editor_value|string %}selected{% endif %}>{{ option_text }}</option>
+          {% endfor %}
+        </select>
+        {% elif kind == "multiline" %}
+        <textarea
+          name="{{ field_name }}"
+          rows="3"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        >{{ editor_value if editor_value is not none else '' }}</textarea>
+        {% elif kind == "boolean" %}
+        <select
+          name="{{ field_name }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        >
+          <option value="" {% if editor_value is none or editor_value|string == '' %}selected{% endif %}>Not set</option>
+          <option value="1" {% if editor_value is not none and editor_value|string == '1' %}selected{% endif %}>Yes</option>
+          <option value="0" {% if editor_value is not none and editor_value|string == '0' %}selected{% endif %}>No</option>
+        </select>
+        {% elif kind == "date" %}
+        <input
+          type="date"
+          name="{{ field_name }}"
+          value="{{ date_input_value if date_input_value is not none else '' }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        />
+        {% elif kind == "email" %}
+        <input
+          type="email"
+          name="{{ field_name }}"
+          value="{{ editor_value if editor_value is not none else '' }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        />
+        {% elif kind == "url" %}
+        <input
+          type="url"
+          name="{{ field_name }}"
+          value="{{ editor_value if editor_value is not none else '' }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        />
+        {% else %}
+        <input
+          type="text"
+          name="{{ field_name }}"
+          value="{{ editor_value if editor_value is not none else '' }}"
+          {% if form_id %}form="{{ form_id }}"{% endif %}
+          {% if is_required %}required{% endif %}
+          {% if field_error %}aria-invalid="true"{% endif %}
+          disabled
+        />
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if field_error %}
+      <p class="detail-field-error error">{{ field_error }}</p>
+      {% endif %}
+    </div>
+  </dd>
+</div>
+{% if row.divider_after %}
+<div class="detail-row-divider" aria-hidden="true"></div>
+{% endif %}
+{%- endmacro %}

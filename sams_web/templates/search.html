@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Global Search</h2>
+    <p>Search across users, projects, samples, preparations, and targets using flexible text matching.</p>
+  </div>
+
+  <form method="get" action="/search" class="inline-form">
+    {% if global_mode %}
+    <input type="hidden" name="global" value="1" />
+    {% endif %}
+    <select name="context">
+      {% for c in contexts %}
+      <option value="{{ c }}" {% if c == context %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="phrase" value="{{ phrase }}" placeholder="search phrase" required />
+    <button type="submit">Search</button>
+  </form>
+
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+
+  {% if results %}
+  <p>{{ results|length }} result(s)</p>
+  <section data-table-filter>
+    <div class="table-wrap table-wrap-horizontal">
+      <table class="search-results-table">
+        <thead>
+          <tr>
+            {% for key in results[0].keys() %}
+            <th>{{ format_table_header_label(key) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results %}
+          <tr>
+            {% for key, value in row.items() %}
+            {% set key_lower = key|string|lower %}
+            {% set sample_nr_value = row.get("sample_nr") %}
+            {% set project_nr_value = row.get("project_nr") %}
+            {% set user_nr_value = row.get("user_nr") %}
+            {% set prep_nr_value = row.get("prep_nr") %}
+            {% set target_nr_value = row.get("target_nr") %}
+            {% set display_value = format_table_cell_value(key, value) %}
+            <td>
+              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}">{{ display_value }}</a>
+              {% elif key_lower in ("project_nr", "project") and project_nr_value is not none %}
+              <a href="/projects/{{ project_nr_value }}">{{ display_value }}</a>
+              {% elif key_lower in ("user_nr", "last_name") and user_nr_value is not none %}
+              <a href="/users/{{ user_nr_value }}">{{ display_value }}</a>
+              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}">{{ display_value }}</a>
+              {% elif key_lower in ("target_nr", "c14_age") and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}">{{ display_value }}</a>
+              {% else %}
+              {{ display_value }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% elif phrase or auto_load %}
+  <p>No results.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Setup</h2>
+    <p>Configuration center for system-level options and future setup modules.</p>
+  </div>
+  <p class="setup-note">
+    Storage file: <code>{{ active_section.storage_file }}</code>
+  </p>
+
+  {% if saved %}
+  <div class="result-box">Setup values were saved.</div>
+  {% endif %}
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+
+  <div class="setup-layout">
+    <aside class="setup-nav" aria-label="Setup sections">
+      {% for section in sections %}
+      <a
+        href="/setup?section={{ section.key }}"
+        class="setup-link {% if section.key == active_section.key %}is-active{% endif %}"
+      >
+        <strong>{{ section.title }}</strong>
+        <span>{{ section.status|title }}</span>
+      </a>
+      {% endfor %}
+    </aside>
+
+    <div class="setup-content">
+      <h3>{{ active_section.title }}</h3>
+      <p class="setup-note">{{ active_section.description }}</p>
+      <p class="setup-note">
+        Storage section key: <code>{{ active_section.storage_section }}</code>
+      </p>
+
+      {% if active_section.kind == "threshold_matrix" %}
+      <form method="post" action="{{ active_section.form_action }}">
+        <p class="setup-note">
+          Card and mini-bar colors use this logic: red if count is below red threshold, yellow if within yellow range,
+          green if above green threshold, otherwise neutral.
+        </p>
+
+        <section data-table-filter data-table-search-placeholder="Filter standards by name or value">
+          <div class="table-wrap">
+            <table class="setup-table">
+              <thead>
+                <tr>
+                  <th>Standard</th>
+                  {% for field, title in threshold_fields %}
+                  <th>{{ title }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in threshold_rows %}
+                <tr>
+                  <td>{{ row.label }}</td>
+                  {% for field, _ in threshold_fields %}
+                  <td>
+                    <input type="number" min="0" step="1" name="{{ row.key }}_{{ field }}" value="{{ row[field] }}" required />
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
+      {% else %}
+      <article class="setup-placeholder">
+        <h4>Section Prepared</h4>
+        <p>
+          This section is already registered in the setup system and can persist structured values. A dedicated editor
+          UI can be added here when you define the exact fields.
+        </p>
+        <pre>{{ active_section.data }}</pre>
+      </article>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

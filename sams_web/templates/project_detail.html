@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% from "_detail_fields.html" import render_detail_field_row %}
+
+{% block content %}
+<section class="panel" data-edit-scope data-edit-initial-mode="{{ project_edit_initial_mode or 'view' }}">
+  <div class="panel-head">
+    <div class="sample-head-row">
+      <h2>Project {{ project.project_nr }}: {{ project.project or 'Untitled Project' }}</h2>
+      <div class="sample-quick-nav" aria-label="Project navigation">
+        {% if previous_project_nr is not none %}
+        <a
+          href="/projects/{{ previous_project_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Previous project"
+          title="Previous project"
+        >&#x2039;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous project" title="No previous project">&#x2039;</span>
+        {% endif %}
+        <form method="get" action="/projects/{{ project.project_nr }}" class="sample-quick-nav-jump">
+          <label for="project-jump-input" class="sr-only">Project #</label>
+          <input
+            id="project-jump-input"
+            name="jump_project"
+            type="number"
+            min="1"
+            max="{{ max_project_nr if max_project_nr > 0 else 1 }}"
+            step="1"
+            value="{{ project.project_nr }}"
+            aria-label="Jump to project #"
+          />
+          <span class="sample-quick-nav-jump-total">/ {{ max_project_nr if max_project_nr > 0 else project_count }}</span>
+          <button type="submit">Go</button>
+        </form>
+        {% if next_project_nr is not none %}
+        <a
+          href="/projects/{{ next_project_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Next project"
+          title="Next project"
+        >&#x203A;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next project" title="No next project">&#x203A;</span>
+        {% endif %}
+      </div>
+    </div>
+    <p>
+      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
+      {% if user %} | User <a href="/users/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>{% endif %}
+    </p>
+    <p class="page-actions">
+      <a href="/projects" class="nav-back" data-history-back data-fallback="/projects">Back</a>
+    </p>
+    {% if project_saved %}
+    <div class="result-box">Project details were saved.</div>
+    {% endif %}
+    {% if project_save_error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Save failed.</strong>
+      <p>{{ project_save_error }}</p>
+    </div>
+    {% endif %}
+    <div class="detail-edit-toolbar">
+      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+      <button type="submit" class="detail-edit-save" data-edit-save form="{{ project_edit_form_id }}" hidden>Save</button>
+      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+    </div>
+    <form id="{{ project_edit_form_id }}" method="post" action="/projects/{{ project.project_nr }}/save" data-detail-edit-form></form>
+  </div>
+
+  <div class="cards project-summary-cards">
+    <article>
+      <h3>Samples</h3>
+      <p>{{ sample_count }}</p>
+    </article>
+    <article>
+      <h3>In Date</h3>
+      <p>{{ project.in_date or '-' }}</p>
+    </article>
+    <article>
+      <h3>Desired Date</h3>
+      <p>{{ project.desired_date or '-' }}</p>
+    </article>
+    <article>
+      <h3>Out Date</h3>
+      <p>{{ project.out_date or '-' }}</p>
+    </article>
+    <article>
+      <h3>Priority</h3>
+      <p>{{ project.priority if project.priority is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>Status</h3>
+      <p>{{ project.status or 'unknown' }}</p>
+    </article>
+  </div>
+
+  <div class="cards project-comment-cards">
+    <article>
+      <h3>Project Comment</h3>
+      {% set project_comment_error = project_field_errors.get('project__project_comment') %}
+      {% set project_comment_editor_value = project_form_values.get('project__project_comment', project.project_comment or '') %}
+      <div class="detail-field-shell detail-field-shell-card{% if project_comment_error %} has-error{% endif %}" data-detail-entity="project" data-field-key="project_comment" data-field-kind="multiline">
+        <div class="detail-field-display is-multiline" data-field-display>
+          {% if project.project_comment %}
+          {{ project.project_comment }}
+          {% else %}
+          <span class="detail-empty">Not set</span>
+          {% endif %}
+        </div>
+        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
+          <textarea
+            name="project__project_comment"
+            form="{{ project_edit_form_id }}"
+            rows="4"
+            {% if project_comment_error %}aria-invalid="true"{% endif %}
+            disabled
+          >{{ project_comment_editor_value }}</textarea>
+        </div>
+        {% if project_comment_error %}
+        <p class="detail-field-error error">{{ project_comment_error }}</p>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <div class="project-section-grid">
+    {% for section in project_sections %}
+    <article class="project-section-card">
+      <header class="project-section-head">
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.description }}</p>
+      </header>
+      <dl class="project-field-list">
+        {% for row in section.rows %}
+        {{ render_detail_field_row(
+          row,
+          entity='project',
+          row_class='project-field-row',
+          form_id=project_edit_form_id,
+          read_only_fields=project_read_only_fields,
+          editor_value_overrides=project_form_values,
+          select_options_by_field=project_select_options,
+          required_fields=project_required_fields,
+          field_errors=project_field_errors
+        ) }}
+        {% endfor %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+
+  <section data-table-filter id="project-samples">
+    <h3>Samples ({{ samples|length }})</h3>
+    <div class="table-wrap">
+      <table data-project-samples-table>
+        <thead>
+          <tr>
+            <th>Sample #</th>
+            <th>User Label</th>
+            <th>Type</th>
+            <th>Material</th>
+            <th>C14 Age</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sample in samples %}
+          <tr>
+            <td><a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }}</a></td>
+            <td>{{ sample.user_label }}</td>
+            <td>{{ sample.type }}</td>
+            <td>{{ sample.material }}</td>
+            <td>{{ format_c14_integer(sample.c14_age) if sample.c14_age is not none else '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">No samples found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</section>
+{% endblock %}

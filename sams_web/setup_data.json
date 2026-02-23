@@ -1,0 +1,43 @@
+{
+  "import_profiles": {},
+  "lab_defaults": {},
+  "notifications": {},
+  "standard_inventory_thresholds": {
+    "blanks": {
+      "green_above": 8,
+      "red_below": 5,
+      "yellow_max": 8,
+      "yellow_min": 5
+    },
+    "iaea_c6": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "iaea_c7": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "iaea_c8": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "oxas": {
+      "green_above": 14,
+      "red_below": 9,
+      "yellow_max": 14,
+      "yellow_min": 9
+    },
+    "pferde": {
+      "green_above": 3,
+      "red_below": 2,
+      "yellow_max": 3,
+      "yellow_min": 2
+    }
+  }
+}

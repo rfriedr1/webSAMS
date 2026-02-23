@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% from "_detail_fields.html" import render_detail_field_row %}
+
+{% block content %}
+<section class="panel" data-edit-scope data-edit-initial-mode="{{ preparation_edit_initial_mode or 'view' }}">
+  <div class="panel-head">
+    <div class="sample-head-row">
+      <h2>Preparation {{ preparation.prep_nr }} for Sample {{ sample.sample_nr }}</h2>
+      <div class="sample-quick-nav" aria-label="Prep navigation">
+        {% if previous_prep_nr is not none %}
+        <a
+          href="/samples/{{ sample.sample_nr }}/preparations/{{ previous_prep_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Previous prep"
+          title="Previous prep"
+        >&#x2039;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous prep" title="No previous prep">&#x2039;</span>
+        {% endif %}
+        <form method="get" action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}" class="sample-quick-nav-jump">
+          <label for="prep-jump-input" class="sr-only">Prep #</label>
+          <input
+            id="prep-jump-input"
+            name="jump_prep"
+            type="number"
+            min="1"
+            max="{{ max_prep_nr if max_prep_nr > 0 else 1 }}"
+            step="1"
+            value="{{ preparation.prep_nr }}"
+            aria-label="Jump to prep #"
+          />
+          <span class="sample-quick-nav-jump-total">/ {{ max_prep_nr if max_prep_nr > 0 else preparation_count }}</span>
+          <button type="submit">Go</button>
+        </form>
+        {% if next_prep_nr is not none %}
+        <a
+          href="/samples/{{ sample.sample_nr }}/preparations/{{ next_prep_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Next prep"
+          title="Next prep"
+        >&#x203A;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next prep" title="No next prep">&#x203A;</span>
+        {% endif %}
+      </div>
+    </div>
+    <p>
+      Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} - {{ sample.user_label or 'Unnamed Sample' }}</a>
+      {% if project %}
+      | Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
+      {% endif %}
+      {% if user %}
+      | User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+      {% endif %}
+    </p>
+    <p class="page-actions">
+      <a
+        href="/samples/{{ sample.sample_nr }}"
+        class="nav-back"
+        data-history-back
+        data-fallback="/samples/{{ sample.sample_nr }}"
+      >Back to sample</a>
+    </p>
+    {% if preparation_saved %}
+    <div class="result-box">Preparation details were saved.</div>
+    {% endif %}
+    {% if preparation_save_error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Save failed.</strong>
+      <p>{{ preparation_save_error }}</p>
+    </div>
+    {% endif %}
+    <div class="detail-edit-toolbar">
+      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+      <button type="submit" class="detail-edit-save" data-edit-save form="{{ preparation_edit_form_id }}" hidden>Save</button>
+      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+    </div>
+    <form
+      id="{{ preparation_edit_form_id }}"
+      method="post"
+      action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/save"
+      data-detail-edit-form
+    ></form>
+  </div>
+
+  <div class="cards sample-summary-cards">
+    <article>
+      <h3>Batch</h3>
+      <p>{{ preparation.batch or '-' }}</p>
+    </article>
+    <article>
+      <h3>Prep Start</h3>
+      <p>{{ preparation.prep_start or '-' }}</p>
+    </article>
+    <article>
+      <h3>Prep End</h3>
+      <p>{{ preparation.prep_end or '-' }}</p>
+    </article>
+    <article>
+      <h3>Targets</h3>
+      <p>{{ targets_total }}</p>
+    </article>
+  </div>
+
+  <div class="sample-section-grid">
+    {% for section in preparation_sections %}
+    <article class="sample-section-card">
+      <header class="sample-section-head">
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.description }}</p>
+      </header>
+      <dl class="sample-field-list">
+        {% for row in section.rows %}
+        {{ render_detail_field_row(
+          row,
+          entity='preparation',
+          row_class='sample-field-row',
+          form_id=preparation_edit_form_id,
+          read_only_fields=preparation_read_only_fields,
+          editor_value_overrides=preparation_form_values,
+          select_options_by_field=preparation_select_options,
+          required_fields=preparation_required_fields,
+          field_errors=preparation_field_errors
+        ) }}
+        {% endfor %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+
+  <section data-table-filter id="preparation-targets">
+    <h3>Targets in Preparation {{ preparation.prep_nr }} ({{ targets_total }})</h3>
+
+    <div class="table-wrap sample-detail-table-wrap">
+      <table data-preparation-targets-table>
+        <thead>
+          <tr>
+            <th>Target #</th>
+            <th>Target ID</th>
+            <th>Graph Batch</th>
+            <th>Graphitized</th>
+            <th>FM</th>
+            <th>d13C</th>
+            <th>C14 Age</th>
+            <th>C (%)</th>
+            <th>N (%)</th>
+            <th>C/N Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for target in targets %}
+          <tr>
+            <td>
+              <a href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ target.target_nr }}">
+                {{ target.target_nr }}
+              </a>
+            </td>
+            <td>{{ target.target_id or '' }}</td>
+            <td>{{ target.graph_batch or '' }}</td>
+            <td>{{ target.graphitized or '' }}</td>
+            <td>{{ "%.4f"|format(target.fm) if target.fm is not none else '' }}</td>
+            <td>{{ "%.4f"|format(target.dc13) if target.dc13 is not none else '' }}</td>
+            <td>{{ format_c14_integer(target.c14_age) if target.c14_age is not none else '' }}</td>
+            <td>{{ format_table_cell_value('conc_c', target.conc_c) }}</td>
+            <td>{{ format_table_cell_value('conc_n', target.conc_n) }}</td>
+            <td>{{ format_cn_ratio_from_conc(target.conc_c, target.conc_n) or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10">No targets found for this preparation.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

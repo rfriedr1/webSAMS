@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% from "_detail_fields.html" import render_detail_field_row %}
+
+{% block content %}
+<section class="panel user-detail-panel" data-edit-scope data-edit-initial-mode="{{ user_edit_initial_mode or 'view' }}">
+  <div class="panel-head user-detail-head">
+    <div class="sample-head-row">
+      <h2>User {{ user.user_nr }}: {{ user.last_name }}, {{ user.first_name }}</h2>
+      <div class="sample-quick-nav" aria-label="User navigation">
+        {% if previous_user_nr is not none %}
+        <a
+          href="/users/{{ previous_user_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Previous user"
+          title="Previous user"
+        >&#x2039;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous user" title="No previous user">&#x2039;</span>
+        {% endif %}
+        <form method="get" action="/users/{{ user.user_nr }}" class="sample-quick-nav-jump">
+          <label for="user-jump-input" class="sr-only">User #</label>
+          <input
+            id="user-jump-input"
+            name="jump_user"
+            type="number"
+            min="1"
+            max="{{ max_user_nr if max_user_nr > 0 else 1 }}"
+            step="1"
+            value="{{ user.user_nr }}"
+            aria-label="Jump to user #"
+          />
+          <span class="sample-quick-nav-jump-total">/ {{ max_user_nr if max_user_nr > 0 else user_count }}</span>
+          <button type="submit">Go</button>
+        </form>
+        {% if next_user_nr is not none %}
+        <a
+          href="/users/{{ next_user_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Next user"
+          title="Next user"
+        >&#x203A;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next user" title="No next user">&#x203A;</span>
+        {% endif %}
+      </div>
+    </div>
+    <p class="user-detail-subtitle">
+      {% if user.organisation %}{{ user.organisation }}{% else %}No organisation{% endif %}
+      {% if user.institute %} | {{ user.institute }}{% endif %}
+    </p>
+    <p class="page-actions">
+      <a href="/users" class="nav-back" data-history-back data-fallback="/users">Back</a>
+    </p>
+    {% if user_saved %}
+    <div class="result-box">User details were saved.</div>
+    {% endif %}
+    {% if user_save_error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Save failed.</strong>
+      <p>{{ user_save_error }}</p>
+    </div>
+    {% endif %}
+    <div class="detail-edit-toolbar">
+      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+      <button type="submit" class="detail-edit-save" data-edit-save form="{{ user_edit_form_id }}" hidden>Save</button>
+      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+    </div>
+    <form id="{{ user_edit_form_id }}" method="post" action="/users/{{ user.user_nr }}/save" data-detail-edit-form></form>
+  </div>
+
+  <div class="user-section-grid">
+    {% for section in user_sections %}
+    <article class="user-section-card">
+      <header class="user-section-head">
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.description }}</p>
+      </header>
+
+      <dl class="user-field-list">
+        {% for row in section.rows %}
+        {{ render_detail_field_row(
+          row,
+          entity='user',
+          row_class='user-field-row',
+          form_id=user_edit_form_id,
+          read_only_fields=user_read_only_fields,
+          editor_value_overrides=user_form_values,
+          select_options_by_field=user_select_options,
+          required_fields=user_required_fields,
+          field_errors=user_field_errors
+        ) }}
+        {% endfor %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+
+  <section data-table-filter>
+    <h3>Projects</h3>
+    {% if projects %}
+    <div class="table-tools">
+      <label class="table-tool-field">
+        Search
+        <input type="search" placeholder="Type to filter projects" data-table-search />
+      </label>
+      <label class="table-tool-field">
+        Column
+        <select data-table-column>
+          <option value="-1">All columns</option>
+          <option value="0">Project #</option>
+          <option value="1">Name</option>
+          <option value="2">Status</option>
+          <option value="3">In Date</option>
+          <option value="4">Out Date</option>
+        </select>
+      </label>
+      <button type="button" class="table-tool-clear" data-table-clear>Clear</button>
+      <p class="table-tool-status"><span data-table-visible>{{ projects|length }}</span> / <span data-table-total>{{ projects|length }}</span> shown</p>
+    </div>
+
+    <div class="table-wrap user-projects-table-wrap">
+      <table data-user-projects-table>
+        <thead>
+          <tr>
+            <th class="table-sortable" title="Click to sort">Project #</th>
+            <th class="table-sortable" title="Click to sort">Name</th>
+            <th class="table-sortable" title="Click to sort">Status</th>
+            <th class="table-sortable" title="Click to sort">In Date</th>
+            <th class="table-sortable" title="Click to sort">Out Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for project in projects %}
+          <tr>
+            <td><a href="/projects/{{ project.project_nr }}">{{ project.project_nr }}</a></td>
+            <td><a href="/projects/{{ project.project_nr }}">{{ project.project }}</a></td>
+            <td>
+              {% set status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+              <span class="badge status-pill status-{{ status_class }}">{{ project.status or 'unknown' }}</span>
+            </td>
+            <td>{{ project.in_date }}</td>
+            <td>{{ project.out_date or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">No projects linked to this user.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching projects.</p>
+    {% else %}
+    <p class="table-empty">No projects linked to this user.</p>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

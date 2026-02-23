@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Projects</h2>
+    <p>Projects in progress first, with full project inventory available on demand.</p>
+  </div>
+
+  <form method="get" action="/projects" class="inline-form">
+    <label>
+      Days window
+      <input type="number" name="days_window" min="1" max="3650" step="1" value="{{ days_window }}" />
+    </label>
+    <button type="submit">Refresh</button>
+  </form>
+
+  {% if projects_in_progress_error %}
+  <div class="inline-notice inline-notice-error">
+    <strong>Projects in progress could not be loaded.</strong>
+    <p>{{ projects_in_progress_error }}</p>
+    {% if projects_in_progress_error_trace %}
+    <details class="debug-trace">
+      <summary>Show traceback</summary>
+      <pre>{{ projects_in_progress_error_trace }}</pre>
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <section data-table-filter>
+    <h3>Projects in Progress ({{ projects_in_progress|length }})</h3>
+    <p class="table-empty">Window: last {{ days_window }} day{% if days_window != 1 %}s{% endif %}.</p>
+    <div class="table-wrap">
+      <table data-projects-in-progress-table>
+        <colgroup>
+          <col style="width: 34%;" />
+          <col style="width: 10%;" />
+          <col style="width: 9%;" />
+          <col style="width: 9%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.33%;" />
+          <col style="width: 6.35%;" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th title="Last Name">Last</th>
+            <th title="In Date">In</th>
+            <th title="Desired Date">Due</th>
+            <th title="Samples">Smp</th>
+            <th title="Discarded Preparations">dPrep</th>
+            <th title="Preparations Done">Prep</th>
+            <th title="Discarded Targets">dTgt</th>
+            <th title="Graphitized Targets">Graph</th>
+            <th title="In Magazine">Mag</th>
+            <th title="Measured">Meas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in projects_in_progress %}
+          {% set measured_count = (row.get('measured', 0) or 0)|int %}
+          <tr{% if measured_count > 0 %} class="projects-progress-row-measured"{% endif %}>
+            <td><a class="table-link" href="/projects/{{ row.get('project_nr') }}">{{ row.get('project') or '' }}</a></td>
+            <td><a class="table-link" href="/users/{{ row.get('user_nr') }}">{{ row.get('last_name') or '' }}</a></td>
+            <td>{{ row.get('in_date') or '' }}</td>
+            <td>{{ row.get('desired_date') or '' }}</td>
+            <td>{{ row.get('samples', 0) }}</td>
+            <td>{{ row.get('discPrep', 0) }}</td>
+            <td>{{ row.get('prepDone', 0) }}</td>
+            <td>{{ row.get('discTarget', 0) }}</td>
+            <td>{{ row.get('graphDone', 0) }}</td>
+            <td>{{ row.get('inMagazine', 0) }}</td>
+            <td>{{ row.get('measured', 0) }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="11">No projects in progress found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="table-collapsible projects-all-collapsible" data-table-filter>
+    <summary class="table-summary">
+      <span class="table-summary-title">All Projects</span>
+      <span class="badge table-summary-count">{{ projects|length }} rows</span>
+    </summary>
+
+    {% if error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Projects could not be loaded.</strong>
+      <p>{{ error }}</p>
+      {% if error_trace %}
+      <details class="debug-trace">
+        <summary>Show traceback</summary>
+        <pre>{{ error_trace }}</pre>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="table-wrap">
+      <table data-projects-table>
+        <thead>
+          <tr>
+            <th>User #</th>
+            <th>Last Name</th>
+            <th>First Name</th>
+            <th>Project #</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>In Date</th>
+            <th>Desired</th>
+            <th>Out Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for project in projects %}
+          <tr>
+            <td>
+              {% if project.user_nr %}
+              <a class="table-link" href="/users/{{ project.user_nr }}">{{ project.user_nr }}</a>
+              {% endif %}
+            </td>
+            <td>
+              {% if project.user and project.user.user_nr and project.user.last_name %}
+              <a class="table-link" href="/users/{{ project.user.user_nr }}">{{ project.user.last_name }}</a>
+              {% elif project.user and project.user.last_name %}
+              {{ project.user.last_name }}
+              {% endif %}
+            </td>
+            <td>{{ project.user.first_name if project.user and project.user.first_name else '' }}</td>
+            <td><a class="table-link" href="/projects/{{ project.project_nr }}">{{ project.project_nr }}</a></td>
+            <td><a class="table-link" href="/projects/{{ project.project_nr }}">{{ project.project or '' }}</a></td>
+            <td>
+              {% set status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+              <span class="badge status-pill status-{{ status_class }}">{{ project.status or 'unknown' }}</span>
+            </td>
+            <td>{{ project.in_date or '' }}</td>
+            <td>{{ project.desired_date or '' }}</td>
+            <td>{{ project.out_date or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9">No projects found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% from "_detail_fields.html" import render_detail_field_row %}
+
+{% block content %}
+<section class="panel" data-edit-scope data-edit-initial-mode="{{ target_edit_initial_mode or 'view' }}">
+  {% set target_back_url = '/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr %}
+  <div class="panel-head">
+    <div class="sample-head-row">
+      <h2>Target {{ target.target_nr }} (Prep {{ target.prep_nr }}, Sample {{ target.sample_nr }})</h2>
+      <div class="sample-quick-nav" aria-label="Target navigation">
+        {% if previous_target_nr %}
+        <a
+          href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ previous_target_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Previous target"
+          title="Previous target"
+        >&#x2039;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous target" title="No previous target">&#x2039;</span>
+        {% endif %}
+        <form method="get" action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ target.target_nr }}" class="sample-quick-nav-jump">
+          <label for="target-jump-input" class="sr-only">Target #</label>
+          <input
+            id="target-jump-input"
+            name="jump_target"
+            type="number"
+            min="1"
+            max="{{ max_target_nr if max_target_nr > 0 else 1 }}"
+            step="1"
+            value="{{ target.target_nr }}"
+            aria-label="Jump to target #"
+          />
+          <span class="sample-quick-nav-jump-total">/ {{ max_target_nr if max_target_nr > 0 else target_count }}</span>
+          <button type="submit">Go</button>
+        </form>
+        {% if next_target_nr %}
+        <a
+          href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ next_target_nr }}"
+          class="sample-quick-nav-link sample-quick-nav-arrow"
+          aria-label="Next target"
+          title="Next target"
+        >&#x203A;</a>
+        {% else %}
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next target" title="No next target">&#x203A;</span>
+        {% endif %}
+      </div>
+    </div>
+    <p>
+      Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} - {{ sample.user_label or 'Unnamed Sample' }}</a>
+      | Preparation <a href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}">{{ preparation.prep_nr }}</a>
+      {% if project %}
+      | Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
+      {% endif %}
+      {% if user %}
+      | User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+      {% endif %}
+    </p>
+    <p class="page-actions">
+      <a
+        href="{{ target_back_url }}"
+        class="nav-back"
+        data-history-back
+        data-fallback="{{ target_back_url }}"
+      >Back to preparation</a>
+    </p>
+    {% if target_saved %}
+    <div class="result-box">Target details were saved.</div>
+    {% endif %}
+    {% if target_save_error %}
+    <div class="inline-notice inline-notice-error">
+      <strong>Save failed.</strong>
+      <p>{{ target_save_error }}</p>
+    </div>
+    {% endif %}
+    <div class="detail-edit-toolbar">
+      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+      <button type="submit" class="detail-edit-save" data-edit-save form="{{ target_edit_form_id }}" hidden>Save</button>
+      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+    </div>
+    <form
+      id="{{ target_edit_form_id }}"
+      method="post"
+      action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ target.target_nr }}/save"
+      data-detail-edit-form
+    ></form>
+  </div>
+
+  <div class="cards sample-summary-cards">
+    <article>
+      <h3>Graph Batch</h3>
+      <p>{{ target.graph_batch or '-' }}</p>
+    </article>
+    <article>
+      <h3>Graphitized</h3>
+      <p>{{ target.graphitized or '-' }}</p>
+    </article>
+    <article>
+      <h3>C14 Age</h3>
+      <p>{{ target_c14_age_display if target_c14_age_display is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>C14 Sigma</h3>
+      <p>{{ target_c14_age_sig_display if target_c14_age_sig_display is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>FM</h3>
+      <p>{{ target_fm_display if target_fm_display is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>FM Sigma</h3>
+      <p>{{ target_fm_sig_display if target_fm_sig_display is not none else '-' }}</p>
+    </article>
+    <article>
+      <h3>d13C</h3>
+      <p>{{ target_dc13_display if target_dc13_display is not none else '-' }}</p>
+    </article>
+  </div>
+
+  <div class="sample-section-grid">
+    {% for section in target_sections %}
+    <article class="sample-section-card">
+      <header class="sample-section-head">
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.description }}</p>
+      </header>
+      <dl class="sample-field-list">
+        {% for row in section.rows %}
+        {{ render_detail_field_row(
+          row,
+          entity='target',
+          row_class='sample-field-row',
+          form_id=target_edit_form_id,
+          read_only_fields=target_read_only_fields,
+          editor_value_overrides=target_form_values,
+          select_options_by_field=target_select_options,
+          required_fields=target_required_fields,
+          field_errors=target_field_errors
+        ) }}
+        {% endfor %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
