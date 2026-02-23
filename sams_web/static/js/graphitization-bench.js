@@ -19,6 +19,56 @@
     return `${yy}${mm}${dd}`;
   };
 
+  const installBenchDirtyMarkers = (form) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return { refresh: () => {} };
+    }
+    const controls = Array.from(form.querySelectorAll("input, select, textarea")).filter((control) => {
+      if (!(control instanceof HTMLElement)) {
+        return false;
+      }
+      if (control instanceof HTMLInputElement && control.type === "hidden") {
+        return false;
+      }
+      if ("disabled" in control && control.disabled) {
+        return false;
+      }
+      return true;
+    });
+
+    const readCurrent = (control) => {
+      if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
+        return control.checked ? "1" : "0";
+      }
+      return "value" in control ? String(control.value ?? "") : "";
+    };
+
+    const wrapperFor = (control) => control.closest(".prep-bench-field, .prep-bench-checkbox-row");
+
+    controls.forEach((control) => {
+      control.dataset.benchInitialValue = readCurrent(control);
+    });
+
+    const refresh = () => {
+      controls.forEach((control) => {
+        const wrapper = wrapperFor(control);
+        if (!(wrapper instanceof HTMLElement)) {
+          return;
+        }
+        const dirty = (control.dataset.benchInitialValue || "") !== readCurrent(control);
+        wrapper.classList.toggle("is-dirty", dirty);
+      });
+    };
+
+    controls.forEach((control) => {
+      const handler = () => refresh();
+      control.addEventListener("input", handler);
+      control.addEventListener("change", handler);
+    });
+
+    return { refresh };
+  };
+
   installers.installGraphitizationBench = () => {
     const benches = document.querySelectorAll("[data-graph-bench]");
     benches.forEach((bench) => {
@@ -49,6 +99,7 @@
 
       const targetForm = bench.querySelector("[data-graph-bench-target-form]");
       if (targetForm instanceof HTMLFormElement) {
+        const dirtyMarkers = installBenchDirtyMarkers(targetForm);
         const prepStorage = targetForm.querySelector("[data-graph-bench-prep-storage]");
         const prepArchived = targetForm.querySelector("[data-graph-bench-prep-archived]");
 
@@ -60,8 +111,14 @@
         };
 
         if (prepStorage instanceof HTMLInputElement) {
-          prepStorage.addEventListener("input", syncPrepArchived);
-          prepStorage.addEventListener("change", syncPrepArchived);
+          prepStorage.addEventListener("input", () => {
+            syncPrepArchived();
+            dirtyMarkers.refresh();
+          });
+          prepStorage.addEventListener("change", () => {
+            syncPrepArchived();
+            dirtyMarkers.refresh();
+          });
         }
 
         targetForm.addEventListener("keydown", (event) => {
@@ -99,10 +156,12 @@
         targetForm.addEventListener("reset", () => {
           window.setTimeout(() => {
             syncPrepArchived();
+            dirtyMarkers.refresh();
           }, 0);
         });
 
         syncPrepArchived();
+        dirtyMarkers.refresh();
       }
 
       const batchForm = bench.querySelector("[data-graph-bench-batch-form]");
@@ -120,6 +179,8 @@
       const emptyRow = batchForm.querySelector("[data-graph-batch-empty-row]");
       const targetsJsonField = batchForm.querySelector("[data-graph-batch-targets-json]");
       const clientError = batchForm.querySelector("[data-graph-batch-client-error]");
+      const batchTargetsCard = batchForm.querySelector("[data-graph-batch-targets-card]");
+      const batchDirtyMarkers = installBenchDirtyMarkers(batchForm);
 
       let stagedTargets = [];
       let batchNameDirty = false;
@@ -148,6 +209,9 @@
         }
         if (countBadge instanceof HTMLElement) {
           countBadge.textContent = String(stagedTargets.length);
+        }
+        if (batchTargetsCard instanceof HTMLElement) {
+          batchTargetsCard.classList.toggle("is-dirty", stagedTargets.length > 0);
         }
       };
 
@@ -324,6 +388,7 @@
           );
       }
       renderStagedTargets();
+      batchDirtyMarkers.refresh();
 
       bench.dataset.graphBenchInstalled = "true";
     });

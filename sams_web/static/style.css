@@ -696,6 +696,7 @@ button[name="action"][value="preview"] {
 }
 
 .prep-bench-field {
+  position: relative;
   display: grid;
   gap: 0.26rem;
   align-content: start;
@@ -730,6 +731,13 @@ button[name="action"][value="preview"] {
 .prep-bench-field-error {
   margin: 0;
   color: #a13a44;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.prep-bench-field-warning {
+  margin: 0.08rem 0 0;
+  color: var(--danger);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -815,6 +823,7 @@ button[name="action"][value="preview"] {
 }
 
 .prep-bench-checkbox-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.58rem;
@@ -825,6 +834,45 @@ button[name="action"][value="preview"] {
   padding: 0.45rem 0.65rem;
   color: #203f4d;
   font-weight: 700;
+}
+
+.prep-bench-field.is-dirty::after,
+.prep-bench-checkbox-row.is-dirty::after {
+  content: "";
+  position: absolute;
+  top: 0.32rem;
+  right: 0.34rem;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: #2f7f9a;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.prep-bench-field.is-dirty > label::after {
+  content: "•";
+  display: inline-block;
+  margin-left: 0.28rem;
+  color: #2f7f9a;
+  font-size: 0.82rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.prep-bench-checkbox-row.is-dirty {
+  border-color: #4d91aa;
+  background: linear-gradient(180deg, #f9fdff, #eef8fc);
+  box-shadow: 0 0 0 2px rgba(77, 145, 170, 0.08);
+}
+
+.prep-bench-card.is-dirty .prep-bench-card-head h4::after {
+  content: "•";
+  display: inline-block;
+  margin-left: 0.28rem;
+  color: #2f7f9a;
+  font-size: 0.9rem;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .prep-bench-checkbox-row input[type="checkbox"] {

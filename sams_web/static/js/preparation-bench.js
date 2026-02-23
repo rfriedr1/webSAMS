@@ -1,5 +1,6 @@
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
+  const LAST_SAMPLE_STORAGE_LOCATION_KEY = "sams_prep_bench_last_sample_storage_location";
 
   const asNumber = (value) => {
     if (typeof value !== "string") {
@@ -25,6 +26,57 @@
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  };
+
+  const installBenchDirtyMarkers = (form) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return { refresh: () => {} };
+    }
+    const controls = Array.from(form.querySelectorAll("input, select, textarea")).filter((control) => {
+      if (!(control instanceof HTMLElement)) {
+        return false;
+      }
+      if (control instanceof HTMLInputElement && control.type === "hidden") {
+        return false;
+      }
+      if ("disabled" in control && control.disabled) {
+        return false;
+      }
+      return true;
+    });
+
+    const readCurrent = (control) => {
+      if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
+        return control.checked ? "1" : "0";
+      }
+      return "value" in control ? String(control.value ?? "") : "";
+    };
+
+    const wrapperFor = (control) =>
+      control.closest(".prep-bench-field, .prep-bench-checkbox-row");
+
+    controls.forEach((control) => {
+      control.dataset.benchInitialValue = readCurrent(control);
+    });
+
+    const refresh = () => {
+      controls.forEach((control) => {
+        const wrapper = wrapperFor(control);
+        if (!(wrapper instanceof HTMLElement)) {
+          return;
+        }
+        const dirty = (control.dataset.benchInitialValue || "") !== readCurrent(control);
+        wrapper.classList.toggle("is-dirty", dirty);
+      });
+    };
+
+    controls.forEach((control) => {
+      const handler = () => refresh();
+      control.addEventListener("input", handler);
+      control.addEventListener("change", handler);
+    });
+
+    return { refresh };
   };
 
   installers.installPreparationBench = () => {
@@ -55,6 +107,7 @@
       }
 
       if (saveForm) {
+        const dirtyMarkers = installBenchDirtyMarkers(saveForm);
         const weightStart = saveForm.querySelector("[data-prep-bench-weight-start]");
         const weightMid = saveForm.querySelector("[data-prep-bench-weight-medium]");
         const weightMid2 = saveForm.querySelector("[data-prep-bench-weight-medium-2]");
@@ -65,6 +118,9 @@
         const yieldHidden = saveForm.querySelector("[data-prep-bench-yield-hidden]");
         const storageInput = saveForm.querySelector("[data-prep-bench-storage-location]");
         const sampleArchivedCheckbox = saveForm.querySelector("[data-prep-bench-sample-archived]");
+        const noLeftoverCheckbox = saveForm.querySelector("[data-prep-bench-no-leftover]");
+        const returnToSenderCheckbox = saveForm.querySelector("[data-prep-bench-return-to-sender]");
+        const storageWarning = saveForm.querySelector("[data-prep-bench-storage-warning]");
 
         let weightEndTouched = Boolean(weightEnd && weightEnd.value.trim() !== "");
 
@@ -153,9 +209,81 @@
           sampleArchivedCheckbox.checked = storageInput.value.trim() !== "";
         };
 
+        const getStorageConflictMessages = () => {
+          const messages = [];
+          const hasStorageValue =
+            storageInput instanceof HTMLInputElement && storageInput.value.trim() !== "";
+          if (!hasStorageValue) {
+            return messages;
+          }
+          if (noLeftoverCheckbox instanceof HTMLInputElement && noLeftoverCheckbox.checked) {
+            messages.push("No Leftover is checked, so there is nothing to archive.");
+          }
+          if (returnToSenderCheckbox instanceof HTMLInputElement && returnToSenderCheckbox.checked) {
+            messages.push("Return to Sender (project) is checked, so the sample material should be returned instead of archived.");
+          }
+          return messages;
+        };
+
+        const renderStorageWarning = () => {
+          if (!(storageWarning instanceof HTMLElement)) {
+            return;
+          }
+          const messages = getStorageConflictMessages();
+          if (messages.length === 0) {
+            storageWarning.hidden = true;
+            storageWarning.textContent = "";
+            return;
+          }
+          storageWarning.hidden = false;
+          storageWarning.textContent = messages.join(" ");
+        };
+
+        const rememberSampleStorageLocation = () => {
+          if (!(storageInput instanceof HTMLInputElement)) {
+            return;
+          }
+          const value = storageInput.value.trim();
+          if (value === "") {
+            return;
+          }
+          window.sessionStorage.setItem(LAST_SAMPLE_STORAGE_LOCATION_KEY, value);
+        };
+
+        const prefillRememberedSampleStorageLocation = () => {
+          if (!(storageInput instanceof HTMLInputElement)) {
+            return;
+          }
+          if (storageInput.value.trim() !== "") {
+            return;
+          }
+          const remembered = (window.sessionStorage.getItem(LAST_SAMPLE_STORAGE_LOCATION_KEY) || "").trim();
+          if (remembered === "") {
+            return;
+          }
+          storageInput.value = remembered;
+        };
+
         if (storageInput instanceof HTMLInputElement) {
-          storageInput.addEventListener("input", syncSampleArchived);
-          storageInput.addEventListener("change", syncSampleArchived);
+          storageInput.addEventListener("input", () => {
+            syncSampleArchived();
+            renderStorageWarning();
+            rememberSampleStorageLocation();
+            dirtyMarkers.refresh();
+          });
+          storageInput.addEventListener("change", () => {
+            syncSampleArchived();
+            renderStorageWarning();
+            rememberSampleStorageLocation();
+            dirtyMarkers.refresh();
+          });
+        }
+
+        if (noLeftoverCheckbox instanceof HTMLInputElement) {
+          noLeftoverCheckbox.addEventListener("change", renderStorageWarning);
+        }
+        if (returnToSenderCheckbox instanceof HTMLInputElement) {
+          returnToSenderCheckbox.addEventListener("change", renderStorageWarning);
         }
 
         saveForm.addEventListener("keydown", (event) => {
@@ -196,12 +324,17 @@
             maybePrefillWeightEnd();
             updateYield();
             syncSampleArchived();
+            renderStorageWarning();
+            dirtyMarkers.refresh();
           }, 0);
         });
 
+        prefillRememberedSampleStorageLocation();
         maybePrefillWeightEnd();
         updateYield();
         syncSampleArchived();
+        renderStorageWarning();
+        dirtyMarkers.refresh();
       }
 
       bench.dataset.prepBenchInstalled = "true";

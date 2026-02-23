@@ -69,6 +69,7 @@
 - In detail pages, edit mode should be in-place: the same field box switches from display to editor (no duplicated display+editor stacked layout).
 - Minimize layout shift in edit mode (stable row/card height where possible); multiline/comment fields may expand when needed.
 - Highlight editable fields subtly in edit mode and visually mark changed (dirty) fields.
+- Use the same dirty-dot visual pattern for task-focused bench UIs (e.g. `Preparation Bench Entry`, `Graphitization Bench Entry`) so users can quickly see unsaved changes and where they were made.
 - Detail-page edit controls (`Edit`, `Save`, `Cancel`) should be right-aligned and visually lightweight (no persistent instructional hint text).
 - When saving detail-page edits, show clear progress feedback on the `Save` button (spinner/loading state), and temporarily disable edit toolbar buttons to prevent double-submit while the request is in progress.
 - Global search table can allow horizontal scrolling if needed.

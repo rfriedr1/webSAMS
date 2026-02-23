@@ -284,6 +284,7 @@
                 type="checkbox"
                 name="bench__s_no_leftover"
                 value="1"
+                data-prep-bench-no-leftover
                 {% if s_no_leftover_checked in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %}
               />
               <span>No Leftover</span>
@@ -293,6 +294,7 @@
               <input
                 type="checkbox"
                 disabled
+                data-prep-bench-return-to-sender
                 {% if bench_project and (bench_project.return_to_sender or 0) %}checked{% endif %}
               />
               <span>Return to Sender (project)</span>
@@ -312,6 +314,7 @@
                   data-prep-bench-storage-location
                 />
                 {% if bench_errors.get('bench__s_storage_loc') %}<p class="prep-bench-field-error">{{ bench_errors['bench__s_storage_loc'] }}</p>{% endif %}
+                <p class="prep-bench-field-warning" data-prep-bench-storage-warning hidden></p>
               </div>
               <label class="prep-bench-checkbox-row is-readonly">
                 <input type="checkbox" disabled {% if bench_storage_value|string|trim %}checked{% endif %} data-prep-bench-sample-archived />
@@ -675,7 +678,7 @@
               <p class="prep-bench-field-error" data-graph-batch-client-error hidden></p>
             </section>
 
-            <section class="prep-bench-card">
+            <section class="prep-bench-card" data-graph-batch-targets-card>
               <div class="prep-bench-card-head">
                 <h4>Batch Targets</h4>
                 <span class="badge status-pill" data-graph-batch-count>0</span>
