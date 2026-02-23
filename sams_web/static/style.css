@@ -845,11 +845,17 @@ button[name="action"][value="preview"] {
 
 .prep-bench-storage-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.5rem;
+  align-items: end;
   border: 1px solid #d7e2e8;
   border-radius: 10px;
   background: #fff;
   padding: 0.55rem 0.65rem;
+}
+
+.prep-bench-storage-row > .prep-bench-checkbox-row {
+  align-self: end;
 }
 
 .prep-bench-storage-label {
@@ -2631,6 +2637,11 @@ body.has-command-palette {
 
   .prep-bench-actions {
     position: static;
+  }
+
+  .prep-bench-storage-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .topbar {
