@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+import re
 from typing import Any
 
 from sqlalchemy.inspection import inspect as sa_inspect
@@ -17,6 +18,7 @@ from sqlalchemy.sql.sqltypes import Integer as SQLInteger
 from sams_web.models import Preparation, Project, Sample, Target, User
 from sams_web.repositories import SamsRepository
 from sams_web.setup_sections import (
+    SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
     SETUP_SECTION_MAP,
     SETUP_SECTION_STANDARD_THRESHOLDS,
     SETUP_SECTIONS,
@@ -105,6 +107,17 @@ def _pick_closed_project_status(statuses: list[str]) -> str | None:
             return matched
 
     return None
+
+
+GRAPHITIZATION_SYSTEM_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+DEFAULT_GRAPHITIZATION_SYSTEMS = [
+    "mag",
+    "age.1",
+    "age.2",
+    "age64.1",
+    "age64.2",
+    "autosampler",
+]
 
 
 class SamsService:
@@ -736,6 +749,29 @@ class SamsService:
     def list_preparation_methods(self) -> list[str]:
         return self.repo.get_methods()
 
+    def get_graphitization_systems(self) -> list[str]:
+        raw = self.setup_store.get_section(
+            SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+            default=list(DEFAULT_GRAPHITIZATION_SYSTEMS),
+        )
+        if not isinstance(raw, list):
+            return list(DEFAULT_GRAPHITIZATION_SYSTEMS)
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            value = item.strip()
+            if not value:
+                continue
+            if not GRAPHITIZATION_SYSTEM_VALUE_PATTERN.fullmatch(value):
+                continue
+            if value in seen:
+                continue
+            cleaned.append(value)
+            seen.add(value)
+        return cleaned or list(DEFAULT_GRAPHITIZATION_SYSTEMS)
+
     def get_preparation_edit_select_options(self) -> dict[str, list[str]]:
         methods = self.repo.get_methods()
         return {
@@ -1254,6 +1290,18 @@ class SamsService:
                 "thresholds": self.get_standard_thresholds(),
                 "threshold_fields": THRESHOLD_FIELDS,
             }
+        if section.key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
+            systems = self.get_graphitization_systems()
+            return {
+                **base_payload,
+                "kind": "string_list",
+                "storage_section": section.key,
+                "list_items": systems,
+                "list_text": "\n".join(systems),
+                "list_label": "Systems",
+                "list_placeholder": "One system per line (e.g. mag)",
+                "list_help": "Used as the suffix in graph batch names: graph_YYMMDD_system",
+            }
 
         return {
             **base_payload,
@@ -1265,7 +1313,7 @@ class SamsService:
     def update_setup_section(
         self,
         section_key: str,
-        payload: dict[str, dict[str, Any]],
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         section = SETUP_SECTION_MAP.get(section_key)
         if section is None:
@@ -1279,6 +1327,36 @@ class SamsService:
                 "threshold_fields": THRESHOLD_FIELDS,
                 "storage_file": str(self.setup_store.path),
                 "storage_section": self.threshold_store.section_key,
+            }
+        if section.key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
+            items_raw = payload.get("items")
+            if not isinstance(items_raw, list):
+                raise ValueError("Graphitization systems payload must contain a list of items.")
+            cleaned: list[str] = []
+            seen: set[str] = set()
+            for index, item in enumerate(items_raw, start=1):
+                if not isinstance(item, str):
+                    raise ValueError(f"System entry {index} must be text.")
+                value = item.strip()
+                if value == "":
+                    continue
+                if not GRAPHITIZATION_SYSTEM_VALUE_PATTERN.fullmatch(value):
+                    raise ValueError(
+                        f"Invalid system '{value}'. Use only letters, numbers, dot, dash, and underscore."
+                    )
+                if value in seen:
+                    raise ValueError(f"Duplicate system '{value}' is not allowed.")
+                cleaned.append(value)
+                seen.add(value)
+            if not cleaned:
+                raise ValueError("At least one graphitization system is required.")
+            self.setup_store.set_section(section.key, cleaned)
+            return {
+                "kind": "string_list",
+                "storage_file": str(self.setup_store.path),
+                "storage_section": section.key,
+                "list_items": cleaned,
+                "list_text": "\n".join(cleaned),
             }
         raise ValueError("No update handler configured for this setup section.")
 

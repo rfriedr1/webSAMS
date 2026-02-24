@@ -8,7 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from sams_web.dependencies import get_service
 from sams_web.services import SamsService
-from sams_web.setup_sections import SETUP_SECTION_STANDARD_THRESHOLDS
+from sams_web.setup_sections import (
+    SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+    SETUP_SECTION_STANDARD_THRESHOLDS,
+)
 from sams_web.thresholds import STANDARD_LABELS, THRESHOLD_FIELDS
 
 from sams_web.routers.pages_shared import build_magic_nav_rules, build_threshold_rows, templates
@@ -90,9 +93,12 @@ def setup_page(
 
     threshold_rows = None
     threshold_fields = None
+    list_text = None
     if active_section["kind"] == "threshold_matrix":
         threshold_rows = build_threshold_rows(active_section["thresholds"])
         threshold_fields = active_section["threshold_fields"]
+    elif active_section["kind"] == "string_list":
+        list_text = active_section.get("list_text", "")
 
     return templates.TemplateResponse(
         "setup.html",
@@ -104,6 +110,7 @@ def setup_page(
             "active_section": active_section,
             "threshold_rows": threshold_rows,
             "threshold_fields": threshold_fields,
+            "list_text": list_text,
         },
     )
 
@@ -126,13 +133,17 @@ async def setup_section_submit(
     service: SamsService = Depends(get_service),
 ):
     form = await request.form()
-    payload: dict[str, dict[str, Any]] = {}
+    payload: dict[str, Any] = {}
     if section_key == SETUP_SECTION_STANDARD_THRESHOLDS:
         for _, key in STANDARD_LABELS:
             payload[key] = {
                 field: form.get(f"{key}_{field}")
                 for field, _ in THRESHOLD_FIELDS
             }
+    elif section_key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
+        raw_list_text = str(form.get("graphitization_systems_text") or "")
+        payload["items"] = raw_list_text.splitlines()
+        payload["raw_text"] = raw_list_text
 
     try:
         service.update_setup_section(section_key=section_key, payload=payload)
@@ -145,9 +156,12 @@ async def setup_section_submit(
 
         threshold_rows = None
         threshold_fields = None
+        list_text = None
         if active_section["kind"] == "threshold_matrix":
             threshold_rows = build_threshold_rows(payload if payload else active_section["thresholds"])
             threshold_fields = active_section["threshold_fields"]
+        elif active_section["kind"] == "string_list":
+            list_text = str(payload.get("raw_text") or active_section.get("list_text") or "")
 
         return templates.TemplateResponse(
             "setup.html",
@@ -159,6 +173,7 @@ async def setup_section_submit(
                 "active_section": active_section,
                 "threshold_rows": threshold_rows,
                 "threshold_fields": threshold_fields,
+                "list_text": list_text,
             },
             status_code=400,
         )

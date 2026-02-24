@@ -75,6 +75,36 @@
           <button type="submit">Save {{ active_section.title }}</button>
         </div>
       </form>
+      {% elif active_section.kind == "string_list" %}
+      <form method="post" action="{{ active_section.form_action }}">
+        {% if active_section.list_help %}
+        <p class="setup-note">{{ active_section.list_help }}</p>
+        {% endif %}
+        <label class="setup-list-editor-label" for="graphitization-systems-textarea">
+          {{ active_section.list_label or "Items" }}
+        </label>
+        <textarea
+          id="graphitization-systems-textarea"
+          name="graphitization_systems_text"
+          rows="10"
+          class="setup-list-editor"
+          placeholder="{{ active_section.list_placeholder or 'One item per line' }}"
+          spellcheck="false"
+        >{{ list_text if list_text is not none else active_section.list_text or '' }}</textarea>
+        <p class="setup-note">
+          One entry per line. Allowed characters: letters, numbers, dot (<code>.</code>), dash (<code>-</code>), underscore (<code>_</code>).
+        </p>
+        {% if active_section.list_items %}
+        <div class="setup-preview-chips" aria-label="Configured values">
+          {% for item in active_section.list_items %}
+          <span class="badge status-pill">{{ item }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
       {% else %}
       <article class="setup-placeholder">
         <h4>Section Prepared</h4>

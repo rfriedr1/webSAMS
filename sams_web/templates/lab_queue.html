@@ -657,13 +657,19 @@
                 <h4>Graph Batch Builder</h4>
               </div>
               <div class="prep-bench-field">
-                <label for="graph-batch-system">Graphitization System</label>
-                <select id="graph-batch-system" data-graph-batch-system>
-                  <option value="">Select system</option>
+                <label>Graphitization System</label>
+                <input type="hidden" value="" data-graph-batch-system />
+                <div class="graph-batch-system-pills" role="group" aria-label="Graphitization System">
                   {% for system_name in graph_batch_system_options or [] %}
-                  <option value="{{ system_name }}">{{ system_name }}</option>
+                  <button
+                    type="button"
+                    class="graph-batch-system-pill"
+                    data-graph-batch-system-pill
+                    data-system-value="{{ system_name }}"
+                    aria-pressed="false"
+                  >{{ system_name }}</button>
                   {% endfor %}
-                </select>
+                </div>
               </div>
               <div class="prep-bench-field" style="margin-top: 0.55rem;">
                 <label for="graph-batch-name">Batch Name</label>

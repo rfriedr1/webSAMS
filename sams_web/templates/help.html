@@ -27,6 +27,23 @@
   </div>
 
   <div class="card">
+    <h3>Settings</h3>
+    <p>
+      The <strong>Settings</strong> page is the central place for system-level configuration values that should be
+      changeable without editing code.
+    </p>
+    <ul>
+      <li><strong>Standard Inventory Thresholds</strong>: controls the warning colors used on the dashboard standard indicators and mini-bars.</li>
+      <li><strong>Graphitization Systems</strong>: controls the list of selectable systems used in the Graphitization Bench batch builder.</li>
+      <li><strong>Storage</strong>: settings are saved in the shared setup data file and are applied when the related pages are loaded.</li>
+    </ul>
+    <p class="muted">
+      Use one line per entry for graphitization systems. These values are used to build batch names in the form
+      <code>graph_YYMMDD_system</code>.
+    </p>
+  </div>
+
+  <div class="card">
     <h3>Command Palette Shortcut</h3>
     <p>
       Use <kbd>Command</kbd> + <kbd>K</kbd> on macOS (or <kbd>Ctrl</kbd> + <kbd>K</kbd> on Windows) to open the

@@ -12,7 +12,7 @@ MAIN_NAV_ITEMS: tuple[dict[str, Any], ...] = (
     {"key": "samples", "module": "sample_management", "label": "Samples", "href": "/samples", "external": False},
     {"key": "lab", "module": "lab_operations", "label": "Lab", "href": "/lab/preparation", "external": False},
     {"key": "search", "module": "search", "label": "Search", "href": "/search?global=1", "external": False},
-    {"key": "setup", "module": "setup", "label": "Setup", "href": "/setup", "external": False},
+    {"key": "setup", "module": "setup", "label": "Settings", "href": "/setup", "external": False},
     {"key": "help", "module": "help", "label": "Help", "href": "/help", "external": False},
     {"key": "api_docs", "module": "api_docs", "label": "API Docs", "href": "/docs", "external": True},
 )
@@ -52,7 +52,7 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
     {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
     {"label": "Search: Global", "href": "/search?global=1"},
-    {"label": "Setup", "href": "/setup"},
+    {"label": "Settings", "href": "/setup"},
     {"label": "Help", "href": "/help"},
     {"label": "API Docs", "href": "/docs"},
 )

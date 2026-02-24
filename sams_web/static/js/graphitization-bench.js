@@ -358,7 +358,8 @@
         return;
       }
 
-      const systemSelect = batchForm.querySelector("[data-graph-batch-system]");
+      const systemField = batchForm.querySelector("[data-graph-batch-system]");
+      const systemPillButtons = Array.from(batchForm.querySelectorAll("[data-graph-batch-system-pill]"));
       const batchNameInput = batchForm.querySelector("[data-graph-batch-name]");
       const addCurrentButton = batchForm.querySelector("[data-graph-batch-add-current]");
       const clearButton = batchForm.querySelector("[data-graph-batch-clear]");
@@ -428,10 +429,10 @@
       };
 
       const buildGeneratedBatchName = () => {
-        if (!(systemSelect instanceof HTMLSelectElement)) {
+        if (!(systemField instanceof HTMLInputElement)) {
           return "";
         }
-        const system = systemSelect.value.trim();
+        const system = systemField.value.trim();
         if (system === "") {
           return "";
         }
@@ -462,11 +463,38 @@
         });
       }
 
-      if (systemSelect instanceof HTMLSelectElement) {
-        systemSelect.addEventListener("change", () => {
-          clearClientError();
-          maybeGenerateBatchName();
+      const syncSystemPills = () => {
+        if (!(systemField instanceof HTMLInputElement)) {
+          return;
+        }
+        const selected = systemField.value.trim();
+        systemPillButtons.forEach((button) => {
+          if (!(button instanceof HTMLButtonElement)) {
+            return;
+          }
+          const isActive = (button.dataset.systemValue || "") === selected && selected !== "";
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
+      };
+
+      if (systemField instanceof HTMLInputElement && systemPillButtons.length > 0) {
+        systemPillButtons.forEach((button) => {
+          if (!(button instanceof HTMLButtonElement)) {
+            return;
+          }
+          button.addEventListener("click", () => {
+            const nextValue = (button.dataset.systemValue || "").trim();
+            if (systemField.value.trim() === nextValue) {
+              return;
+            }
+            systemField.value = nextValue;
+            syncSystemPills();
+            clearClientError();
+            maybeGenerateBatchName();
+          });
+        });
+        syncSystemPills();
       }
 
       const currentTarget = {

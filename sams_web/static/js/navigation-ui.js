@@ -113,7 +113,7 @@
     }
 
     if (root === "setup") {
-      crumbs.push({ label: "Setup", href: "/setup" });
+      crumbs.push({ label: "Settings", href: "/setup" });
       return crumbs;
     }
 
@@ -364,7 +364,7 @@
           { label: "Lab Operations: Graphitization", href: "/lab/graphitization" },
           { label: "Lab Operations: Analysis", href: "/lab/analysis" },
           { label: "Search: Global", href: "/search?global=1" },
-          { label: "Setup", href: "/setup" },
+          { label: "Settings", href: "/setup" },
           { label: "Help", href: "/help" },
           { label: "API Docs", href: "/docs" },
         ];

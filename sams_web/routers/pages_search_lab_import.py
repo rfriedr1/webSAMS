@@ -15,15 +15,6 @@ from sams_web.services import SamsService
 
 router = APIRouter()
 
-GRAPHITIZATION_SYSTEM_OPTIONS = (
-    "mag",
-    "age.1",
-    "age.2",
-    "age64.1",
-    "age64.2",
-    "autosampler",
-)
-
 
 def _build_lab_preparation_page_context(
     request: Request,
@@ -151,7 +142,7 @@ def _build_lab_graphitization_page_context(
         "graph_notice": graph_notice,
         "graph_batch_notice": graph_batch_notice,
         "graph_batch_error": graph_batch_error,
-        "graph_batch_system_options": GRAPHITIZATION_SYSTEM_OPTIONS,
+        "graph_batch_system_options": service.get_graphitization_systems(),
     }
 
 

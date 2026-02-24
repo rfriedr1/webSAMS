@@ -1,4 +1,12 @@
 {
+  "graphitization_systems": [
+    "mag",
+    "age.1",
+    "age.2",
+    "age64.1",
+    "age64.2",
+    "autosampler"
+  ],
   "import_profiles": {},
   "lab_defaults": {},
   "notifications": {},

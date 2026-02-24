@@ -1009,6 +1009,43 @@ button[name="action"][value="preview"] {
   font-weight: 800;
 }
 
+.graph-batch-system-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.graph-batch-system-pill {
+  min-height: 2.15rem;
+  border-radius: 999px;
+  padding: 0.26rem 0.72rem;
+  border: 1px solid #9fbecb;
+  background: #f3f9fc;
+  color: #1f556b;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.graph-batch-system-pill:hover,
+.graph-batch-system-pill:focus-visible {
+  border-color: #7eaabb;
+  background: #eaf5fb;
+}
+
+.graph-batch-system-pill.is-active {
+  border-color: #2f758c;
+  background: linear-gradient(180deg, #3f879f, #2f758c);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.graph-batch-system-pill.is-active:hover,
+.graph-batch-system-pill.is-active:focus-visible {
+  border-color: #2b6d82;
+  background: linear-gradient(180deg, #448ba2, #2e748a);
+}
+
 .graph-bench-batch-save-actions {
   margin-top: 0.7rem;
   display: grid;
@@ -2415,6 +2452,30 @@ body.has-command-palette {
 
 .setup-actions {
   margin-top: 0.85rem;
+}
+
+.setup-list-editor-label {
+  display: block;
+  margin: 0 0 0.38rem;
+  color: #395360;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.setup-list-editor {
+  width: 100%;
+  min-height: 11rem;
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.setup-preview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
 }
 
 .setup-placeholder {
