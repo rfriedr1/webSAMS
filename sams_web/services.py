@@ -1160,6 +1160,30 @@ class SamsService:
         }
         return self.create_sample(payload, with_blank_records=True)
 
+    def create_next_prep_for_sample(self, sample_nr: int) -> tuple[int, int]:
+        sample = self.repo.get_sample(sample_nr)
+        if sample is None:
+            raise ValueError("Sample not found.")
+        _, max_prep_nr = self.repo.get_preparation_stats(sample_nr)
+        next_prep_nr = int(max_prep_nr or 0) + 1
+        self.repo.create_blank_prep(sample_nr=sample_nr, prep_nr=next_prep_nr)
+        self.repo.create_blank_target(sample_nr=sample_nr, prep_nr=next_prep_nr, target_nr=1)
+        self.session.commit()
+        return next_prep_nr, 1
+
+    def create_next_target_for_sample_prep(self, sample_nr: int, prep_nr: int) -> int:
+        sample = self.repo.get_sample(sample_nr)
+        if sample is None:
+            raise ValueError("Sample not found.")
+        preparation = self.repo.get_preparation(sample_nr, prep_nr)
+        if preparation is None:
+            raise ValueError("Preparation not found.")
+        _, max_target_nr = self.repo.get_target_stats(sample_nr, prep_nr)
+        next_target_nr = int(max_target_nr or 0) + 1
+        self.repo.create_blank_target(sample_nr=sample_nr, prep_nr=prep_nr, target_nr=next_target_nr)
+        self.session.commit()
+        return next_target_nr
+
     def set_project_running(self, sample_nr: int) -> bool:
         changed = self.repo.set_project_running_by_sample(sample_nr)
         if changed:

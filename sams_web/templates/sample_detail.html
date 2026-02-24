@@ -311,9 +311,27 @@
       <p class="sample-workspace-path">Open preparation and target records in dedicated pages.</p>
     </div>
 
+    {% if sample_creation_notice %}
+    <div class="inline-notice">
+      <strong>{{ sample_creation_notice }}</strong>
+    </div>
+    {% endif %}
+
     <div class="sample-workspace-grid">
       <section data-table-filter id="sample-preparations">
-        <h3>Preparations ({{ preparations|length }})</h3>
+        <div class="sample-workspace-section-head">
+          <h3>Preparations ({{ preparations|length }})</h3>
+          <div class="sample-workspace-section-actions">
+            <form
+              method="post"
+              action="/samples/{{ sample.sample_nr }}/add-preparation"
+              class="inline-form"
+              onsubmit="return window.confirm('Create one more preparation number for this sample and seed target #1?');"
+            >
+              <button type="submit">+ Prep</button>
+            </form>
+          </div>
+        </div>
         <div class="table-wrap sample-detail-table-wrap">
           <table data-sample-preparations-table>
             <thead>
@@ -347,7 +365,27 @@
       </section>
 
       <section data-table-filter id="sample-targets">
-        <h3>Target Navigator ({{ sample_targets_total }})</h3>
+        <div class="sample-workspace-section-head">
+          <h3>Targets ({{ sample_targets_total }})</h3>
+          <div class="sample-workspace-section-actions">
+            <form
+              method="post"
+              action="/samples/{{ sample.sample_nr }}/add-target"
+              class="inline-form sample-add-target-form"
+              onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
+            >
+              <label>
+                Prep #
+                <select name="prep_nr" required>
+                  {% for prep_row in preparations %}
+                  <option value="{{ prep_row.prep_nr }}" {% if sample_default_target_prep_nr is not none and prep_row.prep_nr == sample_default_target_prep_nr %}selected{% endif %}>{{ prep_row.prep_nr }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button type="submit" {% if not preparations %}disabled{% endif %}>+ Target</button>
+            </form>
+          </div>
+        </div>
 
         <div class="table-wrap sample-detail-table-wrap">
           <table data-sample-targets-table>

@@ -49,16 +49,19 @@ def _build_sample_detail_context(
     sample_field_errors: dict[str, str] | None = None,
     sample_form_values: dict[str, str] | None = None,
     sample_edit_initial_mode: str = "view",
+    creation_notice: str | None = None,
 ) -> dict[str, object]:
     sample = overview["sample"]
     project = overview["project"]
+    preparations = overview["preparations"]
+    default_target_prep_nr = preparations[0].prep_nr if preparations else None
 
     return {
         "request": request,
         "sample": sample,
         "project": project,
         "user": overview["user"],
-        "preparations": overview["preparations"],
+        "preparations": preparations,
         "targets_by_prep": overview["targets_by_prep"],
         "sample_targets_total": overview["sample_targets_total"],
         "targets": overview["targets"],
@@ -79,6 +82,8 @@ def _build_sample_detail_context(
         "sample_save_error": save_error,
         "sample_saved": saved,
         "sample_edit_initial_mode": sample_edit_initial_mode,
+        "sample_creation_notice": creation_notice,
+        "sample_default_target_prep_nr": default_target_prep_nr,
     }
 
 
@@ -276,6 +281,9 @@ def sample_detail_page(
     target: int | None = Query(default=None),
     jump_sample: str | None = Query(default=None),
     saved: bool = Query(default=False),
+    created: str | None = Query(default=None),
+    created_prep: int | None = Query(default=None),
+    created_target: int | None = Query(default=None),
     service: SamsService = Depends(get_service),
 ):
     if prep is not None and target is not None:
@@ -314,6 +322,11 @@ def sample_detail_page(
             overview=overview,
             service=service,
             saved=saved,
+            creation_notice=_build_sample_creation_notice(
+                created=created,
+                created_prep=created_prep,
+                created_target=created_target,
+            ),
         ),
     )
     response.set_cookie(
@@ -323,6 +336,50 @@ def sample_detail_page(
         samesite="lax",
     )
     return response
+
+
+def _build_sample_creation_notice(
+    *,
+    created: str | None,
+    created_prep: int | None,
+    created_target: int | None,
+) -> str | None:
+    if created == "prep" and created_prep is not None:
+        return f"Created preparation #{created_prep} and seeded target #1."
+    if created == "target" and created_prep is not None and created_target is not None:
+        return f"Created target #{created_target} in preparation #{created_prep}."
+    return None
+
+
+@router.post("/samples/{sample_nr}/add-preparation")
+def create_new_preparation_for_sample(
+    sample_nr: int,
+    service: SamsService = Depends(get_service),
+):
+    try:
+        prep_nr, target_nr = service.create_next_prep_for_sample(sample_nr)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return RedirectResponse(
+        url=f"/samples/{sample_nr}?created=prep&created_prep={prep_nr}&created_target={target_nr}",
+        status_code=303,
+    )
+
+
+@router.post("/samples/{sample_nr}/add-target")
+def create_new_target_for_sample_prep(
+    sample_nr: int,
+    prep_nr: int = Form(...),
+    service: SamsService = Depends(get_service),
+):
+    try:
+        target_nr = service.create_next_target_for_sample_prep(sample_nr, prep_nr)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return RedirectResponse(
+        url=f"/samples/{sample_nr}?created=target&created_prep={prep_nr}&created_target={target_nr}",
+        status_code=303,
+    )
 
 
 @router.post("/samples/{sample_nr}/save")
