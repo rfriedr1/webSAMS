@@ -14,6 +14,11 @@
       directly to the related detail page.
     </p>
     <p>Magic commands start with <code>/</code> (for example <code>/prep</code>).</p>
+    <p>
+      For preparation and target details, use dotted numeric IDs:
+      <code>sample.prep</code> (for example <code>45230.1</code>) and
+      <code>sample.prep.target</code> (for example <code>45230.1.1</code>).
+    </p>
     <ul>
       {% for rule in magic_nav_rules %}
       <li><strong>{{ rule.example }}</strong>: {{ rule.description }}</li>
