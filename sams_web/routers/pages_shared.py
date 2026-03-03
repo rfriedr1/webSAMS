@@ -39,6 +39,8 @@ MAGIC_IDENTIFIER_PREFIX_LABELS: dict[str, str] = {
     "usr": "user number",
 }
 MAGIC_IDENTIFIER_SAMPLE_LABEL = "sample number"
+MAGIC_IDENTIFIER_PREPARATION_LABEL = "preparation"
+MAGIC_IDENTIFIER_TARGET_LABEL = "target"
 MAGIC_IDENTIFIER_COMMAND_ROUTES: dict[str, str] = {
     "/prep": "/lab/preparation",
     "/graph": "/lab/graphitization",
@@ -148,6 +150,8 @@ def format_table_cell_value(key: Any, value: Any) -> Any:
 
 templates.env.globals["magic_identifier_prefix_labels"] = MAGIC_IDENTIFIER_PREFIX_LABELS
 templates.env.globals["magic_identifier_sample_label"] = MAGIC_IDENTIFIER_SAMPLE_LABEL
+templates.env.globals["magic_identifier_preparation_label"] = MAGIC_IDENTIFIER_PREPARATION_LABEL
+templates.env.globals["magic_identifier_target_label"] = MAGIC_IDENTIFIER_TARGET_LABEL
 templates.env.globals["magic_identifier_command_labels"] = MAGIC_IDENTIFIER_COMMAND_LABELS
 templates.env.globals["format_c14_integer"] = ds.format_c14_integer
 templates.env.globals["format_d13c"] = ds.format_d13c
@@ -168,9 +172,12 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 class MagicNavResolution:
     """Typed representation of a resolved Magic Nav input."""
 
-    kind: Literal["sample", "project", "user", "command"]
+    kind: Literal["sample", "preparation", "target", "project", "user", "command"]
     target: str
     identifier: int | None = None
+    sample_nr: int | None = None
+    prep_nr: int | None = None
+    target_nr: int | None = None
 
 
 def resolve_magic_identifier(raw: str) -> MagicNavResolution | None:
@@ -182,9 +189,35 @@ def resolve_magic_identifier(raw: str) -> MagicNavResolution | None:
     if command_target is not None:
         return MagicNavResolution(kind="command", target=command_target)
 
+    target_ref = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", value)
+    if target_ref is not None:
+        sample_nr, prep_nr, target_nr = (int(part) for part in target_ref.groups())
+        return MagicNavResolution(
+            kind="target",
+            target=f"/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}",
+            sample_nr=sample_nr,
+            prep_nr=prep_nr,
+            target_nr=target_nr,
+        )
+
+    prep_ref = re.fullmatch(r"(\d+)\.(\d+)", value)
+    if prep_ref is not None:
+        sample_nr, prep_nr = (int(part) for part in prep_ref.groups())
+        return MagicNavResolution(
+            kind="preparation",
+            target=f"/samples/{sample_nr}/preparations/{prep_nr}",
+            sample_nr=sample_nr,
+            prep_nr=prep_nr,
+        )
+
     if re.fullmatch(r"\d+", value):
         identifier = int(value)
-        return MagicNavResolution(kind="sample", identifier=identifier, target=f"/samples/{identifier}")
+        return MagicNavResolution(
+            kind="sample",
+            identifier=identifier,
+            sample_nr=identifier,
+            target=f"/samples/{identifier}",
+        )
 
     prefixed = re.fullmatch(r"([a-z]+)[\s:_-]*(\d+)", value)
     if prefixed is None:
@@ -217,6 +250,22 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
             "pattern": "digits only",
             "example": "123",
             "description": f"Opens sample detail (label: {MAGIC_IDENTIFIER_SAMPLE_LABEL}).",
+        },
+        {
+            "pattern": "sample.prep",
+            "example": "45230.1",
+            "description": (
+                "Opens preparation detail for sample/preparation "
+                f"(label: {MAGIC_IDENTIFIER_PREPARATION_LABEL})."
+            ),
+        },
+        {
+            "pattern": "sample.prep.target",
+            "example": "45230.1.1",
+            "description": (
+                "Opens target detail for sample/preparation/target "
+                f"(label: {MAGIC_IDENTIFIER_TARGET_LABEL})."
+            ),
         }
     ]
     for prefix in sorted(MAGIC_IDENTIFIER_PREFIX_LABELS.keys()):

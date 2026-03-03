@@ -32,13 +32,19 @@
     return match[1];
   };
 
-  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel) => {
+  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel, preparationLabel, targetLabel) => {
     const normalized = String(value || "").trim().toLowerCase();
     if (!normalized) {
       return "";
     }
     if (Object.prototype.hasOwnProperty.call(prefixLabels, normalized)) {
       return prefixLabels[normalized];
+    }
+    if (/^\d+\.\d+\.\d+$/.test(normalized)) {
+      return targetLabel;
+    }
+    if (/^\d+\.\d+$/.test(normalized)) {
+      return preparationLabel;
     }
     if (/^\d+$/.test(normalized)) {
       return sampleLabel;
@@ -62,6 +68,8 @@
         ...parseMagicPrefixLabels(form.dataset.magicCommandLabels || ""),
       };
       const sampleLabel = String(form.dataset.magicSampleLabel || "sample number");
+      const preparationLabel = String(form.dataset.magicPreparationLabel || "preparation");
+      const targetLabel = String(form.dataset.magicTargetLabel || "target");
       const initialError = String(form.dataset.magicError || "").trim();
 
       const renderPatch = (forceErrorLabel = "") => {
@@ -71,7 +79,13 @@
           patch.textContent = forceErrorLabel;
           return;
         }
-        const label = resolveMagicPatchLabel(input.value, prefixLabels, sampleLabel);
+        const label = resolveMagicPatchLabel(
+          input.value,
+          prefixLabels,
+          sampleLabel,
+          preparationLabel,
+          targetLabel,
+        );
         if (!label) {
           patch.hidden = true;
           patch.classList.remove("is-error");
