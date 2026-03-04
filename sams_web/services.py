@@ -1136,6 +1136,7 @@ class SamsService:
 
         project = self.repo.get_project(sample.project_nr) if sample.project_nr else None
         user = self.repo.get_user(project.user_nr) if project and project.user_nr else None
+        preparations = self.repo.list_preparations_by_sample(sample_nr)
         previous_target_nr, next_target_nr = self.repo.get_adjacent_target_nrs(sample_nr, prep_nr, target_nr)
         target_count, max_target_nr = self.repo.get_target_stats(sample_nr, prep_nr)
 
@@ -1145,6 +1146,7 @@ class SamsService:
             "user": user,
             "preparation": preparation,
             "target": target,
+            "preparations": preparations,
             "previous_target_nr": previous_target_nr,
             "next_target_nr": next_target_nr,
             "target_count": target_count,

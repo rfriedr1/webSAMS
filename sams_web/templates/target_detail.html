@@ -63,6 +63,25 @@
         data-fallback="{{ target_back_url }}"
       >Back to preparation</a>
     </p>
+    <div class="page-actions page-actions-forms">
+      <form
+        method="post"
+        action="/samples/{{ sample.sample_nr }}/add-target"
+        class="inline-form page-actions-target-form"
+        onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
+      >
+        <input type="hidden" name="return_to" value="target" />
+        <label>
+          Prep #
+          <select name="prep_nr" required>
+            {% for prep_option in target_prep_options %}
+            <option value="{{ prep_option.prep_nr }}" {% if prep_option.prep_nr == preparation.prep_nr %}selected{% endif %}>{{ prep_option.prep_nr }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
+      </form>
+    </div>
     {% if target_saved %}
     <div class="result-box">Target details were saved.</div>
     {% endif %}

@@ -160,6 +160,7 @@ def _build_target_detail_context(
         "user": data["user"],
         "preparation": data["preparation"],
         "target": target,
+        "target_prep_options": data.get("preparations", []),
         "target_sections": target_sections,
         "previous_target_nr": data["previous_target_nr"],
         "next_target_nr": data["next_target_nr"],
@@ -379,12 +380,18 @@ def _build_sample_creation_notice(
 @router.post("/samples/{sample_nr}/add-preparation")
 def create_new_preparation_for_sample(
     sample_nr: int,
+    return_to: str | None = Form(default=None),
     service: SamsService = Depends(get_service),
 ):
     try:
         prep_nr, target_nr = service.create_next_prep_for_sample(sample_nr)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if (return_to or "").strip().lower() == "preparation":
+        return RedirectResponse(
+            url=f"/samples/{sample_nr}/preparations/{prep_nr}",
+            status_code=303,
+        )
     return RedirectResponse(
         url=f"/samples/{sample_nr}?created=prep&created_prep={prep_nr}&created_target={target_nr}",
         status_code=303,
@@ -395,12 +402,18 @@ def create_new_preparation_for_sample(
 def create_new_target_for_sample_prep(
     sample_nr: int,
     prep_nr: int = Form(...),
+    return_to: str | None = Form(default=None),
     service: SamsService = Depends(get_service),
 ):
     try:
         target_nr = service.create_next_target_for_sample_prep(sample_nr, prep_nr)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if (return_to or "").strip().lower() == "target":
+        return RedirectResponse(
+            url=f"/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}",
+            status_code=303,
+        )
     return RedirectResponse(
         url=f"/samples/{sample_nr}?created=target&created_prep={prep_nr}&created_target={target_nr}",
         status_code=303,

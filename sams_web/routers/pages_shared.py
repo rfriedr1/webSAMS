@@ -248,7 +248,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
     rules: list[dict[str, str]] = [
         {
             "pattern": "digits only",
-            "example": "123",
+            "example": "45230",
             "description": f"Opens sample detail (label: {MAGIC_IDENTIFIER_SAMPLE_LABEL}).",
         },
         {

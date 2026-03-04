@@ -61,6 +61,17 @@
         data-fallback="/samples/{{ sample.sample_nr }}"
       >Back to sample</a>
     </p>
+    <div class="page-actions page-actions-forms">
+      <form
+        method="post"
+        action="/samples/{{ sample.sample_nr }}/add-preparation"
+        class="inline-form"
+        onsubmit="return window.confirm('Create one more preparation number for this sample and seed target #1?');"
+      >
+        <input type="hidden" name="return_to" value="preparation" />
+        <button type="submit">+ Prep</button>
+      </form>
+    </div>
     {% if preparation_saved %}
     <div class="result-box">Preparation details were saved.</div>
     {% endif %}
