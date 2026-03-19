@@ -1,0 +1,19 @@
+{% macro render_detail_feedback_toolbar(saved, save_error, saved_message, form_id) -%}
+  {% if caller is defined %}
+  {{ caller() }}
+  {% endif %}
+  {% if saved %}
+  <div class="result-box">{{ saved_message }}</div>
+  {% endif %}
+  {% if save_error %}
+  <div class="inline-notice inline-notice-error">
+    <strong>Save failed.</strong>
+    <p>{{ save_error }}</p>
+  </div>
+  {% endif %}
+  <div class="detail-edit-toolbar">
+    <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
+    <button type="submit" class="detail-edit-save" data-edit-save form="{{ form_id }}" hidden>Save</button>
+    <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+  </div>
+{%- endmacro %}

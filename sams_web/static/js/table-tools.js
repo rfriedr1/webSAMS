@@ -220,11 +220,6 @@
     icon.append(path);
     button.append(icon);
 
-    const srText = document.createElement("span");
-    srText.className = "sr-only";
-    srText.textContent = downloadText;
-    button.append(srText);
-
     return button;
   };
 
@@ -313,11 +308,6 @@
     clearPath.setAttribute("stroke-linecap", "round");
     clearIcon.append(clearPath);
     clearButton.append(clearIcon);
-    const clearSrText = document.createElement("span");
-    clearSrText.className = "sr-only";
-    clearSrText.textContent = clearText;
-    clearButton.append(clearSrText);
-
     const downloadButton = ensureDownloadButton(container, table);
 
     let visible = container.querySelector("[data-table-visible]");

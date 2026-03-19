@@ -15,6 +15,7 @@ from sqlalchemy.sql.sqltypes import DateTime as SQLDateTime
 from sqlalchemy.sql.sqltypes import Float as SQLFloat
 from sqlalchemy.sql.sqltypes import Integer as SQLInteger
 
+from sams_web.bench_helpers import next_queue_entry, queue_tuples, select_preparation, select_target
 from sams_web.models import Preparation, Project, Sample, Target, User
 from sams_web.repositories import SamsRepository
 from sams_web.setup_sections import (
@@ -372,16 +373,9 @@ class SamsService:
         if not preparations:
             return None
 
-        selected_preparation: Preparation | None = None
-        if prep_nr is not None:
-            selected_preparation = next((p for p in preparations if p.prep_nr == prep_nr), None)
-
+        selected_preparation = select_preparation(preparations, prep_nr, open_attr_name="prep_end")
         if selected_preparation is None:
-            open_preparations = [p for p in preparations if p.prep_end is None]
-            if open_preparations:
-                selected_preparation = open_preparations[-1]
-            else:
-                selected_preparation = preparations[-1]
+            return None
 
         project = self.repo.get_project(sample.project_nr) if sample.project_nr else None
         user = self.repo.get_user(project.user_nr) if project and project.user_nr else None
@@ -407,27 +401,8 @@ class SamsService:
         show_on_hold: bool = False,
     ) -> tuple[int, int] | None:
         rows = self.repo.list_planned_queue_rows(show_on_hold=show_on_hold)
-        queue: list[tuple[int, int]] = []
-        for row in rows:
-            try:
-                row_sample = int(row.get("sample_nr"))
-                row_prep = int(row.get("prep_nr"))
-            except (TypeError, ValueError):
-                continue
-            queue.append((row_sample, row_prep))
-
-        if not queue:
-            return None
-
-        current = (sample_nr, prep_nr)
-        for index, item in enumerate(queue):
-            if item == current:
-                return queue[index + 1] if index + 1 < len(queue) else None
-
-        for item in queue:
-            if item > current:
-                return item
-        return None
+        queue = queue_tuples(rows, "sample_nr", "prep_nr")
+        return next_queue_entry(queue, (sample_nr, prep_nr))
 
     def get_graphitization_bench_entry(
         self,
@@ -443,21 +418,17 @@ class SamsService:
         if not preparations:
             return None
 
-        selected_preparation: Preparation | None = None
-        if prep_nr is not None:
-            selected_preparation = next((p for p in preparations if p.prep_nr == prep_nr), None)
+        selected_preparation = select_preparation(preparations, prep_nr)
         if selected_preparation is None:
-            selected_preparation = preparations[-1]
+            return None
 
         prep_targets = self.repo.list_targets_by_sample(sample_nr, prep_nr=selected_preparation.prep_nr)
         if not prep_targets:
             return None
 
-        selected_target: Target | None = None
-        if target_nr is not None:
-            selected_target = next((t for t in prep_targets if t.target_nr == target_nr), None)
+        selected_target = select_target(prep_targets, target_nr)
         if selected_target is None:
-            selected_target = prep_targets[-1]
+            return None
 
         project = self.repo.get_project(sample.project_nr) if sample.project_nr else None
         user = self.repo.get_user(project.user_nr) if project and project.user_nr else None
@@ -480,27 +451,8 @@ class SamsService:
         target_nr: int,
     ) -> tuple[int, int, int] | None:
         rows = self.repo.list_waiting_for_graph_queue_rows()
-        queue: list[tuple[int, int, int]] = []
-        for row in rows:
-            try:
-                row_sample = int(row.get("sample_nr"))
-                row_prep = int(row.get("prep_nr"))
-                row_target = int(row.get("target_nr"))
-            except (TypeError, ValueError):
-                continue
-            queue.append((row_sample, row_prep, row_target))
-
-        if not queue:
-            return None
-
-        current = (sample_nr, prep_nr, target_nr)
-        for index, item in enumerate(queue):
-            if item == current:
-                return queue[index + 1] if index + 1 < len(queue) else None
-        for item in queue:
-            if item > current:
-                return item
-        return None
+        queue = queue_tuples(rows, "sample_nr", "prep_nr", "target_nr")
+        return next_queue_entry(queue, (sample_nr, prep_nr, target_nr))
 
     def update_graphitization_bench_entry(
         self,

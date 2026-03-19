@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_field_row %}
+{% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ preparation_edit_initial_mode or 'view' }}">
@@ -61,6 +62,7 @@
         data-fallback="/samples/{{ sample.sample_nr }}"
       >Back to sample</a>
     </p>
+    {% call render_detail_feedback_toolbar(preparation_saved, preparation_save_error, "Preparation details were saved.", preparation_edit_form_id) %}
     <div class="page-actions page-actions-forms">
       <form
         method="post"
@@ -72,20 +74,7 @@
         <button type="submit">+ Prep</button>
       </form>
     </div>
-    {% if preparation_saved %}
-    <div class="result-box">Preparation details were saved.</div>
-    {% endif %}
-    {% if preparation_save_error %}
-    <div class="inline-notice inline-notice-error">
-      <strong>Save failed.</strong>
-      <p>{{ preparation_save_error }}</p>
-    </div>
-    {% endif %}
-    <div class="detail-edit-toolbar">
-      <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
-      <button type="submit" class="detail-edit-save" data-edit-save form="{{ preparation_edit_form_id }}" hidden>Save</button>
-      <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
-    </div>
+    {% endcall %}
     <form
       id="{{ preparation_edit_form_id }}"
       method="post"
