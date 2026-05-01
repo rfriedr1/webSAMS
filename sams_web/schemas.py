@@ -7,7 +7,7 @@ from datetime import date
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class UserCreate(BaseModel):
+class SubmitterCreate(BaseModel):
     first_name: str | None = None
     last_name: str = Field(min_length=1, max_length=60)
     organisation: str | None = None
@@ -35,7 +35,7 @@ class SampleCreate(BaseModel):
     weight: float | None = None
 
 
-class UserRead(BaseModel):
+class SubmitterRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_nr: int

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, Iterable
 
@@ -16,107 +15,8 @@ from sams_web.models import (
     Sample,
     SampleType,
     Target,
-    User,
+    Submitter,
 )
-
-
-@dataclass
-class SearchContext:
-    table: str
-    fields: tuple[str, ...]
-
-
-SEARCH_CONTEXTS: dict[str, SearchContext] = {
-    "users": SearchContext(
-        table="user_t",
-        fields=(
-            "user_nr",
-            "last_name",
-            "first_name",
-            "organisation",
-            "address_1",
-            "address_2",
-            "town",
-            "country",
-            "institute",
-            "postcode",
-            "phone_1",
-            "phone_2",
-            "email",
-            "account",
-            "user_comment",
-        ),
-    ),
-    "projects": SearchContext(
-        table="project_t",
-        fields=(
-            "project_nr",
-            "project",
-            "user_nr",
-            "in_date",
-            "out_date",
-            "invoice",
-            "AuftragsNr",
-            "order_nr",
-            "invoice_nr",
-            "letter",
-            "project_comment",
-            "report",
-            "sample_storage_loc",
-        ),
-    ),
-    "samples": SearchContext(
-        table="sample_t",
-        fields=(
-            "sample_nr",
-            "project_nr",
-            "type",
-            "material",
-            "fraction",
-            "weight",
-            "sampling_date",
-            "user_label",
-            "user_label_nr",
-            "user_desc1",
-            "user_desc2",
-            "MA_nr",
-            "lab_comment",
-            "user_comment",
-            "prep_storage_loc",
-            "storage",
-        ),
-    ),
-    "preparations": SearchContext(
-        table="preparation_t",
-        fields=(
-            "sample_nr",
-            "prep_nr",
-            "batch",
-            "cn_ratio",
-            "c_percent",
-            "n_percent",
-            "prep_end",
-            "prep_start",
-            "prep_comment",
-        ),
-    ),
-    "targets": SearchContext(
-        table="target_t",
-        fields=(
-            "sample_nr",
-            "target_nr",
-            "prep_nr",
-            "magazine",
-            "position",
-            "target_comment",
-            "meas_comment",
-            "graph_batch",
-            "weight",
-            "conc_c",
-            "target_id",
-        ),
-    ),
-}
 
 
 class SamsRepository:
@@ -125,56 +25,56 @@ class SamsRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def list_users(self, query: str | None = None, limit: int | None = None) -> list[User]:
-        stmt = select(User).order_by(
-            case((User.last_name.is_(None), 1), else_=0).asc(),
-            User.last_name.asc(),
-            case((User.first_name.is_(None), 1), else_=0).asc(),
-            User.first_name.asc(),
+    def list_submitters(self, query: str | None = None, limit: int | None = None) -> list[Submitter]:
+        stmt = select(Submitter).order_by(
+            case((Submitter.last_name.is_(None), 1), else_=0).asc(),
+            Submitter.last_name.asc(),
+            case((Submitter.first_name.is_(None), 1), else_=0).asc(),
+            Submitter.first_name.asc(),
         )
         if query:
             like = f"%{query}%"
             stmt = stmt.where(
-                User.last_name.like(like)
-                | User.first_name.like(like)
-                | User.organisation.like(like)
-                | User.institute.like(like)
+                Submitter.last_name.like(like)
+                | Submitter.first_name.like(like)
+                | Submitter.organisation.like(like)
+                | Submitter.institute.like(like)
             )
         if limit is not None and limit > 0:
             stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
 
-    def get_user(self, user_nr: int) -> User | None:
-        return self.session.get(User, user_nr)
+    def get_submitter(self, user_nr: int) -> Submitter | None:
+        return self.session.get(Submitter, user_nr)
 
-    def get_adjacent_user_nrs(self, user_nr: int) -> tuple[int | None, int | None]:
+    def get_adjacent_submitter_nrs(self, user_nr: int) -> tuple[int | None, int | None]:
         previous = self.session.scalar(
-            select(func.max(User.user_nr)).where(User.user_nr < user_nr)
+            select(func.max(Submitter.user_nr)).where(Submitter.user_nr < user_nr)
         )
         following = self.session.scalar(
-            select(func.min(User.user_nr)).where(User.user_nr > user_nr)
+            select(func.min(Submitter.user_nr)).where(Submitter.user_nr > user_nr)
         )
         return (
             int(previous) if previous is not None else None,
             int(following) if following is not None else None,
         )
 
-    def get_user_stats(self) -> tuple[int, int]:
+    def get_submitter_stats(self) -> tuple[int, int]:
         total_count, max_user_nr = self.session.execute(
             select(
-                func.count(User.user_nr),
-                func.max(User.user_nr),
+                func.count(Submitter.user_nr),
+                func.max(Submitter.user_nr),
             )
         ).one()
         return int(total_count or 0), int(max_user_nr or 0)
 
-    def create_user(self, payload: dict[str, Any]) -> User:
-        user = User(**payload)
+    def create_submitter(self, payload: dict[str, Any]) -> Submitter:
+        user = Submitter(**payload)
         self.session.add(user)
         self.session.flush()
         return user
 
-    def list_projects_by_user(self, user_nr: int) -> list[Project]:
+    def list_projects_by_submitter(self, user_nr: int) -> list[Project]:
         stmt = (
             select(Project)
             .where(Project.user_nr == user_nr)
@@ -187,7 +87,7 @@ class SamsRepository:
         return list(self.session.scalars(stmt))
 
     def list_projects(self, limit: int | None = None) -> list[Project]:
-        stmt = select(Project).options(selectinload(Project.user)).order_by(
+        stmt = select(Project).options(selectinload(Project.submitter)).order_by(
             case((Project.in_date.is_(None), 1), else_=0).asc(),
             Project.in_date.desc(),
             Project.project_nr.desc(),
@@ -444,13 +344,13 @@ class SamsRepository:
                 Sample.user_label.label("user_label"),
                 Project.project_nr.label("project_nr"),
                 Project.project.label("project"),
-                User.user_nr.label("user_nr"),
-                User.last_name.label("user_last_name"),
+                Submitter.user_nr.label("user_nr"),
+                Submitter.last_name.label("user_last_name"),
             )
             .select_from(Target)
             .join(Sample, Sample.sample_nr == Target.sample_nr, isouter=True)
             .join(Project, Project.project_nr == Sample.project_nr, isouter=True)
-            .join(User, User.user_nr == Project.user_nr, isouter=True)
+            .join(Submitter, Submitter.user_nr == Project.user_nr, isouter=True)
             .where(Target.magazine.is_not(None), func.lower(func.trim(Target.magazine)) == query.lower())
             .order_by(Target.position.asc(), Target.sample_nr.asc(), Target.prep_nr.asc(), Target.target_nr.asc())
         )
@@ -486,23 +386,6 @@ class SamsRepository:
             .group_by(Target.prep_nr)
         )
         return {int(prep_nr): int(count) for prep_nr, count in self.session.execute(stmt).all()}
-
-    def global_search(self, context: str, phrase: str, limit: int = 200) -> list[dict[str, Any]]:
-        ctx = SEARCH_CONTEXTS.get(context)
-        if ctx is None:
-            raise ValueError(f"Unsupported search context: {context}")
-
-        concat_fields = ",".join(ctx.fields)
-        stmt = text(
-            f"""
-            SELECT *
-            FROM {ctx.table}
-            WHERE CONCAT_WS(';',{concat_fields}) LIKE :phrase
-            LIMIT :limit
-            """
-        )
-        rows = self.session.execute(stmt, {"phrase": f"%{phrase}%", "limit": limit}).mappings().all()
-        return [dict(row) for row in rows]
 
     def get_dashboard_counts(self, show_on_hold: bool = False) -> dict[str, int]:
         return {
@@ -795,36 +678,25 @@ class SamsRepository:
         return True
 
     def check_project_status(self) -> int:
-        """Close projects where all non-discarded samples have ages."""
-        closed = 0
-        open_projects = self._fetch_rows(
-            "SELECT project_nr FROM project_t WHERE status <> 'closed'"
-        )
-        for row in open_projects:
-            project_nr = row["project_nr"]
-            pending = self.session.scalar(
-                text(
-                    """
-                    SELECT COUNT(1)
-                    FROM sample_t
-                    INNER JOIN preparation_t ON preparation_t.sample_nr = sample_t.sample_nr
-                    INNER JOIN target_t ON target_t.sample_nr = sample_t.sample_nr
-                    WHERE sample_t.project_nr = :project_nr
-                      AND preparation_t.stop = 0
-                      AND target_t.stop = 0
-                      AND sample_t.c14_age IS NULL
-                    """
-                ),
-                {"project_nr": project_nr},
+        """Close projects whose `out_date` is set but status is not yet `closed`.
+
+        Per ADR-0004, delivery (`out_date`) is the trigger for closure;
+        `prepaid` projects are skipped because that value is a billing
+        flag, not a workflow state.
+        """
+        result = self.session.execute(
+            text(
+                """
+                UPDATE project_t
+                SET status = 'closed'
+                WHERE out_date IS NOT NULL
+                  AND (status IS NULL OR LOWER(status) <> 'closed')
+                  AND (status IS NULL OR LOWER(status) <> 'prepaid')
+                """
             )
-            if int(pending or 0) == 0:
-                self.session.execute(
-                    text("UPDATE project_t SET status='closed' WHERE project_nr=:project_nr"),
-                    {"project_nr": project_nr},
-                )
-                closed += 1
+        )
         self.session.flush()
-        return closed
+        return int(result.rowcount or 0)
 
     def _count_rows(self, sql: str) -> int:
         rows = self._fetch_rows(sql)

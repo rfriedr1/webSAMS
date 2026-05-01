@@ -56,10 +56,10 @@
       {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
       <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
       {% endif %}
-      {% if user %}| User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>{% endif %}
+      {% if user %}| Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>{% endif %}
     </p>
     {% elif user %}
-    <p>User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></p>
+    <p>Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></p>
     {% endif %}
     <p class="page-actions">
       <a href="{{ sample_back_url }}" class="nav-back" data-history-back data-fallback="{{ sample_back_url }}">Back</a>
@@ -206,7 +206,7 @@
 
   <div class="cards sample-comments-cards">
     <article>
-      <h3>User Comment</h3>
+      <h3>Submitter Comment</h3>
       {% set user_comment_error = sample_field_errors.get('sample__user_comment') %}
       {% set user_comment_editor_value = sample_form_values.get('sample__user_comment', sample.user_comment or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if user_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_comment" data-field-kind="multiline">

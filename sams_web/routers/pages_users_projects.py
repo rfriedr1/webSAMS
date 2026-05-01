@@ -1,4 +1,4 @@
-"""User and project page routes."""
+"""Submitter and project page routes."""
 
 from __future__ import annotations
 
@@ -9,119 +9,82 @@ from fastapi.responses import RedirectResponse
 
 from sams_web.config import get_settings
 from sams_web.dependencies import get_service
+from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
 from sams_web.routers.pages_shared import logger, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
-from sams_web.viewmodels import detail_sections as ds
+from sams_web.viewmodels.detail_sections_user_project import (
+    PROJECT_DETAIL_PAGE,
+    SUBMITTER_DETAIL_PAGE,
+)
 
 router = APIRouter()
 
-PROJECT_EDIT_FORM_ID = "project-detail-edit-form"
-PROJECT_READ_ONLY_FIELDS = ("project_nr", "user_nr")
-PROJECT_REQUIRED_FIELDS: tuple[str, ...] = ()
-USER_EDIT_FORM_ID = "user-detail-edit-form"
-USER_READ_ONLY_FIELDS = ("user_nr",)
-USER_REQUIRED_FIELDS: tuple[str, ...] = ()
 
-
-def _build_project_detail_context(
-    request: Request,
-    *,
-    data: dict[str, object],
-    service: SamsService,
-    saved: bool = False,
-    save_error: str | None = None,
-    project_field_errors: dict[str, str] | None = None,
-    project_form_values: dict[str, str] | None = None,
-    project_edit_initial_mode: str = "view",
-) -> dict[str, object]:
-    project = data["project"]
+def _project_extra_keys(data: dict[str, object]) -> dict[str, object]:
     samples = data["samples"]
     return {
-        "request": request,
-        "project": project,
         "user": data["user"],
         "samples": samples,
         "sample_count": len(samples),
-        "project_sections": ds.build_project_sections(project),
-        "previous_project_nr": data["previous_project_nr"],
-        "next_project_nr": data["next_project_nr"],
-        "project_count": data["project_count"],
-        "max_project_nr": data["max_project_nr"],
-        "project_edit_form_id": PROJECT_EDIT_FORM_ID,
-        "project_read_only_fields": PROJECT_READ_ONLY_FIELDS,
-        "project_required_fields": PROJECT_REQUIRED_FIELDS,
-        "project_select_options": service.get_project_edit_select_options(),
-        "project_field_errors": project_field_errors or {},
-        "project_form_values": project_form_values or {},
-        "project_save_error": save_error,
-        "project_saved": saved,
-        "project_edit_initial_mode": project_edit_initial_mode,
     }
 
 
-def _build_user_detail_context(
-    request: Request,
-    *,
-    data: dict[str, object],
-    saved: bool = False,
-    save_error: str | None = None,
-    user_field_errors: dict[str, str] | None = None,
-    user_form_values: dict[str, str] | None = None,
-    user_edit_initial_mode: str = "view",
-) -> dict[str, object]:
+def _project_cursor(data: dict[str, object]) -> NavCursor:
+    return NavCursor(
+        previous_nr=data["previous_project_nr"],
+        next_nr=data["next_project_nr"],
+        count=data["project_count"],
+        max_nr=data["max_project_nr"],
+    )
+
+
+def _submitter_extra_keys(data: dict[str, object]) -> dict[str, object]:
     return {
-        "request": request,
-        "user": data["user"],
-        "user_sections": ds.build_user_sections(data["user"]),
         "projects": data["projects"],
-        "previous_user_nr": data["previous_user_nr"],
-        "next_user_nr": data["next_user_nr"],
-        "user_count": data["user_count"],
-        "max_user_nr": data["max_user_nr"],
-        "user_edit_form_id": USER_EDIT_FORM_ID,
-        "user_read_only_fields": USER_READ_ONLY_FIELDS,
-        "user_required_fields": USER_REQUIRED_FIELDS,
-        "user_select_options": {},
-        "user_field_errors": user_field_errors or {},
-        "user_form_values": user_form_values or {},
-        "user_save_error": save_error,
-        "user_saved": saved,
-        "user_edit_initial_mode": user_edit_initial_mode,
     }
 
 
-@router.get("/users")
-def users_page(
+def _submitter_cursor(data: dict[str, object]) -> NavCursor:
+    return NavCursor(
+        previous_nr=data["previous_user_nr"],
+        next_nr=data["next_user_nr"],
+        count=data["user_count"],
+        max_nr=data["max_user_nr"],
+    )
+
+
+@router.get("/submitters")
+def submitters_page(
     request: Request,
     service: SamsService = Depends(get_service),
 ):
     settings = get_settings()
-    users = []
+    submitters = []
     error: str | None = None
     error_trace: str | None = None
     try:
-        users = service.list_users()
+        submitters = service.list_submitters()
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Failed loading users list")
+        logger.exception("Failed loading submitters list")
         if settings.debug:
             error = f"{type(exc).__name__}: {exc}"
             error_trace = traceback.format_exc()
         else:
-            error = "Failed to load users. Enable SAMS_DEBUG=true for traceback details."
+            error = "Failed to load submitters. Enable SAMS_DEBUG=true for traceback details."
 
     return templates.TemplateResponse(
-        "users.html",
+        "submitters.html",
         {
             "request": request,
-            "users": users,
+            "submitters": submitters,
             "error": error,
             "error_trace": error_trace,
         },
     )
 
 
-@router.post("/users/new")
-def create_user_form(
+@router.post("/submitters/new")
+def create_submitter_form(
     last_name: str = Form(...),
     first_name: str | None = Form(default=None),
     organisation: str | None = Form(default=None),
@@ -129,7 +92,7 @@ def create_user_form(
     email: str | None = Form(default=None),
     service: SamsService = Depends(get_service),
 ):
-    user = service.create_user(
+    submitter = service.create_submitter(
         {
             "last_name": last_name,
             "first_name": first_name,
@@ -138,53 +101,57 @@ def create_user_form(
             "email": email,
         }
     )
-    return RedirectResponse(url=f"/users/{user.user_nr}", status_code=303)
+    return RedirectResponse(url=f"/submitters/{submitter.user_nr}", status_code=303)
 
 
-@router.get("/users/{user_nr}")
-def user_detail_page(
+@router.get("/submitters/{user_nr}")
+def submitter_detail_page(
     request: Request,
     user_nr: int,
-    jump_user: str | None = Query(default=None),
+    jump_submitter: str | None = Query(default=None),
     saved: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
-    data = service.get_user_details(user_nr)
+    data = service.get_submitter_details(user_nr)
     if data is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Submitter not found")
 
-    if jump_user is not None:
-        fallback_url = f"/users/{user_nr}"
+    if jump_submitter is not None:
+        fallback_url = f"/submitters/{user_nr}"
         redirect_url = resolve_jump_redirect_url(
-            jump_value=jump_user,
+            jump_value=jump_submitter,
             current_id=user_nr,
             max_id=int(data.get("max_user_nr") or 0),
             fallback_url=fallback_url,
-            target_url_for=lambda jump_id: f"/users/{jump_id}",
-            exists_fn=service.user_exists,
+            target_url_for=lambda jump_id: f"/submitters/{jump_id}",
+            exists_fn=service.submitter_exists,
         )
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
     return templates.TemplateResponse(
-        "user_detail.html",
-        _build_user_detail_context(
+        "submitter_detail.html",
+        build_detail_page_context(
             request,
-            data=data,
-            saved=saved,
+            SUBMITTER_DETAIL_PAGE,
+            entity=data["user"],
+            cursor=_submitter_cursor(data),
+            edit_state=EditFormState(saved=saved),
+            service=service,
+            extra=_submitter_extra_keys(data),
         ),
     )
 
 
-@router.post("/users/{user_nr}/save")
-async def save_user_detail_page(
+@router.post("/submitters/{user_nr}/save")
+async def save_submitter_detail_page(
     request: Request,
     user_nr: int,
     service: SamsService = Depends(get_service),
 ):
-    data = service.get_user_details(user_nr)
+    data = service.get_submitter_details(user_nr)
     if data is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Submitter not found")
 
     raw_form = await request.form()
     submitted_fields: dict[str, str] = {}
@@ -193,31 +160,37 @@ async def save_user_detail_page(
             continue
         submitted_fields[key] = value if isinstance(value, str) else str(value)
 
-    saved, field_errors, save_error = service.update_user_detail(user_nr, submitted_fields)
+    saved, field_errors, save_error = service.update_submitter_detail(user_nr, submitted_fields)
     if saved:
-        return RedirectResponse(url=f"/users/{user_nr}?saved=true", status_code=303)
+        return RedirectResponse(url=f"/submitters/{user_nr}?saved=true", status_code=303)
 
     return templates.TemplateResponse(
-        "user_detail.html",
-        _build_user_detail_context(
+        "submitter_detail.html",
+        build_detail_page_context(
             request,
-            data=data,
-            saved=False,
-            save_error=save_error,
-            user_field_errors=field_errors,
-            user_form_values=submitted_fields,
-            user_edit_initial_mode="editing",
+            SUBMITTER_DETAIL_PAGE,
+            entity=data["user"],
+            cursor=_submitter_cursor(data),
+            edit_state=EditFormState(
+                saved=False,
+                save_error=save_error,
+                field_errors=field_errors,
+                form_values=submitted_fields,
+                edit_initial_mode="editing",
+            ),
+            service=service,
+            extra=_submitter_extra_keys(data),
         ),
         status_code=422,
     )
 
 
-@router.get("/users/{user_nr}/projects")
-def user_projects_page(request: Request, user_nr: int, service: SamsService = Depends(get_service)):
-    data = service.get_user_details(user_nr)
+@router.get("/submitters/{user_nr}/projects")
+def submitter_projects_page(request: Request, user_nr: int, service: SamsService = Depends(get_service)):
+    data = service.get_submitter_details(user_nr)
     if data is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return RedirectResponse(url=f"/users/{user_nr}", status_code=307)
+        raise HTTPException(status_code=404, detail="Submitter not found")
+    return RedirectResponse(url=f"/submitters/{user_nr}", status_code=307)
 
 
 @router.get("/projects")
@@ -294,11 +267,14 @@ def project_detail_page(
 
     return templates.TemplateResponse(
         "project_detail.html",
-        _build_project_detail_context(
+        build_detail_page_context(
             request,
-            data=data,
+            PROJECT_DETAIL_PAGE,
+            entity=data["project"],
+            cursor=_project_cursor(data),
+            edit_state=EditFormState(saved=saved),
             service=service,
-            saved=saved,
+            extra=_project_extra_keys(data),
         ),
     )
 
@@ -326,15 +302,20 @@ async def save_project_detail_page(
 
     return templates.TemplateResponse(
         "project_detail.html",
-        _build_project_detail_context(
+        build_detail_page_context(
             request,
-            data=data,
+            PROJECT_DETAIL_PAGE,
+            entity=data["project"],
+            cursor=_project_cursor(data),
+            edit_state=EditFormState(
+                saved=False,
+                save_error=save_error,
+                field_errors=field_errors,
+                form_values=submitted_fields,
+                edit_initial_mode="editing",
+            ),
             service=service,
-            saved=False,
-            save_error=save_error,
-            project_field_errors=field_errors,
-            project_form_values=submitted_fields,
-            project_edit_initial_mode="editing",
+            extra=_project_extra_keys(data),
         ),
         status_code=422,
     )
@@ -346,7 +327,7 @@ def create_project_form(
     project: str = Form(...),
     service: SamsService = Depends(get_service),
 ):
-    created = service.add_new_project_by_user_nr(user_nr=user_nr, project_name=project)
+    created = service.add_new_project_by_submitter_nr(user_nr=user_nr, project_name=project)
     return RedirectResponse(url=f"/projects/{created.project_nr}", status_code=303)
 
 

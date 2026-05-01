@@ -6,11 +6,38 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
-from sams_web.routers.detail_contexts import build_preparation_detail_context
+from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
 from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
+from sams_web.viewmodels.detail_sections_sample_lab import PREPARATION_DETAIL_PAGE
 
 router = APIRouter()
+
+
+def _preparation_extra_keys(data: dict[str, object]) -> dict[str, object]:
+    # The preparation template historically uses `prep_nr`-suffixed nav keys
+    # (previous_prep_nr / next_prep_nr / max_prep_nr) while the rest of the
+    # detail-page state uses the full `preparation_` prefix. Rather than
+    # rename the template, alias the nav keys here.
+    return {
+        "sample": data["sample"],
+        "project": data["project"],
+        "user": data["user"],
+        "targets": data["targets"],
+        "targets_total": data["targets_total"],
+        "previous_prep_nr": data["previous_prep_nr"],
+        "next_prep_nr": data["next_prep_nr"],
+        "max_prep_nr": data["max_prep_nr"],
+    }
+
+
+def _preparation_cursor(data: dict[str, object]) -> NavCursor:
+    return NavCursor(
+        previous_nr=data["previous_prep_nr"],
+        next_nr=data["next_prep_nr"],
+        count=data["preparation_count"],
+        max_nr=data["max_prep_nr"],
+    )
 
 
 @router.get("/samples/{sample_nr}/preparations/{prep_nr}")
@@ -41,11 +68,14 @@ def preparation_detail_page(
 
     response = templates.TemplateResponse(
         "preparation_detail.html",
-        build_preparation_detail_context(
+        build_detail_page_context(
             request,
-            data=data,
+            PREPARATION_DETAIL_PAGE,
+            entity=data["preparation"],
+            cursor=_preparation_cursor(data),
+            edit_state=EditFormState(saved=saved),
             service=service,
-            saved=saved,
+            extra=_preparation_extra_keys(data),
         ),
     )
     response.set_cookie(
@@ -91,15 +121,20 @@ async def save_preparation_detail_page(
 
     response = templates.TemplateResponse(
         "preparation_detail.html",
-        build_preparation_detail_context(
+        build_detail_page_context(
             request,
-            data=data,
+            PREPARATION_DETAIL_PAGE,
+            entity=data["preparation"],
+            cursor=_preparation_cursor(data),
+            edit_state=EditFormState(
+                saved=False,
+                save_error=save_error,
+                field_errors=field_errors,
+                form_values=submitted_fields,
+                edit_initial_mode="editing",
+            ),
             service=service,
-            saved=False,
-            save_error=save_error,
-            preparation_field_errors=field_errors,
-            preparation_form_values=submitted_fields,
-            preparation_edit_initial_mode="editing",
+            extra=_preparation_extra_keys(data),
         ),
         status_code=422,
     )

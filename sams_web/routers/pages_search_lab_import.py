@@ -9,141 +9,81 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
-from sams_web.repositories import SEARCH_CONTEXTS
+from sams_web.graphitization_bench import GraphitizationBench
+from sams_web.preparation_bench import PreparationBench
+from sams_web.search import SEARCH_CONTEXTS
 from sams_web.routers.pages_shared import parse_positive_int, templates
 from sams_web.services import SamsService
 
 router = APIRouter()
 
 
-def _build_lab_preparation_page_context(
-    request: Request,
+def _form_to_dict(form) -> dict[str, str]:
+    submitted: dict[str, str] = {}
+    for key in form.keys():
+        values = form.getlist(key)
+        value = values[-1] if values else ""
+        submitted[key] = value if isinstance(value, str) else str(value)
+    return submitted
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _build_prep_redirect(
     *,
-    service: SamsService,
+    sample_nr: int,
+    prep_nr: int,
     show_on_hold: bool,
-    bench_sample_nr_raw: str = "",
-    bench_prep_nr_raw: str = "",
-    bench_form_values: dict[str, str] | None = None,
-    bench_field_errors: dict[str, str] | None = None,
-    bench_error: str | None = None,
-    bench_saved: bool = False,
-    bench_notice: str | None = None,
-) -> dict[str, object]:
-    data = service.get_dashboard(show_on_hold=show_on_hold)
-    rows = data["tables"].get("planned", [])
-
-    bench_form_values = bench_form_values or {}
-    bench_field_errors = bench_field_errors or {}
-    if not bench_sample_nr_raw and rows:
-        first_row = rows[0]
-        first_sample = first_row.get("sample_nr")
-        first_prep = first_row.get("prep_nr")
-        if first_sample is not None:
-            bench_sample_nr_raw = str(first_sample)
-        if first_prep is not None:
-            bench_prep_nr_raw = str(first_prep)
-    bench_sample_nr = parse_positive_int(bench_sample_nr_raw) if bench_sample_nr_raw else None
-    bench_prep_nr = parse_positive_int(bench_prep_nr_raw) if bench_prep_nr_raw else None
-
-    bench_entry = None
-    if bench_sample_nr is not None:
-        bench_entry = service.get_preparation_bench_entry(bench_sample_nr, prep_nr=bench_prep_nr)
-        if bench_entry is None and bench_error is None:
-            bench_error = "Sample or preparation was not found for bench entry."
-        elif bench_entry is not None:
-            bench_prep_nr_raw = str(bench_entry["preparation"].prep_nr)
-
-    return {
-        "request": request,
-        "title": "Preparation Workflow",
-        "description": "Preparation worklist for samples that are ready for pre-treatment planning and execution.",
-        "table_key": "planned",
-        "table_title": "Planned",
-        "rows": rows,
-        "show_on_hold": show_on_hold,
-        "show_on_hold_enabled": True,
-        "bench_entry_enabled": True,
-        "bench_entry": bench_entry,
-        "bench_sample_nr_query": bench_sample_nr_raw,
-        "bench_prep_nr_query": bench_prep_nr_raw,
-        "bench_form_values": bench_form_values,
-        "bench_field_errors": bench_field_errors,
-        "bench_error": bench_error,
-        "bench_saved": bench_saved,
-        "bench_notice": bench_notice,
-        "bench_method_options": service.list_preparation_methods(),
-    }
+    action: str,
+    next_cursor: tuple[int, ...] | None,
+) -> str:
+    parts = [f"show_on_hold={'true' if show_on_hold else 'false'}", "bench_saved=true"]
+    if action == "save_next" and next_cursor is not None:
+        parts.append(f"bench_sample_nr={next_cursor[0]}")
+        parts.append(f"bench_prep_nr={next_cursor[1]}")
+        parts.append("bench_notice=Saved+and+loaded+next+planned+sample.")
+    else:
+        parts.append(f"bench_sample_nr={sample_nr}")
+        parts.append(f"bench_prep_nr={prep_nr}")
+        if action == "save_next":
+            parts.append("bench_notice=Saved.+No+next+planned+sample+was+found.")
+    return "/lab/preparation?" + "&".join(parts)
 
 
-def _build_lab_graphitization_page_context(
-    request: Request,
+def _build_graph_redirect(
     *,
-    service: SamsService,
-    graph_sample_nr_raw: str = "",
-    graph_prep_nr_raw: str = "",
-    graph_target_nr_raw: str = "",
-    graph_form_values: dict[str, str] | None = None,
-    graph_field_errors: dict[str, str] | None = None,
-    graph_error: str | None = None,
-    graph_saved: bool = False,
-    graph_notice: str | None = None,
-    graph_batch_notice: str | None = None,
-    graph_batch_error: str | None = None,
-) -> dict[str, object]:
-    data = service.get_dashboard(show_on_hold=False)
-    rows = data["tables"].get("waiting_for_graph", [])
-
-    graph_form_values = graph_form_values or {}
-    graph_field_errors = graph_field_errors or {}
-    if not graph_sample_nr_raw and rows:
-        first_row = rows[0]
-        if first_row.get("sample_nr") is not None:
-            graph_sample_nr_raw = str(first_row.get("sample_nr"))
-        if first_row.get("prep_nr") is not None:
-            graph_prep_nr_raw = str(first_row.get("prep_nr"))
-        if first_row.get("target_nr") is not None:
-            graph_target_nr_raw = str(first_row.get("target_nr"))
-
-    graph_sample_nr = parse_positive_int(graph_sample_nr_raw) if graph_sample_nr_raw else None
-    graph_prep_nr = parse_positive_int(graph_prep_nr_raw) if graph_prep_nr_raw else None
-    graph_target_nr = parse_positive_int(graph_target_nr_raw) if graph_target_nr_raw else None
-
-    graph_bench_entry = None
-    if graph_sample_nr is not None:
-        graph_bench_entry = service.get_graphitization_bench_entry(
-            graph_sample_nr,
-            prep_nr=graph_prep_nr,
-            target_nr=graph_target_nr,
+    sample_nr: int,
+    prep_nr: int,
+    target_nr: int,
+    action: str,
+    next_cursor: tuple[int, ...] | None,
+) -> str:
+    parts = ["graph_saved=true"]
+    if action == "save_next" and next_cursor is not None:
+        parts.extend(
+            [
+                f"graph_sample_nr={next_cursor[0]}",
+                f"graph_prep_nr={next_cursor[1]}",
+                f"graph_target_nr={next_cursor[2]}",
+                "graph_notice=Saved+and+loaded+next+waiting-for-graph+target.",
+            ]
         )
-        if graph_bench_entry is None and graph_error is None:
-            graph_error = "Sample / preparation / target was not found for graphitization bench entry."
-        elif graph_bench_entry is not None:
-            graph_prep_nr_raw = str(graph_bench_entry["preparation"].prep_nr)
-            graph_target_nr_raw = str(graph_bench_entry["target"].target_nr)
+    else:
+        parts.extend(
+            [
+                f"graph_sample_nr={sample_nr}",
+                f"graph_prep_nr={prep_nr}",
+                f"graph_target_nr={target_nr}",
+            ]
+        )
+        if action == "save_next":
+            parts.append("graph_notice=Saved.+No+next+waiting-for-graph+target+was+found.")
+    return "/lab/graphitization?" + "&".join(parts)
 
-    return {
-        "request": request,
-        "title": "Graphitization Workflow",
-        "description": "Graphitization worklist for samples waiting to enter target production.",
-        "table_key": "waiting_for_graph",
-        "table_title": "Waiting For Graph",
-        "rows": rows,
-        "show_on_hold": False,
-        "show_on_hold_enabled": False,
-        "graph_bench_entry_enabled": True,
-        "graph_bench_entry": graph_bench_entry,
-        "graph_sample_nr_query": graph_sample_nr_raw,
-        "graph_prep_nr_query": graph_prep_nr_raw,
-        "graph_target_nr_query": graph_target_nr_raw,
-        "graph_form_values": graph_form_values,
-        "graph_field_errors": graph_field_errors,
-        "graph_error": graph_error,
-        "graph_saved": graph_saved,
-        "graph_notice": graph_notice,
-        "graph_batch_notice": graph_batch_notice,
-        "graph_batch_error": graph_batch_error,
-        "graph_batch_system_options": service.get_graphitization_systems(),
-    }
+
+# ---- Search route ---------------------------------------------------------
 
 
 @router.get("/search")
@@ -164,12 +104,14 @@ def search_page(
         except ValueError as exc:
             error = str(exc)
 
+    resolved_context = SEARCH_CONTEXTS.get(context)
     return templates.TemplateResponse(
         "search.html",
         {
             "request": request,
             "contexts": list(SEARCH_CONTEXTS.keys()),
             "context": context,
+            "resolved_context": resolved_context,
             "phrase": phrase,
             "results": results,
             "error": error,
@@ -177,6 +119,9 @@ def search_page(
             "global_mode": global_mode,
         },
     )
+
+
+# ---- Preparation bench routes ---------------------------------------------
 
 
 @router.get("/lab/preparation")
@@ -189,18 +134,16 @@ def lab_preparation_page(
     bench_notice: str = Query(default=""),
     service: SamsService = Depends(get_service),
 ):
-    return templates.TemplateResponse(
-        "lab_queue.html",
-        _build_lab_preparation_page_context(
-            request,
-            service=service,
-            show_on_hold=show_on_hold,
-            bench_sample_nr_raw=bench_sample_nr.strip(),
-            bench_prep_nr_raw=bench_prep_nr.strip(),
-            bench_saved=bench_saved,
-            bench_notice=bench_notice.strip() or None,
-        ),
+    bench = PreparationBench(service)
+    context = bench.page_view(
+        show_on_hold=show_on_hold,
+        sample_nr_raw=bench_sample_nr.strip(),
+        prep_nr_raw=bench_prep_nr.strip(),
+        saved=bench_saved,
+        notice=bench_notice.strip() or None,
     )
+    context["request"] = request
+    return templates.TemplateResponse("lab_queue.html", context)
 
 
 @router.post("/lab/preparation/bench/save")
@@ -208,75 +151,59 @@ async def lab_preparation_bench_save(
     request: Request,
     service: SamsService = Depends(get_service),
 ):
-    form = await request.form()
-    submitted_fields: dict[str, str] = {}
-    for key in form.keys():
-        values = form.getlist(key)
-        value = values[-1] if values else ""
-        submitted_fields[key] = value if isinstance(value, str) else str(value)
+    submitted = _form_to_dict(await request.form())
+    bench = PreparationBench(service)
 
-    bench_sample_nr_raw = (submitted_fields.get("bench__sample_nr") or "").strip()
-    bench_prep_nr_raw = (submitted_fields.get("bench__prep_nr") or "").strip()
-    action = (submitted_fields.get("bench__action") or "save").strip().lower()
-    show_on_hold = (submitted_fields.get("bench__show_on_hold") or "").strip().lower() in {"1", "true", "yes", "on"}
+    sample_nr_raw = (submitted.get("bench__sample_nr") or "").strip()
+    prep_nr_raw = (submitted.get("bench__prep_nr") or "").strip()
+    action = (submitted.get("bench__action") or "save").strip().lower()
+    show_on_hold = _truthy(submitted.get("bench__show_on_hold"))
 
-    bench_sample_nr = parse_positive_int(bench_sample_nr_raw)
-    bench_prep_nr = parse_positive_int(bench_prep_nr_raw)
-    if bench_sample_nr is None or bench_prep_nr is None:
-        return templates.TemplateResponse(
-            "lab_queue.html",
-            _build_lab_preparation_page_context(
-                request,
-                service=service,
-                show_on_hold=show_on_hold,
-                bench_sample_nr_raw=bench_sample_nr_raw,
-                bench_prep_nr_raw=bench_prep_nr_raw,
-                bench_form_values=submitted_fields,
-                bench_error="Sample # and Prep # are required to save bench entry data.",
-            ),
-            status_code=422,
-        )
-
-    next_entry: tuple[int, int] | None = None
-    if action == "save_next":
-        next_entry = service.get_next_planned_bench_entry(
-            bench_sample_nr,
-            bench_prep_nr,
+    sample_nr = parse_positive_int(sample_nr_raw)
+    prep_nr = parse_positive_int(prep_nr_raw)
+    if sample_nr is None or prep_nr is None:
+        context = bench.page_view(
             show_on_hold=show_on_hold,
+            sample_nr_raw=sample_nr_raw,
+            prep_nr_raw=prep_nr_raw,
+            form_values=submitted,
+            error="Sample # and Prep # are required to save bench entry data.",
         )
+        context["request"] = request
+        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
 
-    saved, field_errors, save_error = service.update_preparation_bench_entry(
-        bench_sample_nr,
-        bench_prep_nr,
-        submitted_fields,
+    outcome = bench.save(
+        form_data=submitted,
+        sample_nr=sample_nr,
+        prep_nr=prep_nr,
+        action=action,
+        show_on_hold=show_on_hold,
     )
-    if not saved:
-        return templates.TemplateResponse(
-            "lab_queue.html",
-            _build_lab_preparation_page_context(
-                request,
-                service=service,
-                show_on_hold=show_on_hold,
-                bench_sample_nr_raw=bench_sample_nr_raw,
-                bench_prep_nr_raw=bench_prep_nr_raw,
-                bench_form_values=submitted_fields,
-                bench_field_errors=field_errors,
-                bench_error=save_error,
-            ),
-            status_code=422,
+    if not outcome.success:
+        context = bench.page_view(
+            show_on_hold=show_on_hold,
+            sample_nr_raw=sample_nr_raw,
+            prep_nr_raw=prep_nr_raw,
+            form_values=submitted,
+            field_errors=outcome.field_errors,
+            error=outcome.save_error,
         )
+        context["request"] = request
+        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
 
-    query_parts = [f"show_on_hold={'true' if show_on_hold else 'false'}", "bench_saved=true"]
-    if action == "save_next" and next_entry is not None:
-        query_parts.append(f"bench_sample_nr={next_entry[0]}")
-        query_parts.append(f"bench_prep_nr={next_entry[1]}")
-        query_parts.append("bench_notice=Saved+and+loaded+next+planned+sample.")
-    else:
-        query_parts.append(f"bench_sample_nr={bench_sample_nr}")
-        query_parts.append(f"bench_prep_nr={bench_prep_nr}")
-        if action == "save_next":
-            query_parts.append("bench_notice=Saved.+No+next+planned+sample+was+found.")
-    return RedirectResponse(url=f"/lab/preparation?{'&'.join(query_parts)}", status_code=303)
+    return RedirectResponse(
+        _build_prep_redirect(
+            sample_nr=sample_nr,
+            prep_nr=prep_nr,
+            show_on_hold=show_on_hold,
+            action=action,
+            next_cursor=outcome.next_cursor,
+        ),
+        status_code=303,
+    )
+
+
+# ---- Graphitization bench routes ------------------------------------------
 
 
 @router.get("/lab/graphitization")
@@ -291,20 +218,18 @@ def lab_graphitization_page(
     graph_batch_error: str = Query(default=""),
     service: SamsService = Depends(get_service),
 ):
-    return templates.TemplateResponse(
-        "lab_queue.html",
-        _build_lab_graphitization_page_context(
-            request,
-            service=service,
-            graph_sample_nr_raw=graph_sample_nr.strip(),
-            graph_prep_nr_raw=graph_prep_nr.strip(),
-            graph_target_nr_raw=graph_target_nr.strip(),
-            graph_saved=graph_saved,
-            graph_notice=graph_notice.strip() or None,
-            graph_batch_notice=graph_batch_notice.strip() or None,
-            graph_batch_error=graph_batch_error.strip() or None,
-        ),
+    bench = GraphitizationBench(service)
+    context = bench.page_view(
+        sample_nr_raw=graph_sample_nr.strip(),
+        prep_nr_raw=graph_prep_nr.strip(),
+        target_nr_raw=graph_target_nr.strip(),
+        saved=graph_saved,
+        notice=graph_notice.strip() or None,
+        batch_notice=graph_batch_notice.strip() or None,
+        batch_error=graph_batch_error.strip() or None,
     )
+    context["request"] = request
+    return templates.TemplateResponse("lab_queue.html", context)
 
 
 @router.post("/lab/graphitization/bench/save")
@@ -312,87 +237,57 @@ async def lab_graphitization_bench_save(
     request: Request,
     service: SamsService = Depends(get_service),
 ):
-    form = await request.form()
-    submitted_fields: dict[str, str] = {}
-    for key in form.keys():
-        values = form.getlist(key)
-        value = values[-1] if values else ""
-        submitted_fields[key] = value if isinstance(value, str) else str(value)
+    submitted = _form_to_dict(await request.form())
+    bench = GraphitizationBench(service)
 
-    graph_sample_nr_raw = (submitted_fields.get("graphbench__sample_nr") or "").strip()
-    graph_prep_nr_raw = (submitted_fields.get("graphbench__prep_nr") or "").strip()
-    graph_target_nr_raw = (submitted_fields.get("graphbench__target_nr") or "").strip()
-    action = (submitted_fields.get("graphbench__action") or "save").strip().lower()
+    sample_nr_raw = (submitted.get("graphbench__sample_nr") or "").strip()
+    prep_nr_raw = (submitted.get("graphbench__prep_nr") or "").strip()
+    target_nr_raw = (submitted.get("graphbench__target_nr") or "").strip()
+    action = (submitted.get("graphbench__action") or "save").strip().lower()
 
-    graph_sample_nr = parse_positive_int(graph_sample_nr_raw)
-    graph_prep_nr = parse_positive_int(graph_prep_nr_raw)
-    graph_target_nr = parse_positive_int(graph_target_nr_raw)
-    if graph_sample_nr is None or graph_prep_nr is None or graph_target_nr is None:
-        return templates.TemplateResponse(
-            "lab_queue.html",
-            _build_lab_graphitization_page_context(
-                request,
-                service=service,
-                graph_sample_nr_raw=graph_sample_nr_raw,
-                graph_prep_nr_raw=graph_prep_nr_raw,
-                graph_target_nr_raw=graph_target_nr_raw,
-                graph_form_values=submitted_fields,
-                graph_error="Sample #, Prep # and Target # are required to save graphitization bench data.",
-            ),
-            status_code=422,
+    sample_nr = parse_positive_int(sample_nr_raw)
+    prep_nr = parse_positive_int(prep_nr_raw)
+    target_nr = parse_positive_int(target_nr_raw)
+    if sample_nr is None or prep_nr is None or target_nr is None:
+        context = bench.page_view(
+            sample_nr_raw=sample_nr_raw,
+            prep_nr_raw=prep_nr_raw,
+            target_nr_raw=target_nr_raw,
+            form_values=submitted,
+            error="Sample #, Prep # and Target # are required to save graphitization bench data.",
         )
+        context["request"] = request
+        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
 
-    next_entry: tuple[int, int, int] | None = None
-    if action == "save_next":
-        next_entry = service.get_next_graphitization_bench_entry(
-            graph_sample_nr,
-            graph_prep_nr,
-            graph_target_nr,
-        )
-
-    saved, field_errors, save_error = service.update_graphitization_bench_entry(
-        graph_sample_nr,
-        graph_prep_nr,
-        graph_target_nr,
-        submitted_fields,
+    outcome = bench.save(
+        form_data=submitted,
+        sample_nr=sample_nr,
+        prep_nr=prep_nr,
+        target_nr=target_nr,
+        action=action,
     )
-    if not saved:
-        return templates.TemplateResponse(
-            "lab_queue.html",
-            _build_lab_graphitization_page_context(
-                request,
-                service=service,
-                graph_sample_nr_raw=graph_sample_nr_raw,
-                graph_prep_nr_raw=graph_prep_nr_raw,
-                graph_target_nr_raw=graph_target_nr_raw,
-                graph_form_values=submitted_fields,
-                graph_field_errors=field_errors,
-                graph_error=save_error,
-            ),
-            status_code=422,
+    if not outcome.success:
+        context = bench.page_view(
+            sample_nr_raw=sample_nr_raw,
+            prep_nr_raw=prep_nr_raw,
+            target_nr_raw=target_nr_raw,
+            form_values=submitted,
+            field_errors=outcome.field_errors,
+            error=outcome.save_error,
         )
+        context["request"] = request
+        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
 
-    query_parts = ["graph_saved=true"]
-    if action == "save_next" and next_entry is not None:
-        query_parts.extend(
-            [
-                f"graph_sample_nr={next_entry[0]}",
-                f"graph_prep_nr={next_entry[1]}",
-                f"graph_target_nr={next_entry[2]}",
-                "graph_notice=Saved+and+loaded+next+waiting-for-graph+target.",
-            ]
-        )
-    else:
-        query_parts.extend(
-            [
-                f"graph_sample_nr={graph_sample_nr}",
-                f"graph_prep_nr={graph_prep_nr}",
-                f"graph_target_nr={graph_target_nr}",
-            ]
-        )
-        if action == "save_next":
-            query_parts.append("graph_notice=Saved.+No+next+waiting-for-graph+target+was+found.")
-    return RedirectResponse(url=f"/lab/graphitization?{'&'.join(query_parts)}", status_code=303)
+    return RedirectResponse(
+        _build_graph_redirect(
+            sample_nr=sample_nr,
+            prep_nr=prep_nr,
+            target_nr=target_nr,
+            action=action,
+            next_cursor=outcome.next_cursor,
+        ),
+        status_code=303,
+    )
 
 
 @router.post("/lab/graphitization/bench/save-batch")
@@ -400,18 +295,14 @@ async def lab_graphitization_bench_save_batch(
     request: Request,
     service: SamsService = Depends(get_service),
 ):
-    form = await request.form()
-    submitted_fields: dict[str, str] = {}
-    for key in form.keys():
-        values = form.getlist(key)
-        value = values[-1] if values else ""
-        submitted_fields[key] = value if isinstance(value, str) else str(value)
+    submitted = _form_to_dict(await request.form())
+    bench = GraphitizationBench(service)
 
-    graph_sample_nr_raw = (submitted_fields.get("graphbatch__sample_nr") or "").strip()
-    graph_prep_nr_raw = (submitted_fields.get("graphbatch__prep_nr") or "").strip()
-    graph_target_nr_raw = (submitted_fields.get("graphbatch__target_nr") or "").strip()
-    batch_name = (submitted_fields.get("graphbatch__batch_name") or "").strip()
-    targets_json = (submitted_fields.get("graphbatch__targets_json") or "").strip()
+    sample_nr_raw = (submitted.get("graphbatch__sample_nr") or "").strip()
+    prep_nr_raw = (submitted.get("graphbatch__prep_nr") or "").strip()
+    target_nr_raw = (submitted.get("graphbatch__target_nr") or "").strip()
+    batch_name = (submitted.get("graphbatch__batch_name") or "").strip()
+    targets_json = (submitted.get("graphbatch__targets_json") or "").strip()
 
     target_keys: list[tuple[int, int, int]] = []
     try:
@@ -421,33 +312,36 @@ async def lab_graphitization_bench_save_batch(
         for item in raw_items:
             if not isinstance(item, dict):
                 continue
-            sample_nr = parse_positive_int(str(item.get("sample_nr", "")))
-            prep_nr = parse_positive_int(str(item.get("prep_nr", "")))
-            target_nr = parse_positive_int(str(item.get("target_nr", "")))
-            if sample_nr is None or prep_nr is None or target_nr is None:
+            s = parse_positive_int(str(item.get("sample_nr", "")))
+            p = parse_positive_int(str(item.get("prep_nr", "")))
+            t = parse_positive_int(str(item.get("target_nr", "")))
+            if s is None or p is None or t is None:
                 continue
-            target_keys.append((sample_nr, prep_nr, target_nr))
+            target_keys.append((s, p, t))
     except json.JSONDecodeError:
         target_keys = []
 
-    saved, error_message = service.save_graph_batch_assignments(
-        batch_name=batch_name,
-        target_keys=target_keys,
-    )
-    query_parts = []
-    if graph_sample_nr_raw:
-        query_parts.append(f"graph_sample_nr={graph_sample_nr_raw}")
-    if graph_prep_nr_raw:
-        query_parts.append(f"graph_prep_nr={graph_prep_nr_raw}")
-    if graph_target_nr_raw:
-        query_parts.append(f"graph_target_nr={graph_target_nr_raw}")
-    if saved:
-        query_parts.append("graph_batch_notice=Graph+batch+saved.")
-        query_parts.append("graph_batch_saved=true")
+    outcome = bench.assign_graph_batch(batch_name=batch_name, target_keys=target_keys)
+
+    parts: list[str] = []
+    if sample_nr_raw:
+        parts.append(f"graph_sample_nr={sample_nr_raw}")
+    if prep_nr_raw:
+        parts.append(f"graph_prep_nr={prep_nr_raw}")
+    if target_nr_raw:
+        parts.append(f"graph_target_nr={target_nr_raw}")
+    if outcome.success:
+        parts.append("graph_batch_notice=Graph+batch+saved.")
+        parts.append("graph_batch_saved=true")
     else:
-        query_parts.append(f"graph_batch_error={quote_plus(error_message or 'Unable to save graph batch.')}")
-    suffix = f"?{'&'.join(query_parts)}" if query_parts else ""
+        parts.append(
+            f"graph_batch_error={quote_plus(outcome.error or 'Unable to save graph batch.')}"
+        )
+    suffix = f"?{'&'.join(parts)}" if parts else ""
     return RedirectResponse(url=f"/lab/graphitization{suffix}", status_code=303)
+
+
+# ---- Analysis page (read-only; no bench yet) ------------------------------
 
 
 @router.get("/lab/analysis")

@@ -149,7 +149,7 @@
             {% elif key_lower == "project" and project_nr_value is not none %}
             <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
             {% elif key_lower == "last_name" and user_nr_value is not none %}
-            <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+            <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
             {% else %}
             {{ display_value }}
             {% endif %}

@@ -53,7 +53,7 @@
       | Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
       {% endif %}
       {% if user %}
-      | User <a href="/users/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+      | Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
       {% endif %}
     </p>
     <p class="page-actions">

@@ -120,7 +120,7 @@
               <h4>Last Name</h4>
               <p>
                 {% if bench_user and bench_user.user_nr and bench_user.last_name %}
-                <a href="/users/{{ bench_user.user_nr }}" class="table-link">{{ bench_user.last_name }}</a>
+                <a href="/submitters/{{ bench_user.user_nr }}" class="table-link">{{ bench_user.last_name }}</a>
                 {% else %}
                 {{ bench_user.last_name if bench_user and bench_user.last_name else 'Not set' }}
                 {% endif %}
@@ -137,11 +137,11 @@
               </p>
             </article>
             <article class="detail-item">
-              <h4>User Label</h4>
+              <h4>Sample Label</h4>
               <p>{{ bench_sample.user_label or 'Not set' }}</p>
             </article>
             <article class="detail-item">
-              <h4>User Label #</h4>
+              <h4>Sample Label #</h4>
               <p>{{ bench_sample.user_label_nr or 'Not set' }}</p>
             </article>
             <article class="detail-item">
@@ -501,7 +501,7 @@
                   <h4>Last Name</h4>
                   <p>
                     {% if graph_user and graph_user.user_nr and graph_user.last_name %}
-                    <a href="/users/{{ graph_user.user_nr }}" class="table-link">{{ graph_user.last_name }}</a>
+                    <a href="/submitters/{{ graph_user.user_nr }}" class="table-link">{{ graph_user.last_name }}</a>
                     {% else %}
                     {{ graph_user.last_name if graph_user and graph_user.last_name else 'Not set' }}
                     {% endif %}
@@ -518,11 +518,11 @@
                   </p>
                 </article>
                 <article class="detail-item">
-                  <h4>User Label</h4>
+                  <h4>Sample Label</h4>
                   <p>{{ graph_sample.user_label or 'Not set' }}</p>
                 </article>
                 <article class="detail-item">
-                  <h4>User Label #</h4>
+                  <h4>Sample Label #</h4>
                   <p>{{ graph_sample.user_label_nr or 'Not set' }}</p>
                 </article>
                 <article class="detail-item">
@@ -794,7 +794,7 @@
               {% elif key_lower == "project" and project_nr_value is not none %}
               <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
               {% elif key_lower == "last_name" and user_nr_value is not none %}
-              <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+              <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
               {% else %}
               {{ display_value }}
               {% endif %}
@@ -924,7 +924,7 @@
                 {% elif key_lower == "project" and project_nr_value is not none %}
                 <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
                 {% elif key_lower == "user_last_name" and user_nr_value is not none %}
-                <a href="/users/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+                <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
                 {% else %}
                 {{ display_value }}
                 {% endif %}

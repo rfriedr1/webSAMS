@@ -48,7 +48,7 @@
     <p>
       {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
       <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
-      {% if user %} | User <a href="/users/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>{% endif %}
+      {% if user %} | Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>{% endif %}
     </p>
     <p class="page-actions">
       <a href="/projects" class="nav-back" data-history-back data-fallback="/projects">Back</a>

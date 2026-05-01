@@ -66,7 +66,7 @@
           {% set measured_count = (row.get('measured', 0) or 0)|int %}
           <tr{% if measured_count > 0 %} class="projects-progress-row-measured"{% endif %}>
             <td><a class="table-link" href="/projects/{{ row.get('project_nr') }}">{{ row.get('project') or '' }}</a></td>
-            <td><a class="table-link" href="/users/{{ row.get('user_nr') }}">{{ row.get('last_name') or '' }}</a></td>
+            <td><a class="table-link" href="/submitters/{{ row.get('user_nr') }}">{{ row.get('last_name') or '' }}</a></td>
             <td>{{ row.get('in_date') or '' }}</td>
             <td>{{ row.get('desired_date') or '' }}</td>
             <td>{{ row.get('samples', 0) }}</td>
@@ -110,7 +110,7 @@
       <table data-projects-table>
         <thead>
           <tr>
-            <th>User #</th>
+            <th>Submitter #</th>
             <th>Last Name</th>
             <th>First Name</th>
             <th>Project #</th>
@@ -126,17 +126,17 @@
           <tr>
             <td>
               {% if project.user_nr %}
-              <a class="table-link" href="/users/{{ project.user_nr }}">{{ project.user_nr }}</a>
+              <a class="table-link" href="/submitters/{{ project.user_nr }}">{{ project.user_nr }}</a>
               {% endif %}
             </td>
             <td>
-              {% if project.user and project.user.user_nr and project.user.last_name %}
-              <a class="table-link" href="/users/{{ project.user.user_nr }}">{{ project.user.last_name }}</a>
-              {% elif project.user and project.user.last_name %}
-              {{ project.user.last_name }}
+              {% if project.submitter and project.submitter.user_nr and project.submitter.last_name %}
+              <a class="table-link" href="/submitters/{{ project.submitter.user_nr }}">{{ project.submitter.last_name }}</a>
+              {% elif project.submitter and project.submitter.last_name %}
+              {{ project.submitter.last_name }}
               {% endif %}
             </td>
-            <td>{{ project.user.first_name if project.user and project.user.first_name else '' }}</td>
+            <td>{{ project.submitter.first_name if project.submitter and project.submitter.first_name else '' }}</td>
             <td><a class="table-link" href="/projects/{{ project.project_nr }}">{{ project.project_nr }}</a></td>
             <td><a class="table-link" href="/projects/{{ project.project_nr }}">{{ project.project or '' }}</a></td>
             <td>

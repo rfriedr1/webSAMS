@@ -4,15 +4,24 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-import re
-from dataclasses import dataclass
-from typing import Any, Callable, Literal
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from typing import Any, Callable
 
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from sams_web.config import get_settings
+from sams_web.magic_nav import (
+    MAGIC_IDENTIFIER_COMMAND_LABELS,
+    MAGIC_IDENTIFIER_COMMAND_ROUTES,
+    MAGIC_IDENTIFIER_PREFIX_LABELS,
+    MAGIC_IDENTIFIER_PREFIX_ROUTES,
+    MAGIC_IDENTIFIER_PREPARATION_LABEL,
+    MAGIC_IDENTIFIER_SAMPLE_LABEL,
+    MAGIC_IDENTIFIER_TARGET_LABEL,
+    append_magic_feedback,
+    build_magic_nav_rules,
+    resolve_magic_identifier,
+)
 from sams_web.navigation import (
     MAIN_NAV_ITEMS,
     NAVIGATION_COMMAND_ENTRIES,
@@ -30,27 +39,6 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 logger = logging.getLogger(__name__)
 APP_SUBTITLE_BASE = "CEZA C14 Laboratory Information System"
 
-MAGIC_IDENTIFIER_PREFIX_ROUTES: dict[str, tuple[str, str]] = {
-    "pr": ("project", "/projects/{identifier}"),
-    "usr": ("user", "/users/{identifier}"),
-}
-MAGIC_IDENTIFIER_PREFIX_LABELS: dict[str, str] = {
-    "pr": "project number",
-    "usr": "user number",
-}
-MAGIC_IDENTIFIER_SAMPLE_LABEL = "sample number"
-MAGIC_IDENTIFIER_PREPARATION_LABEL = "preparation"
-MAGIC_IDENTIFIER_TARGET_LABEL = "target"
-MAGIC_IDENTIFIER_COMMAND_ROUTES: dict[str, str] = {
-    "/prep": "/lab/preparation",
-    "/graph": "/lab/graphitization",
-    "/ana": "/lab/analysis",
-}
-MAGIC_IDENTIFIER_COMMAND_LABELS: dict[str, str] = {
-    "/prep": "magic command: preparation",
-    "/graph": "magic command: graphitization",
-    "/ana": "magic command: analysis",
-}
 LAST_SAMPLE_COOKIE = "last_sample_nr"
 
 LAB_OPERATION_CONFIGS: dict[str, dict[str, Any]] = {
@@ -119,7 +107,7 @@ TABLE_HEADER_LABELS: dict[str, str] = {
     "conc_n": "N (%)",
     "cn_ratio": "C/N Ratio",
     "cn_ratio_calc": "C/N Ratio",
-    "user_last_name": "User Last Name",
+    "user_last_name": "Submitter Last Name",
 }
 
 
@@ -166,134 +154,6 @@ templates.env.globals["navigation_command_entries"] = NAVIGATION_COMMAND_ENTRIES
 templates.env.globals["resolve_active_module"] = resolve_active_module
 templates.env.globals["is_subnav_active"] = is_subnav_active
 templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().database_name})"
-
-
-@dataclass(frozen=True)
-class MagicNavResolution:
-    """Typed representation of a resolved Magic Nav input."""
-
-    kind: Literal["sample", "preparation", "target", "project", "user", "command"]
-    target: str
-    identifier: int | None = None
-    sample_nr: int | None = None
-    prep_nr: int | None = None
-    target_nr: int | None = None
-
-
-def resolve_magic_identifier(raw: str) -> MagicNavResolution | None:
-    value = raw.strip().lower()
-    if value == "":
-        return None
-
-    command_target = MAGIC_IDENTIFIER_COMMAND_ROUTES.get(value)
-    if command_target is not None:
-        return MagicNavResolution(kind="command", target=command_target)
-
-    target_ref = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", value)
-    if target_ref is not None:
-        sample_nr, prep_nr, target_nr = (int(part) for part in target_ref.groups())
-        return MagicNavResolution(
-            kind="target",
-            target=f"/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}",
-            sample_nr=sample_nr,
-            prep_nr=prep_nr,
-            target_nr=target_nr,
-        )
-
-    prep_ref = re.fullmatch(r"(\d+)\.(\d+)", value)
-    if prep_ref is not None:
-        sample_nr, prep_nr = (int(part) for part in prep_ref.groups())
-        return MagicNavResolution(
-            kind="preparation",
-            target=f"/samples/{sample_nr}/preparations/{prep_nr}",
-            sample_nr=sample_nr,
-            prep_nr=prep_nr,
-        )
-
-    if re.fullmatch(r"\d+", value):
-        identifier = int(value)
-        return MagicNavResolution(
-            kind="sample",
-            identifier=identifier,
-            sample_nr=identifier,
-            target=f"/samples/{identifier}",
-        )
-
-    prefixed = re.fullmatch(r"([a-z]+)[\s:_-]*(\d+)", value)
-    if prefixed is None:
-        return None
-
-    prefix, identifier = prefixed.groups()
-    route_spec = MAGIC_IDENTIFIER_PREFIX_ROUTES.get(prefix)
-    if route_spec is None:
-        return None
-    entity_kind, target_template = route_spec
-    numeric_id = int(identifier)
-    return MagicNavResolution(
-        kind=entity_kind,
-        identifier=numeric_id,
-        target=target_template.format(identifier=numeric_id),
-    )
-
-
-def append_magic_feedback(url: str, entered_value: str, error_message: str) -> str:
-    parsed = urlsplit(url)
-    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    query["magic_identifier"] = entered_value
-    query["magic_error"] = error_message
-    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment))
-
-
-def build_magic_nav_rules() -> list[dict[str, str]]:
-    rules: list[dict[str, str]] = [
-        {
-            "pattern": "digits only",
-            "example": "45230",
-            "description": f"Opens sample detail (label: {MAGIC_IDENTIFIER_SAMPLE_LABEL}).",
-        },
-        {
-            "pattern": "sample.prep",
-            "example": "45230.1",
-            "description": (
-                "Opens preparation detail for sample/preparation "
-                f"(label: {MAGIC_IDENTIFIER_PREPARATION_LABEL})."
-            ),
-        },
-        {
-            "pattern": "sample.prep.target",
-            "example": "45230.1.1",
-            "description": (
-                "Opens target detail for sample/preparation/target "
-                f"(label: {MAGIC_IDENTIFIER_TARGET_LABEL})."
-            ),
-        }
-    ]
-    for prefix in sorted(MAGIC_IDENTIFIER_PREFIX_LABELS.keys()):
-        route_spec = MAGIC_IDENTIFIER_PREFIX_ROUTES.get(prefix)
-        if route_spec is None:
-            continue
-        entity_kind, _target_template = route_spec
-        rules.append(
-            {
-                "pattern": f"{prefix}<number>",
-                "example": f"{prefix}123",
-                "description": (
-                    f"Opens {entity_kind} detail "
-                    f"(label: {MAGIC_IDENTIFIER_PREFIX_LABELS.get(prefix, 'unknown ID')})."
-                ),
-            }
-        )
-    for command in sorted(MAGIC_IDENTIFIER_COMMAND_ROUTES.keys()):
-        command_target = MAGIC_IDENTIFIER_COMMAND_ROUTES[command]
-        label = MAGIC_IDENTIFIER_COMMAND_LABELS.get(command, "magic command")
-        rules.append(
-            {
-                "pattern": command,
-                "example": command,
-                "description": f"Runs {label} and opens {command_target}.",
-            }
-        )
-    return rules
 
 
 def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

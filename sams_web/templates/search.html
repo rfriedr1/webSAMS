@@ -4,7 +4,7 @@
 <section class="panel">
   <div class="panel-head">
     <h2>Global Search</h2>
-    <p>Search across users, projects, samples, preparations, and targets using flexible text matching.</p>
+    <p>Search across submitters, projects, samples, preparations, and targets using flexible text matching.</p>
   </div>
 
   <form method="get" action="/search" class="inline-form">
@@ -40,27 +40,11 @@
           {% for row in results %}
           <tr>
             {% for key, value in row.items() %}
-            {% set key_lower = key|string|lower %}
-            {% set sample_nr_value = row.get("sample_nr") %}
-            {% set project_nr_value = row.get("project_nr") %}
-            {% set user_nr_value = row.get("user_nr") %}
-            {% set prep_nr_value = row.get("prep_nr") %}
-            {% set target_nr_value = row.get("target_nr") %}
             {% set display_value = format_table_cell_value(key, value) %}
+            {% set link = resolved_context.link_for(key, row) if resolved_context else None %}
             <td>
-              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}">{{ display_value }}</a>
-              {% elif key_lower in ("project_nr", "project") and project_nr_value is not none %}
-              <a href="/projects/{{ project_nr_value }}">{{ display_value }}</a>
-              {% elif key_lower in ("user_nr", "last_name") and user_nr_value is not none %}
-              <a href="/users/{{ user_nr_value }}">{{ display_value }}</a>
-              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}">{{ display_value }}</a>
-              {% elif key_lower in ("target_nr", "c14_age") and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}">{{ display_value }}</a>
-              {% else %}
-              {{ display_value }}
-              {% endif %}
+              {% if link %}<a href="{{ link }}">{{ display_value }}</a>
+              {% else %}{{ display_value }}{% endif %}
             </td>
             {% endfor %}
           </tr>

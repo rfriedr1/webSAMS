@@ -14,7 +14,8 @@ from sams_web.setup_sections import (
 )
 from sams_web.thresholds import STANDARD_LABELS, THRESHOLD_FIELDS
 
-from sams_web.routers.pages_shared import build_magic_nav_rules, build_threshold_rows, templates
+from sams_web.magic_nav import build_magic_nav_rules
+from sams_web.routers.pages_shared import build_threshold_rows, templates
 
 router = APIRouter()
 
