@@ -21,7 +21,8 @@ class Base(DeclarativeBase):
     """Declarative base class."""
 
 
-class User(Base):
+class Submitter(Base):
+    # See ADR-0001: Python class is `Submitter` while the legacy DB table stays `user_t`.
     __tablename__ = "user_t"
 
     user_nr: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -47,7 +48,7 @@ class User(Base):
     language: Mapped[str | None] = mapped_column(String(2))
     salutation: Mapped[str | None] = mapped_column(String(40))
 
-    projects: Mapped[list["Project"]] = relationship(back_populates="user")
+    projects: Mapped[list["Project"]] = relationship(back_populates="submitter")
 
 
 class Project(Base):
@@ -82,7 +83,7 @@ class Project(Base):
     prep_return_to_sender: Mapped[int | None] = mapped_column(Integer)
     prep_returned_to_sender: Mapped[int | None] = mapped_column(Integer)
 
-    user: Mapped[User | None] = relationship(back_populates="projects")
+    submitter: Mapped[Submitter | None] = relationship(back_populates="projects")
     samples: Mapped[list["Sample"]] = relationship(back_populates="project")
 
 

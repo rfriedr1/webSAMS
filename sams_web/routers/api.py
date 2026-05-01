@@ -14,8 +14,8 @@ from sams_web.schemas import (
     ProjectRead,
     SampleCreate,
     SampleRead,
-    UserCreate,
-    UserRead,
+    SubmitterCreate,
+    SubmitterRead,
 )
 from sams_web.services import SamsService
 
@@ -57,25 +57,25 @@ def dashboard_tables(
     return service.get_dashboard(show_on_hold=show_on_hold)["tables"]
 
 
-@router.get("/users", response_model=list[UserRead])
-def list_users(
+@router.get("/submitters", response_model=list[SubmitterRead])
+def list_submitters(
     query: str | None = Query(default=None, alias="q"),
     service: SamsService = Depends(get_service),
-) -> list[UserRead]:
-    return [UserRead.model_validate(user) for user in service.list_users(query=query)]
+) -> list[SubmitterRead]:
+    return [SubmitterRead.model_validate(submitter) for submitter in service.list_submitters(query=query)]
 
 
-@router.post("/users", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, service: SamsService = Depends(get_service)) -> UserRead:
-    user = service.create_user(payload.model_dump())
-    return UserRead.model_validate(user)
+@router.post("/submitters", response_model=SubmitterRead, status_code=status.HTTP_201_CREATED)
+def create_submitter(payload: SubmitterCreate, service: SamsService = Depends(get_service)) -> SubmitterRead:
+    submitter = service.create_submitter(payload.model_dump())
+    return SubmitterRead.model_validate(submitter)
 
 
-@router.get("/users/{user_nr}/projects", response_model=list[ProjectRead])
-def list_user_projects(user_nr: int, service: SamsService = Depends(get_service)) -> list[ProjectRead]:
-    data = service.get_user_projects(user_nr)
+@router.get("/submitters/{user_nr}/projects", response_model=list[ProjectRead])
+def list_submitter_projects(user_nr: int, service: SamsService = Depends(get_service)) -> list[ProjectRead]:
+    data = service.get_submitter_projects(user_nr)
     if data is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Submitter not found")
     return [ProjectRead.model_validate(project) for project in data["projects"]]
 
 

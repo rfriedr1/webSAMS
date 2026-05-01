@@ -3,61 +3,61 @@
 {% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
-<section class="panel user-detail-panel" data-edit-scope data-edit-initial-mode="{{ user_edit_initial_mode or 'view' }}">
-  <div class="panel-head user-detail-head">
+<section class="panel submitter-detail-panel" data-edit-scope data-edit-initial-mode="{{ submitter_edit_initial_mode or 'view' }}">
+  <div class="panel-head submitter-detail-head">
     <div class="sample-head-row">
-      <h2>User {{ user.user_nr }}: {{ user.last_name }}, {{ user.first_name }}</h2>
-      <div class="sample-quick-nav" aria-label="User navigation">
-        {% if previous_user_nr is not none %}
+      <h2>Submitter {{ submitter.user_nr }}: {{ submitter.last_name }}, {{ submitter.first_name }}</h2>
+      <div class="sample-quick-nav" aria-label="Submitter navigation">
+        {% if previous_submitter_nr is not none %}
         <a
-          href="/users/{{ previous_user_nr }}"
+          href="/submitters/{{ previous_submitter_nr }}"
           class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Previous user"
-          title="Previous user"
+          aria-label="Previous submitter"
+          title="Previous submitter"
         >&#x2039;</a>
         {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous user" title="No previous user">&#x2039;</span>
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous submitter" title="No previous submitter">&#x2039;</span>
         {% endif %}
-        <form method="get" action="/users/{{ user.user_nr }}" class="sample-quick-nav-jump">
-          <label for="user-jump-input" class="sr-only">User #</label>
+        <form method="get" action="/submitters/{{ submitter.user_nr }}" class="sample-quick-nav-jump">
+          <label for="submitter-jump-input" class="sr-only">Submitter #</label>
           <input
-            id="user-jump-input"
-            name="jump_user"
+            id="submitter-jump-input"
+            name="jump_submitter"
             type="number"
             min="1"
-            max="{{ max_user_nr if max_user_nr > 0 else 1 }}"
+            max="{{ max_submitter_nr if max_submitter_nr > 0 else 1 }}"
             step="1"
-            value="{{ user.user_nr }}"
-            aria-label="Jump to user #"
+            value="{{ submitter.user_nr }}"
+            aria-label="Jump to submitter #"
           />
-          <span class="sample-quick-nav-jump-total">/ {{ max_user_nr if max_user_nr > 0 else user_count }}</span>
+          <span class="sample-quick-nav-jump-total">/ {{ max_submitter_nr if max_submitter_nr > 0 else submitter_count }}</span>
           <button type="submit">Go</button>
         </form>
-        {% if next_user_nr is not none %}
+        {% if next_submitter_nr is not none %}
         <a
-          href="/users/{{ next_user_nr }}"
+          href="/submitters/{{ next_submitter_nr }}"
           class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Next user"
-          title="Next user"
+          aria-label="Next submitter"
+          title="Next submitter"
         >&#x203A;</a>
         {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next user" title="No next user">&#x203A;</span>
+        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next submitter" title="No next submitter">&#x203A;</span>
         {% endif %}
       </div>
     </div>
-    <p class="user-detail-subtitle">
-      {% if user.organisation %}{{ user.organisation }}{% else %}No organisation{% endif %}
-      {% if user.institute %} | {{ user.institute }}{% endif %}
+    <p class="submitter-detail-subtitle">
+      {% if submitter.organisation %}{{ submitter.organisation }}{% else %}No organisation{% endif %}
+      {% if submitter.institute %} | {{ submitter.institute }}{% endif %}
     </p>
     <p class="page-actions">
-      <a href="/users" class="nav-back" data-history-back data-fallback="/users">Back</a>
+      <a href="/submitters" class="nav-back" data-history-back data-fallback="/submitters">Back</a>
     </p>
-    {% call render_detail_feedback_toolbar(user_saved, user_save_error, "User details were saved.", user_edit_form_id) %}{% endcall %}
-    <form id="{{ user_edit_form_id }}" method="post" action="/users/{{ user.user_nr }}/save" data-detail-edit-form></form>
+    {% call render_detail_feedback_toolbar(submitter_saved, submitter_save_error, "Submitter details were saved.", submitter_edit_form_id) %}{% endcall %}
+    <form id="{{ submitter_edit_form_id }}" method="post" action="/submitters/{{ submitter.user_nr }}/save" data-detail-edit-form></form>
   </div>
 
   <div class="user-section-grid">
-    {% for section in user_sections %}
+    {% for section in submitter_sections %}
     <article class="user-section-card">
       <header class="user-section-head">
         <h3>{{ section.title }}</h3>
@@ -70,12 +70,12 @@
           row,
           entity='user',
           row_class='user-field-row',
-          form_id=user_edit_form_id,
-          read_only_fields=user_read_only_fields,
-          editor_value_overrides=user_form_values,
-          select_options_by_field=user_select_options,
-          required_fields=user_required_fields,
-          field_errors=user_field_errors
+          form_id=submitter_edit_form_id,
+          read_only_fields=submitter_read_only_fields,
+          editor_value_overrides=submitter_form_values,
+          select_options_by_field=submitter_select_options,
+          required_fields=submitter_required_fields,
+          field_errors=submitter_field_errors
         ) }}
         {% endfor %}
       </dl>
@@ -131,7 +131,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5">No projects linked to this user.</td>
+            <td colspan="5">No projects linked to this submitter.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -139,7 +139,7 @@
     </div>
     <p class="table-empty table-empty-filter" data-table-empty hidden>No matching projects.</p>
     {% else %}
-    <p class="table-empty">No projects linked to this user.</p>
+    <p class="table-empty">No projects linked to this submitter.</p>
     {% endif %}
   </section>
 </section>

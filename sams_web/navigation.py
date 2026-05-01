@@ -21,7 +21,7 @@ SUB_NAV_ITEMS: dict[str, tuple[dict[str, Any], ...]] = {
     "sample_management": (
         {"key": "sample", "label": "Sample", "href": "/samples", "external": False},
         {"key": "projects", "label": "Projects", "href": "/projects", "external": False},
-        {"key": "users", "label": "Users", "href": "/users", "external": False},
+        {"key": "submitters", "label": "Submitters", "href": "/submitters", "external": False},
     ),
     "lab_operations": (
         {"key": "preparation", "label": "Preparation", "href": "/lab/preparation", "external": False},
@@ -47,7 +47,7 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Dashboard", "href": "/"},
     {"label": "Samples: Sample", "href": "/samples"},
     {"label": "Samples: Projects", "href": "/projects"},
-    {"label": "Samples: Users", "href": "/users"},
+    {"label": "Samples: Submitters", "href": "/submitters"},
     {"label": "Lab Operations: Preparation", "href": "/lab/preparation"},
     {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
     {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
@@ -86,7 +86,7 @@ def resolve_active_module(request: Request) -> str:
         return "lab_operations"
     if path.startswith("/search") and search_context in ("preparations", "targets"):
         return "lab_operations"
-    if path.startswith("/search") and search_context in ("samples", "projects", "users") and search_global != "1":
+    if path.startswith("/search") and search_context in ("samples", "projects", "submitters") and search_global != "1":
         return "sample_management"
     if path.startswith("/search"):
         return "search"
@@ -108,8 +108,8 @@ def is_subnav_active(request: Request, module: str, item_key: str) -> bool:
             )
         if item_key == "projects":
             return path.startswith("/projects") or (path.startswith("/search") and search_context == "projects" and search_global != "1")
-        if item_key == "users":
-            return path.startswith("/users") or (path.startswith("/search") and search_context == "users" and search_global != "1")
+        if item_key == "submitters":
+            return path.startswith("/submitters") or (path.startswith("/search") and search_context == "submitters" and search_global != "1")
 
     if module == "lab_operations":
         if item_key == "preparation":

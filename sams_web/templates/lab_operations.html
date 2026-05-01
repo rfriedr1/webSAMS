@@ -56,7 +56,7 @@
               {% elif key_lower in ("project_nr", "project") and project_nr_value is not none %}
               <a href="/projects/{{ project_nr_value }}">{{ display_value }}</a>
               {% elif key_lower in ("user_nr", "last_name") and user_nr_value is not none %}
-              <a href="/users/{{ user_nr_value }}">{{ display_value }}</a>
+              <a href="/submitters/{{ user_nr_value }}">{{ display_value }}</a>
               {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
               <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}">{{ display_value }}</a>
               {% elif key_lower in ("target_nr", "c14_age") and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}

@@ -3,9 +3,26 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
 T = TypeVar("T")
+
+
+@dataclass
+class BenchSaveOutcome:
+    """Result of applying a single bench-entry submit.
+
+    `next_cursor` is populated only if `action == "save_next"` AND a next
+    queue entry exists. The router translates this into a redirect URL with
+    the new cursor; otherwise it redirects back to the same cursor with a
+    saved=true flag.
+    """
+
+    success: bool
+    field_errors: dict[str, str] = field(default_factory=dict)
+    save_error: str | None = None
+    next_cursor: tuple[int, ...] | None = None
 
 
 def select_by_number(items: Sequence[T], requested_number: int | None, attr_name: str) -> T | None:

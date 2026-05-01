@@ -8,11 +8,43 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
-from sams_web.routers.detail_contexts import build_sample_creation_notice, build_sample_detail_context
+from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
+from sams_web.routers.detail_contexts import build_sample_creation_notice
 from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
+from sams_web.viewmodels import detail_sections as ds
+from sams_web.viewmodels.detail_sections_sample_lab import SAMPLE_DETAIL_PAGE
 
 router = APIRouter()
+
+
+def _sample_extra_keys(overview: dict[str, object], creation_notice: str | None) -> dict[str, object]:
+    """Page-specific extras for the sample detail page (related entities,
+    pre-formatted display values, optional creation notice)."""
+    sample = overview["sample"]
+    preparations = overview["preparations"]
+    return {
+        "project": overview["project"],
+        "user": overview["user"],
+        "preparations": preparations,
+        "targets_by_prep": overview["targets_by_prep"],
+        "sample_targets_total": overview["sample_targets_total"],
+        "targets": overview["targets"],
+        "sample_c14_age_display": ds.format_sample_value("c14_age", sample.c14_age),
+        "sample_user_comment_display": ds.format_sample_value("user_comment", sample.user_comment),
+        "sample_lab_comment_display": ds.format_sample_value("lab_comment", sample.lab_comment),
+        "sample_creation_notice": creation_notice,
+        "sample_default_target_prep_nr": preparations[0].prep_nr if preparations else None,
+    }
+
+
+def _sample_cursor(overview: dict[str, object]) -> NavCursor:
+    return NavCursor(
+        previous_nr=overview["previous_sample_nr"],
+        next_nr=overview["next_sample_nr"],
+        count=overview["sample_count"],
+        max_nr=overview["max_sample_nr"],
+    )
 
 
 @router.get("/samples")
@@ -100,18 +132,24 @@ def sample_detail_page(
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
+    creation_notice = build_sample_creation_notice(
+        created=created,
+        created_prep=created_prep,
+        created_target=created_target,
+    )
+    sample = overview["sample"]
+    project = overview["project"]
     response = templates.TemplateResponse(
         "sample_detail.html",
-        build_sample_detail_context(
+        build_detail_page_context(
             request,
-            overview=overview,
+            SAMPLE_DETAIL_PAGE,
+            entity=sample,
+            cursor=_sample_cursor(overview),
+            edit_state=EditFormState(saved=saved),
             service=service,
-            saved=saved,
-            creation_notice=build_sample_creation_notice(
-                created=created,
-                created_prep=created_prep,
-                created_target=created_target,
-            ),
+            sections_kwargs={"project": project},
+            extra=_sample_extra_keys(overview, creation_notice),
         ),
     )
     response.set_cookie(
@@ -196,15 +234,21 @@ async def save_sample_detail_page(
 
     response = templates.TemplateResponse(
         "sample_detail.html",
-        build_sample_detail_context(
+        build_detail_page_context(
             request,
-            overview=overview,
+            SAMPLE_DETAIL_PAGE,
+            entity=overview["sample"],
+            cursor=_sample_cursor(overview),
+            edit_state=EditFormState(
+                saved=False,
+                save_error=save_error,
+                field_errors=field_errors,
+                form_values=submitted_fields,
+                edit_initial_mode="editing",
+            ),
             service=service,
-            saved=False,
-            save_error=save_error,
-            sample_field_errors=field_errors,
-            sample_form_values=submitted_fields,
-            sample_edit_initial_mode="editing",
+            sections_kwargs={"project": overview["project"]},
+            extra=_sample_extra_keys(overview, creation_notice=None),
         ),
         status_code=422,
     )

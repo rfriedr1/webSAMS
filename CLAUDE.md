@@ -1,23 +1,22 @@
 # AGENTS.md
 
 ## Project Purpose
-- Migrate legacy Delphi program (laboratory LIMS) to a Python web application.
-- Legacy code can be used as inspiration but new workflow and design patterns can be explored
+- Create a laboratory LIMS software as a Python web application.
+- Legacy delphi code (from a previous legacy LIMS system used in the laboratory) can be used as inspiration but new workflows, logics and design patterns should be/need to be explored
 - UI/UX should be improved for browser use.
 - Preserve clear OOP structure and maintainable layering.
 
 ## Repository Context
-- Workspace root: `/Users/ronnyf/my data/KTL/Software/webSAMS`
-- Legacy reference code (read-only reference): `/Users/ronnyf/my data/KTL/Software/webSAMS/delphi-code`
-- Database schema notes: `/Users/ronnyf/my data/KTL/Software/webSAMS/schema_summary.md`
+- Legacy reference code (read-only reference): `../delphi-code`
+- Database schema notes: `schema_summary.md`
 
 ## App purpose
 - the app serves as the main Laboratory Management and Information System (LIMS) of our radiocarbon laboratory
-- use modern design patters regarding LIMS
+- use modern design patters regarding LIMS and regarding UI/UX
 - Navigation between pages and data records needs to be easy and logical
 
 ## Domain Model
-- One `User` can have many `Projects`.
+- One `Submitter` can have many `Projects`. (DB table is `user_t` for legacy reasons; see `docs/adr/0001-submitter-naming.md`.)
 - One `Project` can have many `Samples`.
 - One `Sample` can have many `Preparations`.
 - One `Preparation` can have many `Targets`.
@@ -77,7 +76,7 @@
 ## Magic Nav Rules
 - Input only digits: treat as `sample_nr` and open sample detail.
 - Prefix `pr` + digits: treat as `project_nr` and open project detail.
-- Prefix `usr` + digits: treat as `user_nr` and open user detail.
+- Prefix `sub` + digits: treat as `user_nr` and open submitter detail.
 - Magic commands:
 - `/prep` opens `Lab/Preparation`
 - `/graph` opens `Lab/Graphitization`
@@ -118,7 +117,7 @@
 - `Help`
 - `API Docs`
 - Secondary navigation:
-- Under `Samples`: `Sample`, `Projects`, `Users`
+- Under `Samples`: `Sample`, `Projects`, `Submitters`
 - Under `Lab`: `Preparation`, `Graphitization`, `Analysis`
 - Breadcrumb navigation is shown on pages via the shared `base.html` layout.
 - Dedicated detail pages exist for sample, preparation, and target.

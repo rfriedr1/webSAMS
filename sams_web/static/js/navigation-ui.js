@@ -66,17 +66,17 @@
 
     const root = segments[0];
     const contextLabels = {
-      users: "Users",
+      submitters: "Submitters",
       projects: "Projects",
       samples: "Samples",
       preparations: "Preparations",
       targets: "Targets",
     };
 
-    if (root === "users") {
-      crumbs.push({ label: "Users", href: "/users" });
+    if (root === "submitters") {
+      crumbs.push({ label: "Submitters", href: "/submitters" });
       if (segments[1]) {
-        crumbs.push({ label: `User ${segments[1]}`, href: `/users/${segments[1]}` });
+        crumbs.push({ label: `Submitter ${segments[1]}`, href: `/submitters/${segments[1]}` });
       }
       return crumbs;
     }
@@ -359,7 +359,7 @@
           { label: "Dashboard", href: "/" },
           { label: "Samples: Sample", href: "/samples" },
           { label: "Samples: Projects", href: "/projects" },
-          { label: "Samples: Users", href: "/users" },
+          { label: "Samples: Submitters", href: "/submitters" },
           { label: "Lab Operations: Preparation", href: "/lab/preparation" },
           { label: "Lab Operations: Graphitization", href: "/lab/graphitization" },
           { label: "Lab Operations: Analysis", href: "/lab/analysis" },
@@ -426,12 +426,12 @@
           keywords: `project ${projectMatch[1]} open`,
         };
       }
-      const userMatch = normalized.match(/^usr[\s:_-]*(\d+)$/);
-      if (userMatch) {
+      const submitterMatch = normalized.match(/^sub[\s:_-]*(\d+)$/);
+      if (submitterMatch) {
         return {
-          label: `Open user ${userMatch[1]}`,
-          href: `/users/${userMatch[1]}`,
-          keywords: `user ${userMatch[1]} open`,
+          label: `Open submitter ${submitterMatch[1]}`,
+          href: `/submitters/${submitterMatch[1]}`,
+          keywords: `submitter ${submitterMatch[1]} open`,
         };
       }
       return null;

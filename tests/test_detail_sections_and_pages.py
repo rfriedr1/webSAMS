@@ -2,22 +2,34 @@ from datetime import date
 
 from fastapi.responses import RedirectResponse
 
-from sams_web.models import Project, Sample, Target
-from sams_web.routers.pages import (
-    _append_magic_feedback,
-    _resolve_magic_identifier,
-    sample_detail_page,
+from sams_web.magic_nav import (
+    ProjectNav,
+    SampleNav,
+    SubmitterNav,
+    append_magic_feedback,
+    resolve_magic_identifier,
 )
+from sams_web.models import Project, Sample, Target
+from sams_web.routers.pages import sample_detail_page
 from sams_web.viewmodels import detail_sections as ds
 
 
 def test_magic_identifier_resolution_and_feedback():
-    assert _resolve_magic_identifier("123") == ("sample", 123, "/samples/123")
-    assert _resolve_magic_identifier("pr123") == ("project", 123, "/projects/123")
-    assert _resolve_magic_identifier("usr210") == ("user", 210, "/users/210")
-    assert _resolve_magic_identifier("n/a") is None
+    sample_nav = resolve_magic_identifier("123")
+    assert isinstance(sample_nav, SampleNav)
+    assert sample_nav.sample_nr == 123 and sample_nav.target == "/samples/123"
 
-    feedback_url = _append_magic_feedback("/search", entered_value="pr999", error_message="Project #999 missing")
+    project_nav = resolve_magic_identifier("pr123")
+    assert isinstance(project_nav, ProjectNav)
+    assert project_nav.project_nr == 123 and project_nav.target == "/projects/123"
+
+    submitter_nav = resolve_magic_identifier("sub210")
+    assert isinstance(submitter_nav, SubmitterNav)
+    assert submitter_nav.user_nr == 210 and submitter_nav.target == "/submitters/210"
+
+    assert resolve_magic_identifier("n/a") is None
+
+    feedback_url = append_magic_feedback("/search", entered_value="pr999", error_message="Project #999 missing")
     assert "magic_identifier=pr999" in feedback_url
     assert "magic_error=Project+%23999+missing" in feedback_url
 

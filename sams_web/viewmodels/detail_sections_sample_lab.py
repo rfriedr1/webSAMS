@@ -1,10 +1,16 @@
-"""Sample, preparation, and target detail section definitions."""
+"""Sample, preparation, and target detail section definitions, plus their detail-update configs."""
 
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Iterable
 
+from urllib.parse import quote_plus
+
+from sams_web.detail_page import DetailPageConfig
+from sams_web.detail_update import DetailUpdateConfig, RelatedEntityRule
+from sams_web.models import Preparation, Sample, Target
+from sams_web.viewmodels.detail_sections_user_project import PROJECT_DETAIL
 from sams_web.viewmodels.detail_sections_common import (
     Row,
     SectionSpec,
@@ -32,7 +38,7 @@ SAMPLE_FIELD_LABELS = {
     "photo": "Photo",
     "user_desc1": "Description 1",
     "user_desc2": "Description 2",
-    "user_comment": "User Comment",
+    "user_comment": "Submitter Comment",
     "pre_sub_treat": "Pre-sub Treatment",
     "preparation": "Preparation",
     "editable": "Editable",
@@ -438,3 +444,139 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
                 if row.get("key") == "fm":
                     row["divider_before"] = True
     return sections
+
+
+# ---- Detail-update configs ------------------------------------------------
+
+# Per ADR-0003: BATS owns these target_t fields; webSAMS detail-update paths
+# must never write to them. Listed here for use in TARGET_DETAIL.read_only_fields.
+_BATS_OWNED_TARGET_FIELDS: frozenset[str] = frozenset({
+    "fm", "fm_sig",
+    "dc13", "dc13_sig",
+    "c14_age", "c14_age_sig",
+    "cal1s_min", "cal1s_max",
+    "cal2s_min", "cal2s_max",
+    "calcset",
+    "editallowed",
+})
+
+# Per ADR-0003: BATS-derived sample_t fields. Direct edits via the detail-
+# update path are blocked. The Transfer-to-Sample workflow (ADR-0002) writes
+# some of these by copying BATS-evaluated target values to the sample row.
+_BATS_OWNED_SAMPLE_FIELDS: frozenset[str] = frozenset({
+    "editable",
+    "calib",
+    "delta_r",
+    "c14_age", "c14_age_sig",
+    "av_fm", "av_fm_sig",
+    "av_dc13", "av_dc13_sig",
+    "cal1s_min", "cal1s_max",
+    "cal2s_min", "cal2s_max",
+})
+
+
+def _methods_dropdown(repo: Any) -> list[str]:
+    return list(repo.get_methods())
+
+
+PREPARATION_DETAIL = DetailUpdateConfig(
+    model=Preparation,
+    prefix="preparation__",
+    read_only_fields=frozenset({"sample_nr", "prep_nr", "yield_percent"}),
+    dropdown_getters={
+        "step1_method": _methods_dropdown,
+        "step2_method": _methods_dropdown,
+        "step3_method": _methods_dropdown,
+        "step4_method": _methods_dropdown,
+        "step5_method": _methods_dropdown,
+    },
+)
+
+
+TARGET_DETAIL = DetailUpdateConfig(
+    model=Target,
+    prefix="target__",
+    read_only_fields=frozenset({"sample_nr", "prep_nr", "target_nr", "target_id"}) | _BATS_OWNED_TARGET_FIELDS,
+)
+
+
+SAMPLE_DETAIL = DetailUpdateConfig(
+    model=Sample,
+    prefix="sample__",
+    read_only_fields=frozenset({"sample_nr", "project_nr"}) | _BATS_OWNED_SAMPLE_FIELDS,
+    dropdown_getters={
+        "type": lambda repo: list(repo.get_sample_types()),
+        "material": lambda repo: list(repo.get_materials()),
+        "fraction": lambda repo: list(repo.get_fractions()),
+    },
+    required_fields=(
+        ("type", "Type is required."),
+        ("material", "Material is required."),
+        ("fraction", "Fraction is required."),
+    ),
+    related=(
+        RelatedEntityRule(
+            prefix="project_",
+            config=PROJECT_DETAIL,
+            lookup=lambda sample, repo: (
+                repo.get_project(sample.project_nr) if sample.project_nr else None
+            ),
+            missing_error="This sample has no linked project.",
+            extra_required_fields=(
+                ("in_date", "Project In Date is required."),
+                ("desired_date", "Project Desired Date is required."),
+            ),
+        ),
+    ),
+)
+
+
+# ---- Detail-page configs (read side) -------------------------------------
+
+
+def _decorate_target_sections_with_magazine_links(target: Any) -> list[dict[str, Any]]:
+    """Build target sections, then decorate the `magazine` row with a deep
+    link to `/lab/analysis?magazine=<value>` so operators can jump directly
+    from a target to the magazine listing it belongs to."""
+    sections = build_target_sections(target)
+    for section in sections:
+        for row in section.get("rows", []):
+            if row.get("key") != "magazine":
+                continue
+            raw_magazine = row.get("raw_value")
+            if raw_magazine is None:
+                continue
+            magazine_value = str(raw_magazine).strip()
+            if magazine_value == "":
+                continue
+            row["action_url"] = (
+                f"/lab/analysis?magazine={quote_plus(magazine_value)}#tbl-magazine-targets"
+            )
+            row["action_title"] = f"Show all targets in magazine {magazine_value}"
+    return sections
+
+
+SAMPLE_DETAIL_PAGE = DetailPageConfig(
+    name="sample",
+    update_config=SAMPLE_DETAIL,
+    edit_form_id="sample-detail-edit-form",
+    sections_builder=build_sample_sections,
+    select_options_getter=lambda service: service.get_sample_edit_select_options(),
+)
+
+
+PREPARATION_DETAIL_PAGE = DetailPageConfig(
+    name="preparation",
+    update_config=PREPARATION_DETAIL,
+    edit_form_id="preparation-detail-edit-form",
+    sections_builder=build_preparation_sections,
+    select_options_getter=lambda service: service.get_preparation_edit_select_options(),
+)
+
+
+TARGET_DETAIL_PAGE = DetailPageConfig(
+    name="target",
+    update_config=TARGET_DETAIL,
+    edit_form_id="target-detail-edit-form",
+    sections_builder=_decorate_target_sections_with_magazine_links,
+)
