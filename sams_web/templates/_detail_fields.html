@@ -59,38 +59,28 @@
       <div
         class="detail-field-display{% if kind == 'multiline' %} is-multiline{% endif %}"
         data-field-display
-      >
-        {% if row.value is none %}
-        <span class="detail-empty">Not set</span>
-        {% elif kind == "email" %}
+      >{#- whitespace-stripped value rendering: the `is-multiline` class
+            sets `white-space: pre-wrap`, so any newlines / indentation between
+            these tags would surface as visible blank lines around short
+            values like `—`. -#}
+        {%- if row.value is none -%}
+        <span class="detail-empty">—</span>
+        {%- elif kind == "email" -%}
         <a href="mailto:{{ row.value }}">{{ row.value }}</a>
-        {% elif kind == "url" %}
-        {% set url = row.value %}
-        {% if "://" not in url %}
-        {% set url = "https://" ~ row.value %}
-        {% endif %}
+        {%- elif kind == "url" -%}
+        {%- set url = row.value -%}
+        {%- if "://" not in url -%}
+        {%- set url = "https://" ~ row.value -%}
+        {%- endif -%}
         <a href="{{ url }}" target="_blank" rel="noreferrer">{{ row.value }}</a>
-        {% elif kind == "boolean" %}
-        <span class="detail-boolean-check" title="{{ row.value }}">
-          <input
-            class="detail-boolean-checkbox"
-            type="checkbox"
-            disabled
-            aria-label="{{ row.label }}"
-            {% if row.value == 'Yes' %}checked{% endif %}
-          />
-        </span>
-        {% else %}
-        {{ row.value }}
-        {% endif %}
-        {% if action_url %}
-        <a
-          href="{{ action_url }}"
-          class="detail-field-action-link"
-          title="{{ action_title }}"
-          aria-label="{{ action_title }}"
-        >&#128269;</a>
-        {% endif %}
+        {%- elif kind == "boolean" -%}
+        <span class="detail-boolean-check" title="{{ row.value }}"><input class="detail-boolean-checkbox" type="checkbox" disabled aria-label="{{ row.label }}"{% if row.value == 'Yes' %} checked{% endif %} /></span>
+        {%- else -%}
+        {{- row.value -}}
+        {%- endif -%}
+        {%- if action_url -%}
+        <a href="{{ action_url }}" class="detail-field-action-link" title="{{ action_title }}" aria-label="{{ action_title }}">&#128269;</a>
+        {%- endif -%}
       </div>
       {% if not is_read_only %}
       <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
@@ -102,7 +92,7 @@
           {% if field_error %}aria-invalid="true"{% endif %}
           disabled
         >
-          <option value="">{{ "Select value" if is_required else "Not set" }}</option>
+          <option value="">{{ "Select value" if is_required else "—" }}</option>
           {% for option_value in select_options %}
           {% set option_text = option_value|string %}
           <option value="{{ option_text }}" {% if editor_value is not none and option_text == editor_value|string %}selected{% endif %}>{{ option_text }}</option>
@@ -125,7 +115,7 @@
           {% if field_error %}aria-invalid="true"{% endif %}
           disabled
         >
-          <option value="" {% if editor_value is none or editor_value|string == '' %}selected{% endif %}>Not set</option>
+          <option value="" {% if editor_value is none or editor_value|string == '' %}selected{% endif %}>—</option>
           <option value="1" {% if editor_value is not none and editor_value|string == '1' %}selected{% endif %}>Yes</option>
           <option value="0" {% if editor_value is not none and editor_value|string == '0' %}selected{% endif %}>No</option>
         </select>

@@ -11,7 +11,11 @@ from sams_web.detail_update import (
     RuleOutcome,
 )
 from sams_web.models import Project, Submitter
-from sams_web.viewmodels.detail_sections_common import SectionSpec, build_sections
+from sams_web.viewmodels.detail_sections_common import (
+    SectionSpec,
+    build_sections,
+    is_empty_display_value,
+)
 
 USER_FIELD_LABELS = {
     "user_nr": "Submitter #",
@@ -58,12 +62,10 @@ def user_field_kind(key: str) -> str:
 
 
 def format_user_value(key: str, value: Any) -> Any:
-    if value is None:
+    if is_empty_display_value(value):
         return None
     if isinstance(value, str):
         value = value.strip()
-        if value == "":
-            return None
     if key in {"invoice", "correspondance"}:
         try:
             numeric = int(value)
@@ -151,12 +153,10 @@ def project_field_kind(key: str) -> str:
 
 
 def format_project_value(key: str, value: Any) -> Any:
-    if value is None:
+    if is_empty_display_value(value):
         return None
     if isinstance(value, str):
         value = value.strip()
-        if value == "":
-            return None
     if key in PROJECT_BOOLEAN_FIELDS:
         try:
             numeric = int(value)

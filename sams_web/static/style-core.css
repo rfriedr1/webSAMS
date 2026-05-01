@@ -597,3 +597,100 @@ button[name="action"][value="preview"] {
   border-color: #8fb8c8;
 }
 
+
+/* ---- Visible keyboard focus rings ----------------------------------- */
+
+button:focus-visible,
+.brand:focus-visible,
+.command-palette-trigger:focus-visible,
+.main-nav a:focus-visible,
+.sub-nav a:focus-visible,
+.breadcrumb-link:focus-visible,
+.quick-access-link:focus-visible,
+.quick-pin-toggle:focus-visible,
+.nav-back:focus-visible,
+.table-link:focus-visible,
+.sample-meta-toc-link:focus-visible,
+[data-detail-edit-button]:focus-visible,
+[data-history-back]:focus-visible,
+[data-table-clear]:focus-visible,
+[data-pin-current]:focus-visible {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
+/* Decorative blurred shapes are pure visual flair; respect the reduced-motion
+   preference and skip the GPU-blur cost for users who opt out. */
+@media (prefers-reduced-motion: reduce) {
+  .bg-shape {
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+
+/* ---- Small breakpoint (~640px) for tablet / phone --------------------- */
+
+@media (max-width: 640px) {
+  /* Compress the brand cluster: hide the subtitle, keep the chip + heading. */
+  .brand p {
+    display: none;
+  }
+
+  .brand h1 {
+    font-size: 0.95rem;
+  }
+
+  /* The topbar grid drops to two rows: brand + magic-nav, then nav row. */
+  .topbar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+  }
+
+  .topbar-tools {
+    grid-column: 1 / -1;
+    max-width: 100%;
+    justify-self: stretch;
+  }
+
+  .magic-identifier-form input[type="text"] {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Larger touch targets for primary inputs / buttons on small screens. */
+  input,
+  select,
+  textarea {
+    min-height: 2.5rem;
+  }
+
+  button {
+    min-height: 2.75rem;
+  }
+
+  .main-nav a,
+  .sub-nav a {
+    padding-block: 0.5rem;
+  }
+
+  .page {
+    width: min(1240px, 96%);
+    margin: 0.7rem auto 1rem;
+  }
+
+  /* Single-column cards in narrow viewports. */
+  .cards,
+  .sample-identity-cards,
+  .sample-summary-cards,
+  .sample-comments-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
+

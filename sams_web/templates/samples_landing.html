@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Samples</h2>
+    <p>{{ "{:,}".format(sample_count) }} samples in the database. Pick where to start.</p>
+  </div>
+
+  <div class="cards samples-landing-cards">
+    {% if last_sample_nr is not none and last_sample_nr != newest_sample_nr %}
+    <article class="samples-landing-card">
+      <h3>Browse where you left off</h3>
+      <p>Resume your most recently viewed sample — <strong>{{ last_sample_nr }}</strong>.</p>
+      <a href="/samples/{{ last_sample_nr }}" class="samples-landing-cta">Open sample {{ last_sample_nr }}</a>
+    </article>
+    {% endif %}
+
+    {% if newest_sample_nr is not none %}
+    <article class="samples-landing-card">
+      <h3>Newest sample</h3>
+      <p>The most recently created sample is <strong>{{ newest_sample_nr }}</strong>.</p>
+      <a href="/samples/{{ newest_sample_nr }}" class="samples-landing-cta">Open sample {{ newest_sample_nr }}</a>
+    </article>
+    {% endif %}
+
+    <article class="samples-landing-card">
+      <h3>Browse all samples</h3>
+      <p>Search across every sample in the database with text matching across labels, descriptions, comments and IDs.</p>
+      <a href="/search?context=samples" class="samples-landing-cta">Search samples</a>
+    </article>
+
+    <article class="samples-landing-card">
+      <h3>Magic Nav</h3>
+      <p>Jump straight to a sample by number using the Magic Nav field in the topbar — type <code>123</code> for sample, <code>123.4</code> for prep, <code>123.4.7</code> for target.</p>
+    </article>
+  </div>
+
+  {% if newest_sample_nr is none %}
+  <p class="table-empty">No samples in the database yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

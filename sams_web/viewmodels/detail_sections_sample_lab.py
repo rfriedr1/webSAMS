@@ -20,6 +20,7 @@ from sams_web.viewmodels.detail_sections_common import (
     format_cn_ratio_from_conc,
     format_d13c,
     format_one_decimal,
+    is_empty_display_value,
     mapped_values,
 )
 
@@ -94,12 +95,10 @@ def sample_field_kind(key: str) -> str:
 
 
 def format_sample_value(key: str, value: Any) -> Any:
-    if value is None:
+    if is_empty_display_value(value):
         return None
     if isinstance(value, str):
         value = value.strip()
-        if value == "":
-            return None
     if key in {"av_fm", "av_fm_sig", "av_dc13", "av_dc13_sig"}:
         try:
             rounded_4 = Decimal(str(value)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
@@ -149,6 +148,7 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
         other_description="Additional fields available in this sample record.",
         other_excluded_keys=SAMPLE_EXCLUDED_FIELDS,
         extra_rows_by_section=extra_rows,
+        drop_all_empty_sections=True,
     )
 
 
@@ -212,12 +212,10 @@ def preparation_field_kind(key: str) -> str:
 
 
 def format_preparation_value(key: str, value: Any) -> Any:
-    if value is None:
+    if is_empty_display_value(value):
         return None
     if isinstance(value, str):
         value = value.strip()
-        if value == "":
-            return None
     if key in PREPARATION_BOOLEAN_FIELDS:
         try:
             numeric = int(value)
@@ -380,12 +378,10 @@ def format_target_indicator(key: str, value: Any) -> Any:
 
 
 def format_target_value(key: str, value: Any) -> Any:
-    if value is None:
+    if is_empty_display_value(value):
         return None
     if isinstance(value, str):
         value = value.strip()
-        if value == "":
-            return None
     if key in TARGET_BOOLEAN_FIELDS:
         try:
             numeric = int(value)

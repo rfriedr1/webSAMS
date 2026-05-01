@@ -78,7 +78,7 @@
           {% if sample.user_label %}
           {{ sample.user_label }}
           {% else %}
-          <span class="detail-empty">Not set</span>
+          <span class="detail-empty">—</span>
           {% endif %}
         </div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
@@ -105,7 +105,7 @@
           {% if sample.user_label_nr is not none and sample.user_label_nr != '' %}
           {{ sample.user_label_nr }}
           {% else %}
-          <span class="detail-empty">Not set</span>
+          <span class="detail-empty">—</span>
           {% endif %}
         </div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
@@ -128,13 +128,7 @@
       {% set sample_desc1_error = sample_field_errors.get('sample__user_desc1') %}
       {% set sample_desc1_editor_value = sample_form_values.get('sample__user_desc1', sample.user_desc1 or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if sample_desc1_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc1" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>
-          {% if sample.user_desc1 %}
-          {{ sample.user_desc1 }}
-          {% else %}
-          <span class="detail-empty">Not set</span>
-          {% endif %}
-        </div>
+        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>{% if sample.user_desc1 %}{{ sample.user_desc1 }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
           <textarea
             name="sample__user_desc1"
@@ -154,13 +148,7 @@
       {% set sample_desc2_error = sample_field_errors.get('sample__user_desc2') %}
       {% set sample_desc2_editor_value = sample_form_values.get('sample__user_desc2', sample.user_desc2 or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if sample_desc2_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc2" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>
-          {% if sample.user_desc2 %}
-          {{ sample.user_desc2 }}
-          {% else %}
-          <span class="detail-empty">Not set</span>
-          {% endif %}
-        </div>
+        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>{% if sample.user_desc2 %}{{ sample.user_desc2 }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
           <textarea
             name="sample__user_desc2"
@@ -210,13 +198,7 @@
       {% set user_comment_error = sample_field_errors.get('sample__user_comment') %}
       {% set user_comment_editor_value = sample_form_values.get('sample__user_comment', sample.user_comment or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if user_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>
-          {% if sample_user_comment_display is none %}
-          <span class="detail-empty">Not set</span>
-          {% else %}
-          {{ sample_user_comment_display }}
-          {% endif %}
-        </div>
+        <div class="detail-field-display is-multiline" data-field-display>{% if sample_user_comment_display is none %}<span class="detail-empty">—</span>{% else %}{{ sample_user_comment_display }}{% endif %}</div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
           <textarea
             name="sample__user_comment"
@@ -236,13 +218,7 @@
       {% set lab_comment_error = sample_field_errors.get('sample__lab_comment') %}
       {% set lab_comment_editor_value = sample_form_values.get('sample__lab_comment', sample.lab_comment or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if lab_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="lab_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>
-          {% if sample_lab_comment_display is none %}
-          <span class="detail-empty">Not set</span>
-          {% else %}
-          {{ sample_lab_comment_display }}
-          {% endif %}
-        </div>
+        <div class="detail-field-display is-multiline" data-field-display>{% if sample_lab_comment_display is none %}<span class="detail-empty">—</span>{% else %}{{ sample_lab_comment_display }}{% endif %}</div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
           <textarea
             name="sample__lab_comment"
@@ -259,15 +235,22 @@
     </article>
   </div>
 
-  <details class="table-collapsible sample-meta-collapsible" open>
+  <details class="table-collapsible sample-meta-collapsible">
     <summary class="table-summary">
       <span class="table-summary-title">Additional Sample Metadata</span>
       <span class="badge table-summary-count">{{ sample_sections|length }} sections</span>
     </summary>
     <div class="sample-meta-body">
+      {% if sample_sections|length > 1 %}
+      <nav class="sample-meta-toc" aria-label="Section navigation">
+        {% for section in sample_sections %}
+        <a class="sample-meta-toc-link" href="#sample-section-{{ loop.index }}">{{ section.title }}</a>
+        {% endfor %}
+      </nav>
+      {% endif %}
       <div class="sample-section-grid">
         {% for section in sample_sections %}
-        <article class="sample-section-card">
+        <article class="sample-section-card" id="sample-section-{{ loop.index }}">
           <header class="sample-section-head">
             <h3>{{ section.title }}</h3>
             <p>{{ section.description }}</p>
@@ -344,7 +327,9 @@
               </tr>
               {% else %}
               <tr>
-                <td colspan="6">No preparations found.</td>
+                <td colspan="6" class="table-empty-row">
+                  No preparations yet for this sample. Use <strong>+ Prep</strong> above to create one and seed target #1.
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -407,7 +392,9 @@
               </tr>
               {% else %}
               <tr>
-                <td colspan="8">No targets found.</td>
+                <td colspan="8" class="table-empty-row">
+                  No targets yet. Use <strong>+ Target</strong> above to create the first one for the selected preparation.
+                </td>
               </tr>
               {% endfor %}
             </tbody>

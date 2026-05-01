@@ -10,6 +10,8 @@ from sams_web.viewmodels.detail_sections_common import (
     format_cn_ratio_from_conc,
     format_d13c,
     format_one_decimal,
+    is_empty_display_value,
+    is_sentinel_date,
 )
 from sams_web.viewmodels.detail_sections_sample_lab import (
     build_preparation_sections,
@@ -35,4 +37,6 @@ __all__ = [
     "format_one_decimal",
     "format_sample_value",
     "format_target_indicator",
+    "is_empty_display_value",
+    "is_sentinel_date",
 ]

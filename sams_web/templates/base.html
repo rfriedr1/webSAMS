@@ -7,7 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/style.css" />
+    {% set css_v = '20260502-3' %}
+    <link rel="stylesheet" href="/static/style-core.css?v={{ css_v }}" />
+    <link rel="stylesheet" href="/static/style-benches.css?v={{ css_v }}" />
+    <link rel="stylesheet" href="/static/style-tables.css?v={{ css_v }}" />
+    <link rel="stylesheet" href="/static/style-detail-pages.css?v={{ css_v }}" />
+    <link rel="stylesheet" href="/static/style-settings-kpi.css?v={{ css_v }}" />
   </head>
   <body>
     {% set active_module = resolve_active_module(request) %}
@@ -138,6 +143,10 @@
         <ul class="command-palette-list" data-command-palette-list></ul>
       </div>
     </section>
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/page-progress.js"></script>
+    <script src="/static/js/detail-shortcuts.js"></script>
+    <script src="/static/js/searchable-select.js"></script>
     <script src="/static/js/history-back.js"></script>
     <script src="/static/js/table-tools.js"></script>
     <script src="/static/js/magic-nav-ui.js"></script>

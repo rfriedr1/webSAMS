@@ -57,10 +57,16 @@ def samples_landing_page(
     if re.fullmatch(r"\d+", cookie_value):
         preferred_sample_nr = int(cookie_value)
 
-    resolved_sample_nr = service.resolve_samples_landing_sample_nr(preferred_sample_nr=preferred_sample_nr)
-    if resolved_sample_nr is None:
-        return RedirectResponse(url="/search?context=samples", status_code=303)
-    return RedirectResponse(url=f"/samples/{resolved_sample_nr}", status_code=303)
+    landing = service.get_samples_landing(preferred_sample_nr=preferred_sample_nr)
+    return templates.TemplateResponse(
+        "samples_landing.html",
+        {
+            "request": request,
+            "last_sample_nr": landing["last_sample_nr"],
+            "newest_sample_nr": landing["newest_sample_nr"],
+            "sample_count": landing["sample_count"],
+        },
+    )
 
 
 @router.post("/samples/new")

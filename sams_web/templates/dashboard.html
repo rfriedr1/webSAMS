@@ -10,7 +10,7 @@
   <form method="get" action="/" class="inline-form">
     <label>
       <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} />
-      include not-to-be-dated samples
+      Include held samples
     </label>
     <button type="submit">Refresh</button>
   </form>
@@ -42,28 +42,39 @@
       {% endfor %}
     </div>
   </details>
+</section>
 
-  <h3>Standards Ready for Analysis</h3>
+<section class="panel">
+  <div class="panel-head">
+    <h2>Standards Ready for Analysis</h2>
+    <p>Counts and distribution of pre-evaluated standard targets ready to enter analysis.</p>
+  </div>
+
   <div class="cards cards-standards">
     {% for item in standards_cards %}
     <article class="indicator-{{ item.status }}"><h3>{{ item.label }}</h3><p>{{ item.value }}</p></article>
     {% endfor %}
   </div>
 
-  <article class="kpi-chart">
-    <h3>Standard Distribution</h3>
-    {% for item in standards_chart %}
-    <div class="kpi-row">
-      <div class="kpi-meta">
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
+  <details class="kpi-chart kpi-collapsible" open>
+    <summary class="kpi-summary">
+      <span class="kpi-summary-title">Standard Distribution</span>
+      <span class="kpi-summary-hint">Show/Hide</span>
+    </summary>
+    <div class="kpi-collapsible-body">
+      {% for item in standards_chart %}
+      <div class="kpi-row">
+        <div class="kpi-meta">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </div>
+        <div class="kpi-bar">
+          <div class="kpi-fill kpi-fill-threshold-{{ item.status }}" style="width: {{ item.pct }}%;"></div>
+        </div>
       </div>
-      <div class="kpi-bar">
-        <div class="kpi-fill kpi-fill-threshold-{{ item.status }}" style="width: {{ item.pct }}%;"></div>
-      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </article>
+  </details>
 </section>
 
 <section class="panel">

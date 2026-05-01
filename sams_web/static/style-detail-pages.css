@@ -328,7 +328,14 @@ body.has-command-palette {
 }
 
 .detail-field-shell-card {
-  min-height: 5rem;
+  /* Top-align content so multi-line descriptions and short single-line
+     values start at the same position. With centre-alignment, taller
+     descriptions floated their text in the middle of empty space, which
+     read as "messy". Pair with a smaller min-height so a card whose
+     value is just `—` doesn't artificially inflate the surrounding
+     row (the parent grid still stretches to the tallest sibling). */
+  align-items: start;
+  min-height: 2.6rem;
 }
 
 .detail-field-display {
@@ -712,6 +719,36 @@ body.has-command-palette {
   padding: 0.7rem 0.08rem 0.08rem;
 }
 
+.sample-meta-toc {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e0e9ef;
+}
+
+.sample-meta-toc-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cfdee7;
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2d5f74;
+  background: #f8fcfe;
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.sample-meta-toc-link:hover,
+.sample-meta-toc-link:focus-visible {
+  color: #1f4f63;
+  border-color: #a7c2d0;
+  background: #edf6fb;
+}
+
 .user-projects-table-wrap {
   max-height: min(58dvh, 34rem);
 }
@@ -747,7 +784,372 @@ body.has-command-palette {
 }
 
 .detail-empty {
+  color: #93a4af;
+  font-style: italic;
+}
+
+/* /samples landing page action cards.
+
+   The shared `.cards` grid styles `<p>` as a big bold KPI number (`font-size:
+   1.45rem; font-weight: 800`) -- which is correct for the dashboard tiles
+   ("Planned 125") but wrong for prose paragraphs. The rules below override
+   that for the landing-page cards so the description paragraphs render at
+   regular reading weight, and the CTA sits as its own pill-shaped button
+   aligned to the bottom of the card. */
+.samples-landing-cards {
+  margin-top: 0.4rem;
+  align-items: stretch;
+}
+
+.samples-landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem 1rem 1.05rem;
+  min-height: 12rem;
+}
+
+/* The shared `.cards p` rule sets a big-bold KPI value (1.45rem / 800).
+   Force-override here so the prose paragraphs render as normal body text. */
+.samples-landing-card h3 {
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: #6c8493 !important;
+  text-transform: uppercase;
+  margin: 0 0 0.15rem !important;
+}
+
+.samples-landing-card p {
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  color: #1f3138 !important;
+}
+
+.samples-landing-card p strong {
+  font-weight: 700 !important;
+  color: var(--brand) !important;
+}
+
+.samples-landing-card .samples-landing-cta {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.samples-landing-cta {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 0.55rem 1rem !important;
+  border-radius: 999px !important;
+  background: linear-gradient(130deg, var(--brand), var(--brand-2)) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  border: 1px solid var(--brand) !important;
+  transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+}
+
+.samples-landing-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(15, 97, 121, 0.22);
+  color: #fff !important;
+}
+
+/* Empty-state row inside a list table — friendlier than a flat one-liner. */
+.table-empty-row {
+  padding: 1.4rem 1rem !important;
+  text-align: center;
+  color: #6b8290;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.table-empty-row strong {
+  color: var(--brand);
+  font-style: normal;
+}
+
+/* --- Toast notifications ---------------------------------------------- */
+
+.toast-region {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 16rem;
+  max-width: 26rem;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  background: #ffffff;
+  border: 1px solid #d4dee5;
+  box-shadow: 0 12px 30px rgba(16, 46, 61, 0.12);
+  color: #1f3138;
+  font-weight: 600;
+  font-size: 0.9rem;
+  pointer-events: auto;
+  animation: toast-rise 220ms ease both;
+}
+
+.toast.is-leaving {
+  animation: toast-fade 220ms ease both;
+}
+
+@keyframes toast-rise {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-fade {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+.toast-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.toast-success .toast-icon {
+  background: #dff3e8;
+  color: #186f3a;
+}
+
+.toast-error {
+  border-color: #dcb7b7;
+  background: #fff5f5;
+}
+
+.toast-error .toast-icon {
+  background: #f5cccc;
+  color: #842f2f;
+}
+
+.toast-info .toast-icon {
+  background: #e6f2f7;
+  color: #1f5e77;
+}
+
+.toast-body {
+  flex: 1;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.toast-close {
+  background: transparent !important;
+  border: none !important;
+  color: #5f7480 !important;
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding: 0 0.2rem !important;
+  min-height: auto !important;
+  min-width: auto !important;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.toast-close:hover {
+  color: #1f3138 !important;
+  transform: none !important;
+}
+
+/* --- Keyboard shortcut cheat sheet ------------------------------------ */
+
+.shortcut-cheatsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+}
+
+.shortcut-cheatsheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 38, 47, 0.36);
+  backdrop-filter: blur(2px);
+}
+
+.shortcut-cheatsheet-panel {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 92vw);
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #d4dee5;
+  box-shadow: 0 24px 50px rgba(16, 46, 61, 0.2);
+  padding: 1.1rem 1.3rem 1.2rem;
+}
+
+.shortcut-cheatsheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.shortcut-cheatsheet-head h3 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #1f3138;
+}
+
+.shortcut-cheatsheet-close {
+  background: transparent !important;
+  border: none !important;
+  color: #5f7480 !important;
+  font-size: 1.3rem;
+  font-weight: 800;
+  padding: 0 0.35rem !important;
+  min-height: auto !important;
+  min-width: auto !important;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.shortcut-cheatsheet-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.shortcut-cheatsheet-list dt {
+  margin: 0;
+  align-self: center;
+}
+
+.shortcut-cheatsheet-list dd {
+  margin: 0;
+  align-self: center;
+  color: #2c4754;
+  font-size: 0.9rem;
+}
+
+.shortcut-cheatsheet-list kbd,
+.shortcut-cheatsheet-hint kbd {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid #c5d4dc;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #f3f8fb;
+  color: #1f3138;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.shortcut-cheatsheet-hint {
+  margin: 0.9rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* --- Searchable select combobox -------------------------------------- */
+
+.searchable-select {
+  position: relative;
+  display: block;
+}
+
+.searchable-select-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.searchable-select-input {
+  width: 100%;
+}
+
+.searchable-select-list {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0.2rem;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #c5d4dc;
+  border-radius: 10px;
+  box-shadow: 0 12px 26px rgba(16, 46, 61, 0.14);
+}
+
+.searchable-select-list li {
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.searchable-select-list li:hover,
+.searchable-select-list li.is-active {
+  background: #e8f1f5;
+  color: #1f4d61;
+}
+
+.searchable-select-empty {
+  padding: 0.5rem 0.55rem;
   color: #7d919f;
+  font-style: italic;
+  font-size: 0.85rem;
+  cursor: default !important;
+  background: transparent !important;
+}
+
+/* --- Page progress bar (top of viewport during navigation) ----------- */
+
+.page-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--brand-2), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  z-index: 1200;
+  animation: page-progress-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes page-progress-sweep {
+  0% { background-position: -50% 0; }
+  100% { background-position: 150% 0; }
 }
 
 .error {

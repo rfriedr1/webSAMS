@@ -122,7 +122,7 @@
                 {% if bench_user and bench_user.user_nr and bench_user.last_name %}
                 <a href="/submitters/{{ bench_user.user_nr }}" class="table-link">{{ bench_user.last_name }}</a>
                 {% else %}
-                {{ bench_user.last_name if bench_user and bench_user.last_name else 'Not set' }}
+                {{ bench_user.last_name if bench_user and bench_user.last_name else '—' }}
                 {% endif %}
               </p>
             </article>
@@ -132,21 +132,21 @@
                 {% if bench_project and bench_project.project_nr and bench_project.project %}
                 <a href="/projects/{{ bench_project.project_nr }}" class="table-link">{{ bench_project.project }}</a>
                 {% else %}
-                {{ bench_project.project if bench_project and bench_project.project else 'Not set' }}
+                {{ bench_project.project if bench_project and bench_project.project else '—' }}
                 {% endif %}
               </p>
             </article>
             <article class="detail-item">
               <h4>Sample Label</h4>
-              <p>{{ bench_sample.user_label or 'Not set' }}</p>
+              <p>{{ bench_sample.user_label or '—' }}</p>
             </article>
             <article class="detail-item">
               <h4>Sample Label #</h4>
-              <p>{{ bench_sample.user_label_nr or 'Not set' }}</p>
+              <p>{{ bench_sample.user_label_nr or '—' }}</p>
             </article>
             <article class="detail-item">
               <h4>Material</h4>
-              <p>{{ bench_sample.material or 'Not set' }}</p>
+              <p>{{ bench_sample.material or '—' }}</p>
             </article>
           </div>
         </section>
@@ -241,7 +241,7 @@
             <div class="prep-bench-field prep-bench-field-readonly prep-bench-field-span-2">
               <label>Yield (%)</label>
               {% set bench_yield_value = bench_values['bench__yield_percent_display'] if 'bench__yield_percent_display' in bench_values else (bench_entry.yield_percent if bench_entry.yield_percent is not none else '') %}
-              <div class="prep-bench-readout" data-prep-bench-yield>{{ bench_yield_value or 'Not set' }}</div>
+              <div class="prep-bench-readout" data-prep-bench-yield>{{ bench_yield_value or '—' }}</div>
               <input type="hidden" name="bench__yield_percent_display" value="{{ bench_yield_value or '' }}" data-prep-bench-yield-hidden />
             </div>
           </div>
@@ -259,7 +259,7 @@
             <div class="prep-bench-field{% if bench_errors.get(field_name) %} has-error{% endif %}">
               <label for="prep-bench-{{ step_field }}">Step {{ step_index }} Method</label>
               <select id="prep-bench-{{ step_field }}" name="{{ field_name }}">
-                <option value="">Not set</option>
+                <option value="">—</option>
                 {% for method_value in bench_method_options or [] %}
                 <option value="{{ method_value }}" {% if step_value|string == method_value|string %}selected{% endif %}>{{ method_value }}</option>
                 {% endfor %}
@@ -309,7 +309,7 @@
                   class="prep-bench-storage-input{% if bench_errors.get('bench__s_storage_loc') %} is-error{% endif %}"
                   name="bench__s_storage_loc"
                   value="{{ bench_storage_value }}"
-                  placeholder="Not set"
+                  placeholder="—"
                   aria-label="Sample Storage Location"
                   data-prep-bench-storage-location
                 />
@@ -503,7 +503,7 @@
                     {% if graph_user and graph_user.user_nr and graph_user.last_name %}
                     <a href="/submitters/{{ graph_user.user_nr }}" class="table-link">{{ graph_user.last_name }}</a>
                     {% else %}
-                    {{ graph_user.last_name if graph_user and graph_user.last_name else 'Not set' }}
+                    {{ graph_user.last_name if graph_user and graph_user.last_name else '—' }}
                     {% endif %}
                   </p>
                 </article>
@@ -513,25 +513,25 @@
                     {% if graph_project and graph_project.project_nr and graph_project.project %}
                     <a href="/projects/{{ graph_project.project_nr }}" class="table-link">{{ graph_project.project }}</a>
                     {% else %}
-                    {{ graph_project.project if graph_project and graph_project.project else 'Not set' }}
+                    {{ graph_project.project if graph_project and graph_project.project else '—' }}
                     {% endif %}
                   </p>
                 </article>
                 <article class="detail-item">
                   <h4>Sample Label</h4>
-                  <p>{{ graph_sample.user_label or 'Not set' }}</p>
+                  <p>{{ graph_sample.user_label or '—' }}</p>
                 </article>
                 <article class="detail-item">
                   <h4>Sample Label #</h4>
-                  <p>{{ graph_sample.user_label_nr or 'Not set' }}</p>
+                  <p>{{ graph_sample.user_label_nr or '—' }}</p>
                 </article>
                 <article class="detail-item">
                   <h4>Material</h4>
-                  <p>{{ graph_sample.material or 'Not set' }}</p>
+                  <p>{{ graph_sample.material or '—' }}</p>
                 </article>
                 <article class="detail-item">
                   <h4>Prep Weight End</h4>
-                  <p>{{ format_table_cell_value('weight_end', graph_prep.weight_end) or 'Not set' }}</p>
+                  <p>{{ format_table_cell_value('weight_end', graph_prep.weight_end) or '—' }}</p>
                 </article>
                 <article class="detail-item">
                   <h4>Prep Discarded</h4>
@@ -541,7 +541,7 @@
                 </article>
                 <article class="detail-item">
                   <h4>Graph Batch</h4>
-                  <p>{{ graph_target.graph_batch or 'Not set' }}</p>
+                  <p>{{ graph_target.graph_batch or '—' }}</p>
                 </article>
               </div>
             </section>
@@ -597,7 +597,7 @@
                       type="text"
                       name="graphbench__prep_storage_loc"
                       value="{{ graph_prep_storage_value }}"
-                      placeholder="Not set"
+                      placeholder="—"
                       data-graph-bench-prep-storage
                     />
                     {% if graph_errors.get('graphbench__prep_storage_loc') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__prep_storage_loc'] }}</p>{% endif %}

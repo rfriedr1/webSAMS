@@ -57,46 +57,13 @@
     <form id="{{ project_edit_form_id }}" method="post" action="/projects/{{ project.project_nr }}/save" data-detail-edit-form></form>
   </div>
 
-  <div class="cards project-summary-cards">
-    <article>
-      <h3>Samples</h3>
-      <p>{{ sample_count }}</p>
-    </article>
-    <article>
-      <h3>In Date</h3>
-      <p>{{ project.in_date or '-' }}</p>
-    </article>
-    <article>
-      <h3>Desired Date</h3>
-      <p>{{ project.desired_date or '-' }}</p>
-    </article>
-    <article>
-      <h3>Out Date</h3>
-      <p>{{ project.out_date or '-' }}</p>
-    </article>
-    <article>
-      <h3>Priority</h3>
-      <p>{{ project.priority if project.priority is not none else '-' }}</p>
-    </article>
-    <article>
-      <h3>Status</h3>
-      <p>{{ project.status or 'unknown' }}</p>
-    </article>
-  </div>
-
   <div class="cards project-comment-cards">
     <article>
       <h3>Project Comment</h3>
       {% set project_comment_error = project_field_errors.get('project__project_comment') %}
       {% set project_comment_editor_value = project_form_values.get('project__project_comment', project.project_comment or '') %}
       <div class="detail-field-shell detail-field-shell-card{% if project_comment_error %} has-error{% endif %}" data-detail-entity="project" data-field-key="project_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>
-          {% if project.project_comment %}
-          {{ project.project_comment }}
-          {% else %}
-          <span class="detail-empty">Not set</span>
-          {% endif %}
-        </div>
+        <div class="detail-field-display is-multiline" data-field-display>{% if project.project_comment %}{{ project.project_comment }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
         <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
           <textarea
             name="project__project_comment"
@@ -163,7 +130,9 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5">No samples found.</td>
+            <td colspan="5" class="table-empty-row">
+              No samples linked to this project yet. New samples are created via project intake.
+            </td>
           </tr>
           {% endfor %}
         </tbody>

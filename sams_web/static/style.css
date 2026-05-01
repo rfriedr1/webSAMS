@@ -1,5 +1,5 @@
-@import "./style-core.css";
-@import "./style-benches.css";
-@import "./style-tables.css";
-@import "./style-detail-pages.css";
-@import "./style-settings-kpi.css";
+@import "./style-core.css?v=20260501-2";
+@import "./style-benches.css?v=20260501-2";
+@import "./style-tables.css?v=20260501-2";
+@import "./style-detail-pages.css?v=20260501-2";
+@import "./style-settings-kpi.css?v=20260501-2";

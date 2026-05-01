@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 ## Project Purpose
 - Create a laboratory LIMS software as a Python web application.
@@ -9,6 +9,8 @@
 ## Repository Context
 - Legacy reference code (read-only reference): `../delphi-code`
 - Database schema notes: `schema_summary.md`
+- Domain glossary and bounded vocabulary: `CONTEXT.md` — read this first before naming new things; flagged ambiguities are listed at the bottom.
+- Architecture decision records: `docs/adr/` — sequentially numbered. Don't re-litigate decisions here without checking these first.
 
 ## App purpose
 - the app serves as the main Laboratory Management and Information System (LIMS) of our radiocarbon laboratory
@@ -24,15 +26,21 @@
 
 ## App Architecture
 - `sams_web/main.py`: FastAPI app setup
-- `sams_web/models.py`: SQLAlchemy ORM models
+- `sams_web/models.py`: SQLAlchemy ORM models. Class names use domain language (`Submitter`); table names stay legacy (`user_t`).
 - `sams_web/repositories.py`: DB access/query layer
 - `sams_web/services.py`: business logic/workflows
-- `sams_web/routers/pages.py`: server-rendered web routes
+- `sams_web/detail_update.py`: generic single-entity form-update primitive (`apply_detail_update` + `DetailUpdateConfig` per entity). All write paths flow through here; per-entity configs live next to the viewmodels.
+- `sams_web/detail_page.py`: generic detail-page context builder (`build_detail_page_context` + `DetailPageConfig`). Read side of detail pages.
+- `sams_web/preparation_bench.py` / `graphitization_bench.py`: bench workflow modules (`PreparationBench`, `GraphitizationBench`) — page_view() + save() + (graph) assign_graph_batch().
+- `sams_web/magic_nav.py`: sealed `NavTarget` family + parser + match-based dispatchers for the magic-nav input.
+- `sams_web/search.py`: `SearchContext` registry + `run_search()` + `fk_based_link()` rule for cell-level row links.
+- `sams_web/routers/pages.py` and the per-area `pages_*.py`: server-rendered web routes (thin dispatchers).
 - `sams_web/routers/api.py`: JSON API routes
-- `sams_web/viewmodels/detail_sections.py`: detail-page field grouping/formatting
+- `sams_web/viewmodels/detail_sections*.py`: detail-page field grouping/formatting + per-entity configs (`SUBMITTER_DETAIL`, `PROJECT_DETAIL`, etc. for write; `*_DETAIL_PAGE` for read).
 - `sams_web/templates/*`: Jinja templates
-- `sams_web/static/app.js`: shared frontend behavior (table tools, navigation helpers)
-- `sams_web/static/style.css`: global UI styling
+- `sams_web/static/app.js`: shared table-tools etc.
+- `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, prep/graph bench UIs).
+- `sams_web/static/style*.css`: split per concern (`style-core`, `style-detail-pages`, `style-tables`, `style-benches`, `style-settings-kpi`); `style.css` is the entrypoint that imports them.
 
 ## Data Access Strategy
 - Use a pragmatic hybrid approach.
@@ -72,6 +80,15 @@
 - Detail-page edit controls (`Edit`, `Save`, `Cancel`) should be right-aligned and visually lightweight (no persistent instructional hint text).
 - When saving detail-page edits, show clear progress feedback on the `Save` button (spinner/loading state), and temporarily disable edit toolbar buttons to prevent double-submit while the request is in progress.
 - Global search table can allow horizontal scrolling if needed.
+- **Empty values render as a muted italic em-dash (`—`)**, never `Not set` or `null` or `N/A`. The dash uses `.detail-empty` styling (italic, low contrast). The detection helper is `viewmodels.detail_sections_common.is_empty_display_value(value)` — it returns True for `None`, blank/whitespace strings, sentinel string tokens (`"undefined"`, `"null"`, `"n/a"`, `"none"`), and **sentinel dates with year < 1950** (legacy null stand-ins like `1899-12-30`). All `format_*_value` formatters route through this helper. New value formatters should call it; new templates should render the `—` via `<span class="detail-empty">—</span>`.
+- **Long detail-page metadata sections collapse by default.** Use `<details>` (no `open` attribute) for "Additional Metadata" blocks. When the block holds 2+ sections, render an in-page TOC chip row at the top so operators can jump.
+- **Sections whose every row is empty are dropped at build time.** Pass `drop_all_empty_sections=True` to `build_sections(...)` for verbose detail pages (sample currently uses this — preparation/target/project don't, by choice).
+- **Header column labels live in `routers.pages_shared.TABLE_HEADER_LABELS`.** When adding a new column to a search context, dashboard table, or any other list, register a human label there. Unknown columns fall back to `snake_case → Title Case`.
+- **Empty-state table rows** (`<td class="table-empty-row">`) use centred italic muted text and call out the relevant CTA (e.g. "Use **+ Prep** above to create one"). Don't ship the bare "No rows found" sentence.
+- **Save / notice feedback fires as a toast** (top-right, auto-dismissing) via `window.SAMSToast.show(message, kind)` where `kind` ∈ `success | error | info`. The toast module also auto-promotes `?saved`, `?bench_saved`, `?graph_saved`, `?graph_batch_saved`, and any `*_notice` query params on page load and strips them from the URL via `history.replaceState`. Inline panel-head feedback is allowed alongside, but the toast is the primary surface.
+- **Decorative animations and the blurred bg-shapes respect `@media (prefers-reduced-motion: reduce)`** — they're hidden / shortened for users who opted out.
+- **Every interactive element has a visible `:focus-visible` outline** (`2px solid var(--brand-2)` with `2px` offset). When you add a new clickable thing, include it in the focus-ring rule list in `style-core.css`.
+- **Three responsive breakpoints**: 1024px (large), 860px (medium), 640px (small). At 640px: the brand subtitle hides, cards stack to one column, inputs/buttons grow to ~44px touch targets, the magic-nav input fills its row.
 
 ## Magic Nav Rules
 - Input only digits: treat as `sample_nr` and open sample detail.
@@ -101,6 +118,15 @@
 - `C/N Ratio`: calculate from EA values as `(conc_c/12.011)/(conc_n/14.007)` and round/display to 1 decimal.
 - Boolean fields in detail cards: render as checkboxes (view mode).
 - `stop` label in preparation/target detail views: `Discarded`.
+- Empty / sentinel values: render as muted italic `—` (see UX/UI Invariants for the full empty-value rule).
+
+## Frontend Modules and Shared Behaviours
+- **Toasts**: `window.SAMSToast.show(message, kind, { duration })`. `kind` defaults to `info`; `duration` defaults to ~4.5s, pass `0` for sticky. Auto-fires on save query params.
+- **Keyboard shortcuts within a record** (active when the page contains `[data-edit-scope]`): `e` toggle edit, `Esc` cancel, `Ctrl/Cmd + S` save (always intercepted, even while typing), `[` or `j` previous record, `]` or `k` next record, `?` open the cheat-sheet overlay. Suppressed while typing in inputs (except Save).
+- **Searchable selects**: any `<select>` with more than 8 real options is auto-enhanced into a type-to-filter combobox by `searchable-select.js`. Mark a select with `data-no-searchable` to opt out. The shim commits back to the native `<select>` so server-side form handling is unchanged.
+- **Page progress bar**: indeterminate top-of-page sweep on form submit / link navigation, via `page-progress.js`. No setup needed; appears automatically.
+- **Pinned / Recent quick-access groups** auto-hide when their list is empty. Don't render placeholder "No pinned pages" text — that's deliberately removed.
+- **Breadcrumbs** auto-hide when there is only the root crumb (the page title already says where you are).
 
 ## Settings and Setup
 - Store setup data in a generic settings file, not feature-specific filenames.
@@ -121,11 +147,10 @@
 - Under `Lab`: `Preparation`, `Graphitization`, `Analysis`
 - Breadcrumb navigation is shown on pages via the shared `base.html` layout.
 - Dedicated detail pages exist for sample, preparation, and target.
-- `Samples -> Sample` lands on `/samples`, which opens:
-- last visited sample when available
-- otherwise the highest `sample_nr` (newest sample)
+- `Samples -> Sample` lands on `/samples`, which is a **landing page** (not a redirect) with action cards: Resume last sample (only when different from newest), Newest sample, Browse all samples (→ `/search?context=samples`), and a Magic Nav explainer. The "last sample" is read from the `last_sample_nr` cookie.
 - Sample page is a navigation hub to preparations and targets.
 - Table features are centrally handled in `sams_web/static/app.js`; new tables should follow existing hooks to inherit behavior automatically.
+- Dashboard layout: two side-by-side conceptual panels — **Lab Queues** (Planned / In Prep / Waiting for Graph / Waiting for Meas / Express + queue distribution chart) and **Standards Ready for Analysis** (Oxas / Blanks / Pferde / IAEA-C6 / IAEA-C7 / IAEA-C8 + standard distribution chart). Each chart sits inside a `<details>` collapsible.
 
 ## Development Guardrails
 - Preserve existing behavior unless the user explicitly asks for change.
@@ -135,4 +160,6 @@
 
 ## Quick Validation
 - Python syntax/import check: `python3 -m compileall sams_web`
-- Frontend JS syntax check: `node --check sams_web/static/app.js`
+- Frontend JS syntax check: `for f in sams_web/static/app.js sams_web/static/js/*.js; do node --check "$f"; done`
+- App import smoke: `.venv/bin/python -c "from sams_web.main import app; print(len(app.routes))"`
+- Routes smoke: `for path in / /samples /samples/<n> /projects/<n> /submitters/<n> /lab/preparation /lab/graphitization /search?context=samples; do curl -s -o /dev/null -w "$path -> %{http_code}\n" http://127.0.0.1:8000$path; done`

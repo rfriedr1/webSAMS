@@ -103,21 +103,137 @@ LAB_OPERATION_CONFIGS: dict[str, dict[str, Any]] = {
 }
 
 TABLE_HEADER_LABELS: dict[str, str] = {
-    "conc_c": "C (%)",
-    "conc_n": "N (%)",
+    # Identifiers
+    "sample_nr": "Sample #",
+    "project_nr": "Project #",
+    "user_nr": "Submitter #",
+    "prep_nr": "Prep #",
+    "target_nr": "Target #",
+    "ma_nr": "MA #",
+    "invoice_nr": "Invoice #",
+    "auftragsnr": "Order ID",
+    "order_nr": "Order #",
+    "target_id": "Target ID",
+    # Submitter
+    "last_name": "Last Name",
+    "first_name": "First Name",
+    "user_last_name": "Submitter Last Name",
+    "organisation": "Organisation",
+    "institute": "Institute",
+    "address_1": "Address 1",
+    "address_2": "Address 2",
+    "town": "Town",
+    "country": "Country",
+    "postcode": "Postcode",
+    "phone_1": "Phone 1",
+    "phone_2": "Phone 2",
+    "email": "Email",
+    "account": "Account",
+    "user_comment": "Submitter Comment",
+    # Project
+    "project": "Project Name",
+    "in_date": "In Date",
+    "out_date": "Out Date",
+    "desired_date": "Desired Date",
+    "invoice_date": "Invoice Date",
+    "invoice": "Invoice",
+    "letter": "Letter",
+    "project_comment": "Project Comment",
+    "report": "Report",
+    "report_type": "Report Type",
+    "research": "Research",
+    "advisor": "Advisor",
+    "supervisor": "Supervisor",
+    "priority": "Priority",
+    "status": "Status",
+    "project_type": "Project Type",
+    "price": "Price",
+    "free_of_charge": "Free of Charge",
+    "sample_storage_loc": "Sample Storage Location",
+    "return_to_sender": "Return to Sender",
+    "returned_to_sender": "Returned to Sender",
+    "prep_return_to_sender": "Prep Return to Sender",
+    "prep_returned_to_sender": "Prep Returned to Sender",
+    # Sample
+    "type": "Type",
+    "material": "Material",
+    "fraction": "Fraction",
+    "weight": "Weight",
+    "sampling_date": "Sampling Date",
+    "user_label": "Sample Label",
+    "user_label_nr": "Sample Label #",
+    "user_desc1": "Description 1",
+    "user_desc2": "Description 2",
+    "pre_sub_treat": "Submitter Pre-treatment",
+    "preparation": "Preparation",
+    "residue": "Residue",
+    "lab_comment": "Lab Comment",
+    "prep_storage_loc": "Prep Storage Location",
+    "storage": "Storage",
+    "photo": "Photo",
+    # Sample / Target measurements
+    "c14_age": "C14 Age",
+    "c14_age_sig": "C14 Sigma",
+    "fm": "FM",
+    "fm_sig": "FM Sigma",
+    "av_fm": "Average FM",
+    "av_fm_sig": "Average FM Sigma",
+    "av_dc13": "Average δ¹³C",
+    "av_dc13_sig": "Average δ¹³C Sigma",
+    "dc13": "δ¹³C",
+    "dc13_sig": "δ¹³C Sigma",
+    "delta_r": "Delta R",
+    "calib": "Calibration",
+    "cal1s_min": "Cal 1σ Min",
+    "cal1s_max": "Cal 1σ Max",
+    "cal2s_min": "Cal 2σ Min",
+    "cal2s_max": "Cal 2σ Max",
+    # Preparation
+    "batch": "Prep Batch",
     "cn_ratio": "C/N Ratio",
     "cn_ratio_calc": "C/N Ratio",
-    "user_last_name": "Submitter Last Name",
+    "c_percent": "C (%)",
+    "n_percent": "N (%)",
+    "prep_start": "Prep Start",
+    "prep_end": "Prep End",
+    "prep_comment": "Prep Comment",
+    "weight_start": "Weight Start",
+    "weight_medium": "Weight Mid",
+    "weight_medium_2": "Weight Mid 2",
+    "weight_end": "Weight End",
+    # Target
+    "magazine": "Magazine",
+    "position": "Position",
+    "graph_batch": "Graph Batch",
+    "graphitized": "Graphitized",
+    "target_pressed": "Target Pressed",
+    "target_comment": "Target Comment",
+    "meas_comment": "Measurement Comment",
+    "weight_combustion": "Combustion Weight",
+    "conc_c": "C (%)",
+    "conc_n": "N (%)",
+    "le_curr": "LE Current",
+    "he_curr": "HE Current",
 }
 
 
 def format_table_header_label(key: Any) -> str:
     key_str = str(key)
-    return TABLE_HEADER_LABELS.get(key_str.lower(), key_str)
+    label = TABLE_HEADER_LABELS.get(key_str.lower())
+    if label is not None:
+        return label
+    # Default: snake_case → Title Case for unknown columns
+    return key_str.replace("_", " ").title()
 
 
 def format_table_cell_value(key: Any, value: Any) -> Any:
-    if value is None:
+    """Format a table cell's value for display.
+
+    Returns "" for empty, sentinel-string ("undefined" / "null" / "n/a"),
+    and sentinel dates (year < 1950). Numeric/date columns get type-specific
+    formatting.
+    """
+    if ds.is_empty_display_value(value):
         return ""
 
     key_lower = str(key).lower()

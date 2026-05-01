@@ -215,6 +215,31 @@ class SamsService:
             return max_sample_nr
         return None
 
+    def get_samples_landing(self, preferred_sample_nr: int | None = None) -> dict[str, Any]:
+        """Data for the /samples landing page: last visited (if valid),
+        newest sample, and the total count.
+
+        `last_sample_nr` is the operator's cookie-recorded most-recent sample
+        if it still exists in the DB; otherwise None. `newest_sample_nr` is
+        the highest sample_nr in the database (effectively "most recent
+        record"). Both may be the same number — the route shows "Resume" only
+        when the cookie value differs from the newest, to avoid two buttons
+        for the same destination.
+        """
+        sample_count, max_sample_nr = self.repo.get_sample_stats()
+        last_sample_nr: int | None = None
+        if (
+            preferred_sample_nr is not None
+            and preferred_sample_nr > 0
+            and self.sample_exists(preferred_sample_nr)
+        ):
+            last_sample_nr = preferred_sample_nr
+        return {
+            "last_sample_nr": last_sample_nr,
+            "newest_sample_nr": max_sample_nr if max_sample_nr > 0 else None,
+            "sample_count": sample_count,
+        }
+
     def preparation_exists(self, sample_nr: int, prep_nr: int) -> bool:
         return self.repo.get_preparation(sample_nr, prep_nr) is not None
 

@@ -168,9 +168,13 @@
     }
     const crumbs = buildBreadcrumbs();
     container.textContent = "";
-    if (crumbs.length === 0) {
+    // Hide the breadcrumbs nav entirely when there's only the root crumb —
+    // the page title already states where you are.
+    if (crumbs.length <= 1) {
+      container.hidden = true;
       return;
     }
+    container.hidden = false;
     crumbs.forEach((crumb, index) => {
       const isLast = index === crumbs.length - 1;
       if (isLast) {
@@ -222,14 +226,20 @@
     const currentLabel = deriveCurrentPageLabel();
     const hiddenPaths = new Set(["/magic/open", "/samples/open"]);
 
-    const renderLinkGroup = (host, items, emptyLabel) => {
+    const renderLinkGroup = (host, items) => {
       host.textContent = "";
+      // Hide the surrounding group (label + list) entirely when empty.
+      // Rendering "No pinned pages" / "No recent pages" placeholders adds
+      // chrome noise that the user never asked for.
+      const group = host.closest(".quick-access-group");
       if (!items.length) {
-        const empty = document.createElement("span");
-        empty.className = "quick-access-empty";
-        empty.textContent = emptyLabel;
-        host.append(empty);
+        if (group) {
+          group.hidden = true;
+        }
         return;
+      }
+      if (group) {
+        group.hidden = false;
       }
       items.forEach((item) => {
         const anchor = document.createElement("a");
@@ -262,8 +272,22 @@
     const sync = () => {
       const pinned = normalizeCollection(loadStoredPages(PINNED_PAGES_STORAGE_KEY), MAX_PINNED_PAGES);
       const recent = normalizeCollection(loadStoredPages(RECENT_PAGES_STORAGE_KEY), MAX_RECENT_PAGES);
-      renderLinkGroup(pinnedHost, pinned, "No pinned pages");
-      renderLinkGroup(recentHost, recent, "No recent pages");
+      renderLinkGroup(pinnedHost, pinned);
+      renderLinkGroup(recentHost, recent);
+      // Hide the entire context-strip when neither breadcrumbs nor any
+      // quick-access content is showing; otherwise hide just the
+      // quick-access shell when both groups are empty.
+      const quickAccess = document.querySelector(".quick-access");
+      if (quickAccess) {
+        quickAccess.hidden = pinned.length === 0 && recent.length === 0;
+      }
+      const breadcrumbs = document.querySelector("[data-breadcrumbs]");
+      const strip = document.querySelector("[data-context-strip]");
+      if (strip) {
+        const breadcrumbsHidden = !breadcrumbs || breadcrumbs.hidden || !breadcrumbs.children.length;
+        const quickAccessHidden = !quickAccess || quickAccess.hidden;
+        strip.hidden = breadcrumbsHidden && quickAccessHidden;
+      }
       const isPinned = pinned.some((item) => item.url === currentUrl);
       pinButton.classList.toggle("is-pinned", isPinned);
       pinButton.title = isPinned ? "Unpin current page" : "Pin current page";
