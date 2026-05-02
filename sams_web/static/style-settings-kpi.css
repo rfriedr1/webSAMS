@@ -62,6 +62,58 @@
   margin-top: 0.85rem;
 }
 
+.setup-threshold-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.4rem 0 0;
+}
+
+.setup-threshold-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid #d8e2e8;
+  border-radius: 12px;
+  background: #f9fcfe;
+}
+
+.setup-threshold-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  margin: 0;
+}
+
+.setup-threshold-label strong {
+  font-size: 0.92rem;
+  color: #204150;
+}
+
+.setup-threshold-label .setup-note {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.setup-threshold-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setup-threshold-input input {
+  width: 7rem;
+  text-align: right;
+}
+
+.setup-threshold-unit {
+  color: #4a6270;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .setup-list-editor-label {
   display: block;
   margin: 0 0 0.38rem;

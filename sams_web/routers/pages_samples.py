@@ -12,7 +12,6 @@ from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_con
 from sams_web.routers.detail_contexts import build_sample_creation_notice
 from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
-from sams_web.viewmodels import detail_sections as ds
 from sams_web.viewmodels.detail_sections_sample_lab import SAMPLE_DETAIL_PAGE
 
 router = APIRouter()
@@ -20,8 +19,8 @@ router = APIRouter()
 
 def _sample_extra_keys(overview: dict[str, object], creation_notice: str | None) -> dict[str, object]:
     """Page-specific extras for the sample detail page (related entities,
-    pre-formatted display values, optional creation notice)."""
-    sample = overview["sample"]
+    table joins, optional creation notice). Headline display values come
+    from `SAMPLE_DETAIL_PAGE.headline_builder`, not from this dict."""
     preparations = overview["preparations"]
     return {
         "project": overview["project"],
@@ -30,9 +29,6 @@ def _sample_extra_keys(overview: dict[str, object], creation_notice: str | None)
         "targets_by_prep": overview["targets_by_prep"],
         "sample_targets_total": overview["sample_targets_total"],
         "targets": overview["targets"],
-        "sample_c14_age_display": ds.format_sample_value("c14_age", sample.c14_age),
-        "sample_user_comment_display": ds.format_sample_value("user_comment", sample.user_comment),
-        "sample_lab_comment_display": ds.format_sample_value("lab_comment", sample.lab_comment),
         "sample_creation_notice": creation_notice,
         "sample_default_target_prep_nr": preparations[0].prep_nr if preparations else None,
     }

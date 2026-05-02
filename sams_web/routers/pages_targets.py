@@ -9,7 +9,6 @@ from sams_web.dependencies import get_service
 from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
 from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
-from sams_web.viewmodels import detail_sections as ds
 from sams_web.viewmodels.detail_sections_sample_lab import TARGET_DETAIL_PAGE
 
 router = APIRouter()
@@ -21,18 +20,15 @@ def _target_extra_keys(
     target_nr: int,
     data: dict[str, object],
 ) -> dict[str, object]:
-    target = data["target"]
+    """Page-specific extras: related entities and prep-options for the
+    +Target form. Headline display values + warnings come from
+    `TARGET_DETAIL_PAGE.headline_builder` / `.warnings_builder`."""
     return {
         "sample": data["sample"],
         "project": data["project"],
         "user": data["user"],
         "preparation": data["preparation"],
         "target_prep_options": data.get("preparations", []),
-        "target_fm_display": ds.format_target_indicator("fm", target.fm),
-        "target_fm_sig_display": ds.format_target_indicator("fm_sig", target.fm_sig),
-        "target_dc13_display": ds.format_target_indicator("dc13", target.dc13),
-        "target_c14_age_display": ds.format_target_indicator("c14_age", target.c14_age),
-        "target_c14_age_sig_display": ds.format_target_indicator("c14_age_sig", target.c14_age_sig),
         "sample_nr": sample_nr,
         "prep_nr": prep_nr,
         "target_nr": target_nr,
@@ -87,6 +83,7 @@ def target_detail_page(
             cursor=_target_cursor(data),
             edit_state=EditFormState(saved=saved),
             service=service,
+            lab_warning_thresholds=service.get_lab_warning_thresholds(),
             extra=_target_extra_keys(sample_nr, prep_nr, target_nr, data),
         ),
     )
@@ -149,6 +146,7 @@ async def save_target_detail_page(
                 edit_initial_mode="editing",
             ),
             service=service,
+            lab_warning_thresholds=service.get_lab_warning_thresholds(),
             extra=_target_extra_keys(sample_nr, prep_nr, target_nr, data),
         ),
         status_code=422,

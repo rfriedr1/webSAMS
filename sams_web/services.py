@@ -23,12 +23,17 @@ from sams_web.viewmodels.detail_sections_user_project import (
 )
 from sams_web.setup_sections import (
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+    SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_MAP,
     SETUP_SECTION_STANDARD_THRESHOLDS,
     SETUP_SECTIONS,
 )
 from sams_web.setup_store import SetupStore
 from sams_web.thresholds import THRESHOLD_FIELDS, ThresholdRule, ThresholdStore
+from sams_web.lab_warning_thresholds import (
+    LAB_WARNING_THRESHOLD_FIELDS,
+    LabWarningThresholdStore,
+)
 
 
 @dataclass
@@ -83,6 +88,7 @@ class SamsService:
         self.repo = SamsRepository(session)
         self.threshold_store = threshold_store
         self.setup_store = setup_store
+        self.lab_warning_threshold_store = LabWarningThresholdStore(setup_store)
 
     def get_dashboard(self, show_on_hold: bool = False) -> dict[str, Any]:
         standards = self.repo.get_standard_counts()
@@ -268,6 +274,12 @@ class SamsService:
             cleaned.append(value)
             seen.add(value)
         return cleaned or list(DEFAULT_GRAPHITIZATION_SYSTEMS)
+
+    def get_lab_warning_thresholds(self) -> dict[str, float]:
+        return self.lab_warning_threshold_store.load()
+
+    def update_lab_warning_thresholds(self, payload: dict[str, Any]) -> dict[str, float]:
+        return self.lab_warning_threshold_store.update(payload)
 
     def get_preparation_edit_select_options(self) -> dict[str, list[str]]:
         methods = self.repo.get_methods()
@@ -582,6 +594,24 @@ class SamsService:
                 "list_placeholder": "One system per line (e.g. mag)",
                 "list_help": "Used as the suffix in graph batch names: graph_YYMMDD_system",
             }
+        if section.key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
+            values = self.get_lab_warning_thresholds()
+            return {
+                **base_payload,
+                "kind": "numeric_thresholds",
+                "storage_section": self.lab_warning_threshold_store.section_key,
+                "numeric_threshold_rows": [
+                    {
+                        "key": field.key,
+                        "label": field.label,
+                        "description": field.description,
+                        "unit": field.unit,
+                        "step": field.step,
+                        "value": field.format(values.get(field.key, field.default)),
+                    }
+                    for field in LAB_WARNING_THRESHOLD_FIELDS
+                ],
+            }
 
         return {
             **base_payload,
@@ -637,6 +667,24 @@ class SamsService:
                 "storage_section": section.key,
                 "list_items": cleaned,
                 "list_text": "\n".join(cleaned),
+            }
+        if section.key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
+            updated = self.update_lab_warning_thresholds(payload)
+            return {
+                "kind": "numeric_thresholds",
+                "storage_file": str(self.setup_store.path),
+                "storage_section": self.lab_warning_threshold_store.section_key,
+                "numeric_threshold_rows": [
+                    {
+                        "key": field.key,
+                        "label": field.label,
+                        "description": field.description,
+                        "unit": field.unit,
+                        "step": field.step,
+                        "value": field.format(updated.get(field.key, field.default)),
+                    }
+                    for field in LAB_WARNING_THRESHOLD_FIELDS
+                ],
             }
         raise ValueError("No update handler configured for this setup section.")
 

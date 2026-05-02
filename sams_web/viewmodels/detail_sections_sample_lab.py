@@ -11,6 +11,10 @@ from sams_web.detail_page import DetailPageConfig
 from sams_web.detail_update import DetailUpdateConfig, RelatedEntityRule
 from sams_web.models import Preparation, Sample, Target
 from sams_web.viewmodels.detail_sections_user_project import PROJECT_DETAIL
+from sams_web.viewmodels.lab_warnings import (
+    evaluate_preparation_warnings,
+    evaluate_target_warnings,
+)
 from sams_web.viewmodels.detail_sections_common import (
     Row,
     SectionSpec,
@@ -20,6 +24,7 @@ from sams_web.viewmodels.detail_sections_common import (
     format_cn_ratio_from_conc,
     format_d13c,
     format_one_decimal,
+    format_total_c_ug,
     is_empty_display_value,
     mapped_values,
 )
@@ -48,7 +53,7 @@ SAMPLE_FIELD_LABELS = {
     "lab_comment": "Lab Comment",
     "weight": "Weight",
     "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Sigma",
+    "c14_age_sig": "C14 Age Sigma",
     "av_fm": "Average Fm",
     "av_fm_sig": "Average Fm Sigma",
     "av_dc13": "Average d13C",
@@ -322,7 +327,7 @@ TARGET_FIELD_LABELS = {
     "dc13_sig": "d13C Sigma",
     "calcset": "Calcset",
     "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Sigma",
+    "c14_age_sig": "C14 Age Sigma",
     "cal1s_min": "Cal 1s Min",
     "cal1s_max": "Cal 1s Max",
     "cal2s_min": "Cal 2s Min",
@@ -333,6 +338,7 @@ TARGET_FIELD_LABELS = {
     "conc_c": "C (%)",
     "conc_n": "N (%)",
     "cn_ratio_calc": "C/N Ratio",
+    "total_c_ug": "Total C (µg)",
     "le_curr": "LE Current",
     "he_curr": "HE Current",
 }
@@ -406,6 +412,9 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
         if section_title != "Elemental Analyzer":
             return []
         ratio = format_cn_ratio_from_conc(values_by_key.get("conc_c"), values_by_key.get("conc_n"))
+        total_c_ug = format_total_c_ug(
+            values_by_key.get("weight_combustion"), values_by_key.get("conc_c")
+        )
         return [
             {
                 "key": "cn_ratio_calc",
@@ -414,7 +423,15 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
                 "raw_value": ratio,
                 "value": ratio,
                 "read_only": True,
-            }
+            },
+            {
+                "key": "total_c_ug",
+                "label": TARGET_FIELD_LABELS["total_c_ug"],
+                "kind": "text",
+                "raw_value": total_c_ug,
+                "value": total_c_ug,
+                "read_only": True,
+            },
         ]
 
     sections = build_sections(
@@ -552,12 +569,49 @@ def _decorate_target_sections_with_magazine_links(target: Any) -> list[dict[str,
     return sections
 
 
+def build_sample_headline(sample: Any) -> dict[str, Any]:
+    return {
+        "c14_age": format_sample_value("c14_age", sample.c14_age),
+        "c14_age_sig": format_sample_value("c14_age_sig", sample.c14_age_sig),
+        "user_comment": format_sample_value("user_comment", sample.user_comment),
+        "lab_comment": format_sample_value("lab_comment", sample.lab_comment),
+    }
+
+
+def build_preparation_headline(preparation: Any) -> dict[str, Any]:
+    return {
+        "yield_percent": calculate_preparation_yield(
+            preparation.weight_start, preparation.weight_end
+        ),
+        "stop": format_preparation_value("stop", preparation.stop),
+        "no_leftover": format_preparation_value("p_no_leftover", preparation.p_no_leftover),
+        "comment": format_preparation_value("prep_comment", preparation.prep_comment),
+    }
+
+
+def build_target_headline(target: Any) -> dict[str, Any]:
+    return {
+        "fm": format_target_indicator("fm", target.fm),
+        "fm_sig": format_target_indicator("fm_sig", target.fm_sig),
+        "dc13": format_target_indicator("dc13", target.dc13),
+        "c14_age": format_target_indicator("c14_age", target.c14_age),
+        "c14_age_sig": format_target_indicator("c14_age_sig", target.c14_age_sig),
+        "conc_c": format_target_value("conc_c", target.conc_c),
+        "conc_n": format_target_value("conc_n", target.conc_n),
+        "cn_ratio": format_cn_ratio_from_conc(target.conc_c, target.conc_n),
+        "total_c_ug": format_total_c_ug(target.weight_combustion, target.conc_c),
+        "stop": format_target_value("stop", target.stop),
+        "comment": format_target_value("target_comment", target.target_comment),
+    }
+
+
 SAMPLE_DETAIL_PAGE = DetailPageConfig(
     name="sample",
     update_config=SAMPLE_DETAIL,
     edit_form_id="sample-detail-edit-form",
     sections_builder=build_sample_sections,
     select_options_getter=lambda service: service.get_sample_edit_select_options(),
+    headline_builder=build_sample_headline,
 )
 
 
@@ -567,6 +621,8 @@ PREPARATION_DETAIL_PAGE = DetailPageConfig(
     edit_form_id="preparation-detail-edit-form",
     sections_builder=build_preparation_sections,
     select_options_getter=lambda service: service.get_preparation_edit_select_options(),
+    headline_builder=build_preparation_headline,
+    warnings_builder=evaluate_preparation_warnings,
 )
 
 
@@ -575,4 +631,6 @@ TARGET_DETAIL_PAGE = DetailPageConfig(
     update_config=TARGET_DETAIL,
     edit_form_id="target-detail-edit-form",
     sections_builder=_decorate_target_sections_with_magazine_links,
+    headline_builder=build_target_headline,
+    warnings_builder=evaluate_target_warnings,
 )

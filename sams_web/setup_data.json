@@ -9,6 +9,10 @@
   ],
   "import_profiles": {},
   "lab_defaults": {},
+  "lab_warning_thresholds": {
+    "preparation_yield_percent_min": 0.5,
+    "target_total_c_ug_min": 500.0
+  },
   "notifications": {},
   "standard_inventory_thresholds": {
     "blanks": {

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_field_row %}
+{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
 {% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
@@ -83,24 +83,36 @@
     ></form>
   </div>
 
-  <div class="cards sample-summary-cards">
-    <article>
-      <h3>Batch</h3>
-      <p>{{ preparation.batch or '-' }}</p>
-    </article>
-    <article>
-      <h3>Prep Start</h3>
-      <p>{{ preparation.prep_start or '-' }}</p>
-    </article>
-    <article>
-      <h3>Prep End</h3>
-      <p>{{ preparation.prep_end or '-' }}</p>
-    </article>
-    <article>
-      <h3>Targets</h3>
-      <p>{{ targets_total }}</p>
-    </article>
-  </div>
+  <section class="card-group">
+    <h4 class="card-group-title">Batch &amp; Timeline</h4>
+    <div class="cards sample-summary-cards">
+      {{ render_detail_display_card('Batch', preparation.batch) }}
+      {{ render_detail_display_card('Prep Start', preparation.prep_start) }}
+      {{ render_detail_display_card('Prep End', preparation.prep_end) }}
+    </div>
+  </section>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Outcome</h4>
+    <div class="cards sample-summary-cards">
+      {{ render_detail_display_card('Yield (%)', preparation_headline.yield_percent, warning=preparation_warnings.get('preparation_yield_percent_min')) }}
+      {{ render_detail_display_card('Discarded', preparation_headline.stop, kind='boolean') }}
+      {{ render_detail_display_card('No Leftover', preparation_headline.no_leftover, kind='boolean') }}
+      {{ render_detail_display_card('Targets', targets_total) }}
+    </div>
+  </section>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Comments</h4>
+    <div class="cards detail-comments-cards">
+      {{ render_detail_card(
+        'preparation', 'prep_comment', 'Preparation Comment',
+        raw_value=preparation.prep_comment, display_value=preparation_headline.comment,
+        kind='multiline', rows=4,
+        form_id=preparation_edit_form_id, form_values=preparation_form_values, field_errors=preparation_field_errors
+      ) }}
+    </div>
+  </section>
 
   <div class="sample-section-grid">
     {% for section in preparation_sections %}

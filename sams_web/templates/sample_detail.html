@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_field_row %}
+{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
 {% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
@@ -68,172 +68,69 @@
     <form id="{{ sample_edit_form_id }}" method="post" action="/samples/{{ sample.sample_nr }}/save" data-detail-edit-form></form>
   </div>
 
-  <div class="cards sample-identity-cards">
-    <article>
-      <h3>Sample Label</h3>
-      {% set sample_label_error = sample_field_errors.get('sample__user_label') %}
-      {% set sample_label_editor_value = sample_form_values.get('sample__user_label', sample.user_label or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if sample_label_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_label" data-field-kind="text">
-        <div class="detail-field-display" data-field-display>
-          {% if sample.user_label %}
-          {{ sample.user_label }}
-          {% else %}
-          <span class="detail-empty">—</span>
-          {% endif %}
-        </div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <input
-            type="text"
-            name="sample__user_label"
-            form="{{ sample_edit_form_id }}"
-            value="{{ sample_label_editor_value }}"
-            {% if sample_label_error %}aria-invalid="true"{% endif %}
-            disabled
-          />
-        </div>
-        {% if sample_label_error %}
-        <p class="detail-field-error error">{{ sample_label_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-    <article>
-      <h3>Sample Label #</h3>
-      {% set sample_label_nr_error = sample_field_errors.get('sample__user_label_nr') %}
-      {% set sample_label_nr_editor_value = sample_form_values.get('sample__user_label_nr', sample.user_label_nr or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if sample_label_nr_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_label_nr" data-field-kind="text">
-        <div class="detail-field-display" data-field-display>
-          {% if sample.user_label_nr is not none and sample.user_label_nr != '' %}
-          {{ sample.user_label_nr }}
-          {% else %}
-          <span class="detail-empty">—</span>
-          {% endif %}
-        </div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <input
-            type="text"
-            name="sample__user_label_nr"
-            form="{{ sample_edit_form_id }}"
-            value="{{ sample_label_nr_editor_value }}"
-            {% if sample_label_nr_error %}aria-invalid="true"{% endif %}
-            disabled
-          />
-        </div>
-        {% if sample_label_nr_error %}
-        <p class="detail-field-error error">{{ sample_label_nr_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-    <article class="sample-identity-description">
-      <h3>Description 1</h3>
-      {% set sample_desc1_error = sample_field_errors.get('sample__user_desc1') %}
-      {% set sample_desc1_editor_value = sample_form_values.get('sample__user_desc1', sample.user_desc1 or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if sample_desc1_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc1" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>{% if sample.user_desc1 %}{{ sample.user_desc1 }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <textarea
-            name="sample__user_desc1"
-            form="{{ sample_edit_form_id }}"
-            rows="3"
-            {% if sample_desc1_error %}aria-invalid="true"{% endif %}
-            disabled
-          >{{ sample_desc1_editor_value }}</textarea>
-        </div>
-        {% if sample_desc1_error %}
-        <p class="detail-field-error error">{{ sample_desc1_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-    <article class="sample-identity-description">
-      <h3>Description 2</h3>
-      {% set sample_desc2_error = sample_field_errors.get('sample__user_desc2') %}
-      {% set sample_desc2_editor_value = sample_form_values.get('sample__user_desc2', sample.user_desc2 or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if sample_desc2_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_desc2" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline sample-identity-description-text" data-field-display>{% if sample.user_desc2 %}{{ sample.user_desc2 }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <textarea
-            name="sample__user_desc2"
-            form="{{ sample_edit_form_id }}"
-            rows="3"
-            {% if sample_desc2_error %}aria-invalid="true"{% endif %}
-            disabled
-          >{{ sample_desc2_editor_value }}</textarea>
-        </div>
-        {% if sample_desc2_error %}
-        <p class="detail-field-error error">{{ sample_desc2_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-  </div>
+  <section class="card-group">
+    <h4 class="card-group-title">Identity</h4>
+    <div class="cards sample-identity-cards">
+      {{ render_detail_card(
+        'sample', 'user_label', 'Sample Label',
+        raw_value=sample.user_label,
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+      {{ render_detail_card(
+        'sample', 'user_label_nr', 'Sample Label #',
+        raw_value=sample.user_label_nr,
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+      {{ render_detail_card(
+        'sample', 'user_desc1', 'Description 1',
+        raw_value=sample.user_desc1, kind='multiline', rows=3,
+        card_class='sample-identity-description',
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+      {{ render_detail_card(
+        'sample', 'user_desc2', 'Description 2',
+        raw_value=sample.user_desc2, kind='multiline', rows=3,
+        card_class='sample-identity-description',
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+    </div>
+  </section>
 
-  <div class="cards sample-summary-cards">
-    <article>
-      <h3>Type</h3>
-      <p>{{ sample.type or '-' }}</p>
-    </article>
-    <article>
-      <h3>Material</h3>
-      <p>{{ sample.material or '-' }}</p>
-    </article>
-    <article>
-      <h3>Fraction</h3>
-      <p>{{ sample.fraction or '-' }}</p>
-    </article>
-    <article>
-      <h3>Weight</h3>
-      <p>{{ sample.weight if sample.weight is not none else '-' }}</p>
-    </article>
-    <article>
-      <h3>C14 Age</h3>
-      <p>{{ sample_c14_age_display if sample_c14_age_display is not none else '-' }}</p>
-    </article>
-    <article>
-      <h3>Records</h3>
-      <p>{{ preparations|length }} prep / {{ sample_targets_total }} targets</p>
-    </article>
-  </div>
+  <section class="card-group">
+    <h4 class="card-group-title">Classification</h4>
+    <div class="cards sample-summary-cards">
+      {{ render_detail_display_card('Type', sample.type) }}
+      {{ render_detail_display_card('Material', sample.material) }}
+      {{ render_detail_display_card('Fraction', sample.fraction) }}
+      {{ render_detail_display_card('Weight', sample.weight) }}
+    </div>
+  </section>
 
-  <div class="cards sample-comments-cards">
-    <article>
-      <h3>Submitter Comment</h3>
-      {% set user_comment_error = sample_field_errors.get('sample__user_comment') %}
-      {% set user_comment_editor_value = sample_form_values.get('sample__user_comment', sample.user_comment or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if user_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="user_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>{% if sample_user_comment_display is none %}<span class="detail-empty">—</span>{% else %}{{ sample_user_comment_display }}{% endif %}</div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <textarea
-            name="sample__user_comment"
-            form="{{ sample_edit_form_id }}"
-            rows="4"
-            {% if user_comment_error %}aria-invalid="true"{% endif %}
-            disabled
-          >{{ user_comment_editor_value }}</textarea>
-        </div>
-        {% if user_comment_error %}
-        <p class="detail-field-error error">{{ user_comment_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-    <article>
-      <h3>Lab Comment</h3>
-      {% set lab_comment_error = sample_field_errors.get('sample__lab_comment') %}
-      {% set lab_comment_editor_value = sample_form_values.get('sample__lab_comment', sample.lab_comment or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if lab_comment_error %} has-error{% endif %}" data-detail-entity="sample" data-field-key="lab_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>{% if sample_lab_comment_display is none %}<span class="detail-empty">—</span>{% else %}{{ sample_lab_comment_display }}{% endif %}</div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <textarea
-            name="sample__lab_comment"
-            form="{{ sample_edit_form_id }}"
-            rows="4"
-            {% if lab_comment_error %}aria-invalid="true"{% endif %}
-            disabled
-          >{{ lab_comment_editor_value }}</textarea>
-        </div>
-        {% if lab_comment_error %}
-        <p class="detail-field-error error">{{ lab_comment_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-  </div>
+  <section class="card-group">
+    <h4 class="card-group-title">Measurement Results</h4>
+    <div class="cards sample-summary-cards">
+      {{ render_detail_display_card('C14 Age', sample_headline.c14_age) }}
+      {{ render_detail_display_card('C14 Age Sigma', sample_headline.c14_age_sig) }}
+    </div>
+  </section>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Comments</h4>
+    <div class="cards sample-comments-cards">
+      {{ render_detail_card(
+        'sample', 'user_comment', 'Submitter Comment',
+        raw_value=sample.user_comment, display_value=sample_headline.user_comment,
+        kind='multiline', rows=4,
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+      {{ render_detail_card(
+        'sample', 'lab_comment', 'Lab Comment',
+        raw_value=sample.lab_comment, display_value=sample_headline.lab_comment,
+        kind='multiline', rows=4,
+        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
+      ) }}
+    </div>
+  </section>
 
   <details class="table-collapsible sample-meta-collapsible">
     <summary class="table-summary">

@@ -173,7 +173,7 @@ TABLE_HEADER_LABELS: dict[str, str] = {
     "photo": "Photo",
     # Sample / Target measurements
     "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Sigma",
+    "c14_age_sig": "C14 Age Sigma",
     "fm": "FM",
     "fm_sig": "FM Sigma",
     "av_fm": "Average FM",

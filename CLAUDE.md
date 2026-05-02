@@ -64,10 +64,10 @@
 - Keep history-based back navigation on detail pages. Back navigation should alway show where to link back to.
 - Use icons instead of labelled buttons if the function of the icons are easily recognizable (don't do this in the primary and secondary navigation bar)
 - Any table should provide:
-- Search/filter
-- Column sorting
-- Download icon export (Excel-compatible)
-- Internal scrolling within table container (avoid excessive page scrolling)
+	- Search/filter
+	- Column sorting
+	- Download icon export (Excel-compatible)
+	- Internal scrolling within table container (avoid excessive page scrolling)
 - No server-side pagination in UI tables (load full dataset; pagination, if needed later, should be client-side UX)
 - Prefer inline links in tables for navigation to details (instead of row-click navigation).
 - Keep link-column style consistent (underlined, colored, bold).
@@ -75,7 +75,7 @@
 - In detail cards/views, do not use per-field hairlines; use subtle divider lines only at explicit group transitions.
 - In detail pages, edit mode should be in-place: the same field box switches from display to editor (no duplicated display+editor stacked layout).
 - Minimize layout shift in edit mode (stable row/card height where possible); multiline/comment fields may expand when needed.
-- Highlight editable fields subtly in edit mode and visually mark changed (dirty) fields.
+- Highlight editable fields subtly in edit mode and visually mark changed (dirty-dots) fields.
 - Use the same dirty-dot visual pattern for task-focused bench UIs (e.g. `Preparation Bench Entry`, `Graphitization Bench Entry`) so users can quickly see unsaved changes and where they were made.
 - Detail-page edit controls (`Edit`, `Save`, `Cancel`) should be right-aligned and visually lightweight (no persistent instructional hint text).
 - When saving detail-page edits, show clear progress feedback on the `Save` button (spinner/loading state), and temporarily disable edit toolbar buttons to prevent double-submit while the request is in progress.
@@ -110,8 +110,41 @@
 - `/max` indicator
 - Guard invalid jump input values and keep user on current record when invalid.
 
+## Detail Page field hierarchy
+- The fields listed below are the *headline fields* that carry the main information about each entity. They render at the top of the detail page as `<article>` cards inside a `.cards` grid, organized into labelled **groups** — each group is a `<section class="card-group">` with a small uppercase title. Less important fields stay in the collapsible/section-grid below.
+- Group labels stay short and noun-form (e.g. `Identity`, `Classification`, `Measurement Results`). When adding a new headline field, place it in the group whose label best describes its meaning rather than spinning up a new group.
+- Numeric/categorical headline cards are display-only; identity-text and comment cards are editable in-place via the `.detail-field-shell-card` pattern so they participate in the page's edit-mode toggle.
+- Empty values render as the muted italic `—` per the standard empty-value rule. Boolean fields render as the disabled-checkbox badge (`.detail-boolean-check`) so the value is visible at a glance.
+- Generic CSS hooks: `.card-group` / `.card-group-title` (group container + label), `.detail-headline-cards` and `.detail-comments-cards` (variant card rows). Comment cards are full-width single-column; metric cards inherit the dashboard `.cards` auto-fit grid.
+
+	### Submitter
+	- **Identity** — Salutation · First Name · Last Name (editable)
+
+	### Project
+	- **Identity** — Project Name (editable, spans 2 cols) · Status (badge)
+	- **Timeline** — In Date · Desired Date · Out Date
+	- **Comments** — Project Comment (editable, full-width)
+
+	### Sample
+	- **Identity** — Sample Label · Sample Label # · Description 1 · Description 2 (all editable)
+	- **Classification** — Type · Material · Fraction · Weight
+	- **Measurement Results** — C14 Age · C14 Age Sigma
+	- **Comments** — Submitter Comment · Lab Comment (both editable, two-column)
+
+	### Preparation
+	- **Batch & Timeline** — Batch · Prep Start · Prep End
+	- **Outcome** — Yield (%) · Discarded · No Leftover · Targets (count)
+	- **Comments** — Preparation Comment (editable, full-width)
+
+	### Target
+	- **Graphitization** — Graph Batch · Graphitized · Magazine · Discarded
+	- **Elemental Analysis** — C (%) · N (%) · C/N Ratio · Total C (µg) *(calculated from `Weight Combustion` × `C (%)`; warning highlight when below the configured Lab Warning Threshold)*
+	- **Measurement Results** — C14 Age · C14 Age Sigma · FM · FM Sigma · d13C
+	- **Comments** — Target Comment (editable, full-width)
+
+
 ## Data Formatting Rules
-- `C14 Age` and `C14 Sigma`: round/display as integers.
+- `C14 Age` and `C14 Age Sigma`: round/display as integers.
 - `FM` and `FM Sigma`: round/display to 4 decimals.
 - `d13C` and `d13C Sigma`: round/display to 4 decimals.
 - `C (%)` (`conc_c`) and `N (%)` (`conc_n`): round/display to 1 decimal.
@@ -133,6 +166,12 @@
 - Current settings file: `sams_web/setup_data.json`.
 - Setup page should remain extensible for future configuration modules.
 
+## Lab Warning Thresholds
+- The canonical list of in-app warning thresholds lives in `LAB_WARNING_THRESHOLD_FIELDS` in `sams_web/lab_warning_thresholds.py` — that tuple drives the Setup → "Lab Warning Thresholds" editor, the JSON persistence in `setup_data.json`, and the per-field formatting rules. Don't duplicate the list elsewhere; treat the code as source of truth and the Setup page as the user-facing rendering.
+- Each threshold has its own evaluator in `sams_web/viewmodels/lab_warnings.py` returning a `WarningOutcome` dict keyed by the threshold's key. Evaluators are pure (no DB / no service / no request), so warnings stay easy to test and easy to extend.
+- Detail-page integration is declarative: the entity's `DetailPageConfig` carries a `warnings_builder` callable, and `build_detail_page_context` exposes results as `{name}_warnings`. Templates branch via `render_detail_display_card(..., warning=*_warnings.get('<threshold_key>'))` — the macro handles the red-card highlight and the inline hint.
+- To add a new warning: (1) append a `LabWarningThresholdField` entry, (2) extend the relevant `evaluate_*_warnings` function (or write a new one + wire it via `warnings_builder`), and (3) reference the warning key in the right card on the detail template. The Setup UI picks up the field automatically.
+
 ## Current Workflow Notes
 - Main navigation labels:
 - `Dashboard`
@@ -153,7 +192,6 @@
 - Dashboard layout: two side-by-side conceptual panels — **Lab Queues** (Planned / In Prep / Waiting for Graph / Waiting for Meas / Express + queue distribution chart) and **Standards Ready for Analysis** (Oxas / Blanks / Pferde / IAEA-C6 / IAEA-C7 / IAEA-C8 + standard distribution chart). Each chart sits inside a `<details>` collapsible.
 
 ## Development Guardrails
-- Preserve existing behavior unless the user explicitly asks for change.
 - Implement changes in shared layers when possible to avoid duplication.
 - Keep templates focused on display; put logic in services/viewmodels/JS helpers.
 - Prefer small, safe, incremental edits.

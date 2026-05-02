@@ -8,8 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from sams_web.dependencies import get_service
 from sams_web.services import SamsService
+from sams_web.lab_warning_thresholds import LAB_WARNING_THRESHOLD_FIELDS
 from sams_web.setup_sections import (
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+    SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_STANDARD_THRESHOLDS,
 )
 from sams_web.thresholds import STANDARD_LABELS, THRESHOLD_FIELDS
@@ -145,6 +147,9 @@ async def setup_section_submit(
         raw_list_text = str(form.get("graphitization_systems_text") or "")
         payload["items"] = raw_list_text.splitlines()
         payload["raw_text"] = raw_list_text
+    elif section_key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
+        for field in LAB_WARNING_THRESHOLD_FIELDS:
+            payload[field.key] = form.get(field.key)
 
     try:
         service.update_setup_section(section_key=section_key, payload=payload)
