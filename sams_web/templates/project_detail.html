@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_field_row %}
+{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
 {% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
@@ -57,28 +57,53 @@
     <form id="{{ project_edit_form_id }}" method="post" action="/projects/{{ project.project_nr }}/save" data-detail-edit-form></form>
   </div>
 
-  <div class="cards project-comment-cards">
-    <article>
-      <h3>Project Comment</h3>
-      {% set project_comment_error = project_field_errors.get('project__project_comment') %}
-      {% set project_comment_editor_value = project_form_values.get('project__project_comment', project.project_comment or '') %}
-      <div class="detail-field-shell detail-field-shell-card{% if project_comment_error %} has-error{% endif %}" data-detail-entity="project" data-field-key="project_comment" data-field-kind="multiline">
-        <div class="detail-field-display is-multiline" data-field-display>{% if project.project_comment %}{{ project.project_comment }}{% else %}<span class="detail-empty">—</span>{% endif %}</div>
-        <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-          <textarea
-            name="project__project_comment"
-            form="{{ project_edit_form_id }}"
-            rows="4"
-            {% if project_comment_error %}aria-invalid="true"{% endif %}
-            disabled
-          >{{ project_comment_editor_value }}</textarea>
-        </div>
-        {% if project_comment_error %}
-        <p class="detail-field-error error">{{ project_comment_error }}</p>
-        {% endif %}
-      </div>
-    </article>
-  </div>
+  <section class="card-group">
+    <h4 class="card-group-title">Identity</h4>
+    <div class="cards detail-headline-cards project-headline-cards">
+      {{ render_detail_card(
+        'project',
+        'project',
+        'Project Name',
+        raw_value=project.project,
+        form_id=project_edit_form_id,
+        form_values=project_form_values,
+        field_errors=project_field_errors,
+        card_class='project-headline-name'
+      ) }}
+      <article>
+        <h3>Status</h3>
+        <p>
+          {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+          <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Timeline</h4>
+    <div class="cards detail-headline-cards project-headline-cards">
+      {{ render_detail_display_card('In Date', project_headline.in_date) }}
+      {{ render_detail_display_card('Desired Date', project_headline.desired_date) }}
+      {{ render_detail_display_card('Out Date', project_headline.out_date) }}
+    </div>
+  </section>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Comments</h4>
+    <div class="cards detail-comments-cards">
+      {{ render_detail_card(
+        'project',
+        'project_comment',
+        'Project Comment',
+        raw_value=project.project_comment,
+        form_id=project_edit_form_id,
+        form_values=project_form_values,
+        field_errors=project_field_errors,
+        kind='multiline'
+      ) }}
+    </div>
+  </section>
 
   <div class="project-section-grid">
     {% for section in project_sections %}

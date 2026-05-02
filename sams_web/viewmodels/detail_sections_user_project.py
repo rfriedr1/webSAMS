@@ -267,6 +267,22 @@ PROJECT_DETAIL = DetailUpdateConfig(
 # ---- Detail-page configs (read side) -------------------------------------
 
 
+def build_project_headline(project: Any) -> dict[str, Any]:
+    """Pre-formatted headline values for the project detail page.
+
+    Templates access via `project_headline.in_date`, etc. Centralising here
+    means the router no longer has to remember to add a `*_display` key for
+    every new headline field — the template + this builder are the only
+    places that need to change.
+    """
+    return {
+        "in_date": format_project_value("in_date", project.in_date),
+        "desired_date": format_project_value("desired_date", project.desired_date),
+        "out_date": format_project_value("out_date", project.out_date),
+        "comment": format_project_value("project_comment", project.project_comment),
+    }
+
+
 SUBMITTER_DETAIL_PAGE = DetailPageConfig(
     name="submitter",
     update_config=SUBMITTER_DETAIL,
@@ -281,4 +297,5 @@ PROJECT_DETAIL_PAGE = DetailPageConfig(
     edit_form_id="project-detail-edit-form",
     sections_builder=build_project_sections,
     select_options_getter=lambda service: service.get_project_edit_select_options(),
+    headline_builder=build_project_headline,
 )

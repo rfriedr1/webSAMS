@@ -75,6 +75,40 @@
           <button type="submit">Save {{ active_section.title }}</button>
         </div>
       </form>
+      {% elif active_section.kind == "numeric_thresholds" %}
+      <form method="post" action="{{ active_section.form_action }}">
+        <p class="setup-note">
+          These values trigger warning highlights on lab detail pages. A value below the configured minimum tints
+          the relevant card and shows an inline warning hint.
+        </p>
+        <div class="setup-threshold-list">
+          {% for row in active_section.numeric_threshold_rows %}
+          <div class="setup-threshold-row">
+            <label class="setup-threshold-label" for="numeric-threshold-{{ row.key }}">
+              <strong>{{ row.label }}</strong>
+              <span class="setup-note">{{ row.description }}</span>
+            </label>
+            <div class="setup-threshold-input">
+              <input
+                id="numeric-threshold-{{ row.key }}"
+                type="number"
+                min="0"
+                step="{{ row.step or 1 }}"
+                name="{{ row.key }}"
+                value="{{ row.value }}"
+                required
+              />
+              {% if row.unit %}
+              <span class="setup-threshold-unit">{{ row.unit }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
       {% elif active_section.kind == "string_list" %}
       <form method="post" action="{{ active_section.form_action }}">
         {% if active_section.list_help %}

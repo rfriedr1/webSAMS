@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 
 SectionsBuilder = Callable[[Any], list[dict[str, Any]]]
 SelectOptionsGetter = Callable[["SamsService"], dict[str, list[str]]]
+HeadlineBuilder = Callable[[Any], dict[str, Any]]
+WarningsBuilder = Callable[[Any, dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,17 @@ class DetailPageConfig:
     `sample_saved`, etc.). `update_config` is the source of truth for the
     write-side rules; the page builder derives the template's `read_only_fields`
     and `required_fields` from it so the view and the write path agree.
+
+    `headline_builder` (optional) returns a flat dict of formatted display
+    values keyed by short name (e.g. `c14_age`, `fm`). Exposed in template
+    context as `{name}_headline` (a dict, accessed as `target_headline.fm`).
+    Replaces the previous pattern of routers manually computing each
+    `{entity}_{field}_display` key — adds robustness because the headline
+    keys live next to the format functions, not scattered across routers.
+
+    `warnings_builder` (optional) takes the entity plus the lab-warning
+    threshold dict and returns a per-warning outcome dict. Exposed as
+    `{name}_warnings`, accessed in templates as `target_warnings.get('total_c_ug_min')`.
     """
 
     name: str
@@ -47,6 +60,8 @@ class DetailPageConfig:
     edit_form_id: str
     sections_builder: SectionsBuilder
     select_options_getter: SelectOptionsGetter | None = None
+    headline_builder: HeadlineBuilder | None = None
+    warnings_builder: WarningsBuilder | None = None
 
 
 @dataclass
@@ -100,6 +115,7 @@ def build_detail_page_context(
     edit_state: EditFormState,
     service: "SamsService",
     sections_kwargs: dict[str, Any] | None = None,
+    lab_warning_thresholds: dict[str, Any] | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     """Produce the shared detail-page template context.
@@ -122,6 +138,12 @@ def build_detail_page_context(
     select_options: dict[str, list[str]] = (
         config.select_options_getter(service) if config.select_options_getter else {}
     )
+    headline = config.headline_builder(entity) if config.headline_builder else {}
+    warnings = (
+        config.warnings_builder(entity, lab_warning_thresholds or {})
+        if config.warnings_builder
+        else {}
+    )
 
     standard: dict[str, object] = {
         "request": request,
@@ -138,6 +160,8 @@ def build_detail_page_context(
         f"{name}_save_error": edit_state.save_error,
         f"{name}_saved": edit_state.saved,
         f"{name}_edit_initial_mode": edit_state.edit_initial_mode,
+        f"{name}_headline": headline,
+        f"{name}_warnings": warnings,
         f"previous_{name}_nr": cursor.previous_nr,
         f"next_{name}_nr": cursor.next_nr,
         f"{name}_count": cursor.count,

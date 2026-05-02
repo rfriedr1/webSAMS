@@ -204,3 +204,37 @@ def format_cn_ratio_from_conc(conc_c: Any, conc_n: Any) -> str | None:
         return None
     ratio = (c / Decimal("12.011")) / (n / Decimal("14.007"))
     return str(format_cn_ratio(ratio))
+
+
+def calculate_preparation_yield_value(weight_start: Any, weight_end: Any) -> float | None:
+    """Numeric yield (%) for warning evaluation. The display-formatted
+    sibling lives in `detail_sections_sample_lab.calculate_preparation_yield`
+    and rounds to 2 decimals; this version stays unrounded so threshold
+    comparisons aren't biased by display rounding."""
+    if weight_start is None or weight_end is None:
+        return None
+    try:
+        start = Decimal(str(weight_start))
+        end = Decimal(str(weight_end))
+    except (InvalidOperation, ValueError):
+        return None
+    if start == 0:
+        return None
+    return float((end / start) * Decimal("100"))
+
+
+def format_total_c_ug(weight_combustion: Any, conc_c: Any) -> str | None:
+    """Total carbon mass in µg, from combustion weight (mg) and C concentration (%).
+
+    µg C = weight_combustion_mg × (conc_c / 100) × 1000 = weight_combustion × conc_c × 10
+    """
+    if weight_combustion is None or conc_c is None:
+        return None
+    try:
+        weight = Decimal(str(weight_combustion))
+        c = Decimal(str(conc_c))
+    except (InvalidOperation, ValueError):
+        return None
+    total_ug = weight * c * Decimal("10")
+    rounded = total_ug.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return str(int(rounded))

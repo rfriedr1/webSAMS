@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 SETUP_SECTION_STANDARD_THRESHOLDS = "standard_inventory_thresholds"
 SETUP_SECTION_GRAPHITIZATION_SYSTEMS = "graphitization_systems"
+SETUP_SECTION_LAB_WARNING_THRESHOLDS = "lab_warning_thresholds"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,14 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         editable=True,
         status="active",
         form_action="/setup/graphitization_systems",
+    ),
+    SetupSection(
+        key=SETUP_SECTION_LAB_WARNING_THRESHOLDS,
+        title="Lab Warning Thresholds",
+        description="Quality thresholds that drive in-app warning highlights on lab detail pages.",
+        editable=True,
+        status="active",
+        form_action="/setup/lab_warning_thresholds",
     ),
     SetupSection(
         key="import_profiles",

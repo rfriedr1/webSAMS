@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_field_row %}
+{% from "_detail_fields.html" import render_detail_card, render_detail_field_row %}
 {% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
 
 {% block content %}
@@ -55,6 +55,23 @@
     {% call render_detail_feedback_toolbar(submitter_saved, submitter_save_error, "Submitter details were saved.", submitter_edit_form_id) %}{% endcall %}
     <form id="{{ submitter_edit_form_id }}" method="post" action="/submitters/{{ submitter.user_nr }}/save" data-detail-edit-form></form>
   </div>
+
+  <section class="card-group">
+    <h4 class="card-group-title">Identity</h4>
+    <div class="cards detail-headline-cards submitter-headline-cards">
+      {% for field_key, field_label in [('salutation', 'Salutation'), ('first_name', 'First Name'), ('last_name', 'Last Name')] %}
+      {{ render_detail_card(
+        'user',
+        field_key,
+        field_label,
+        raw_value=submitter[field_key],
+        form_id=submitter_edit_form_id,
+        form_values=submitter_form_values,
+        field_errors=submitter_field_errors
+      ) }}
+      {% endfor %}
+    </div>
+  </section>
 
   <div class="user-section-grid">
     {% for section in submitter_sections %}

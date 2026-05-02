@@ -489,20 +489,6 @@ body.has-command-palette {
   word-break: break-word;
 }
 
-.project-comment-cards {
-  grid-template-columns: 1fr;
-  margin-top: -0.2rem;
-}
-
-.project-comment-cards p {
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.4;
-  margin-top: 0.35rem;
-  color: #244656;
-  white-space: pre-wrap;
-}
-
 .sample-summary-cards p {
   font-size: 1rem;
   line-height: 1.25;
@@ -538,6 +524,119 @@ body.has-command-palette {
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Visual grouping for the headline / summary card stack at the top of a
+   detail page. Each `<section class="card-group">` carries a small
+   uppercase label and one `.cards` row, so related metrics stay together
+   (e.g. on the target page: Graphitization / EA / Measurement Results). */
+.card-group {
+  margin-top: 0.55rem;
+}
+
+.card-group:first-of-type {
+  margin-top: 0.4rem;
+}
+
+.card-group-title {
+  margin: 0 0 0.25rem 0.18rem;
+  color: #5f7581;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-group .cards {
+  margin: 0 0 0.15rem;
+}
+
+/* --- Detail-page headline + comment card patterns --------------------- */
+
+/* Generic headline cards row at the top of a detail page. Surfaces the
+   most important fields per CLAUDE.md "Detail Page field hierarchy". */
+.detail-headline-cards {
+  margin-top: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.detail-headline-cards article {
+  border-color: #c8dde6;
+  background: linear-gradient(180deg, #ffffff, #eef7fb);
+}
+
+/* Headline cards with editable text/date values shouldn't render the value
+   as a giant KPI number — keep body-weight typography for readable text. */
+.project-headline-cards p,
+.submitter-headline-cards p {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Project Name spans wider than other timeline cards on roomy viewports. */
+.project-headline-cards .project-headline-name {
+  grid-column: span 2;
+}
+
+/* Generic single-row comment card area. Used on preparation and target
+   detail pages — visually equivalent to the existing sample-comments-cards
+   but full-width because there is only one comment per record. */
+.detail-comments-cards {
+  grid-template-columns: 1fr;
+  margin-top: -0.2rem;
+}
+
+.detail-comments-cards p {
+  margin: 0.35rem 0 0;
+  color: #1f3d4b;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Boolean badges inside the dense summary card rows: the parent `.cards p`
+   rule sets a 1.45rem KPI font, but a checkbox should stay compact. */
+.cards article p .detail-boolean-check {
+  font-size: 0.92rem;
+}
+
+/* Warning highlight applied to a summary card whose value crosses a
+   configured Lab Warning Threshold (see Setup → Lab Warning Thresholds).
+   Currently used on the target detail page when Total C (µg) is below
+   the configured minimum. */
+.cards article.is-warning-critical {
+  border-color: #dca0a0;
+  background: linear-gradient(180deg, #fff7f7, #ffe7e7);
+}
+
+.cards article.is-warning-critical h3 {
+  color: #8a3a3a;
+}
+
+.cards article.is-warning-critical > p {
+  color: #842f2f;
+}
+
+.card-warning-hint {
+  display: flex !important;
+  align-items: center;
+  gap: 0.32rem;
+  margin: 0.42rem 0 0 !important;
+  padding: 0.32rem 0.5rem;
+  border-radius: 8px;
+  background: #fadcdc;
+  color: #842f2f !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.card-warning-icon {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .sample-workspace {
