@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel not-found-panel">
+  <div class="panel-head">
+    <h2>{{ heading or "We couldn't find that record" }}</h2>
+    <p>{{ subheading or "The page you followed may have been removed, or the link contains a typo." }}</p>
+  </div>
+
+  <div class="cards not-found-cards">
+    {% if newest_url %}
+    <article class="samples-landing-card">
+      <h3>Newest {{ entity_singular or "record" }}</h3>
+      <p>Jump to the latest entry that exists in this database.</p>
+      <a class="samples-landing-cta" href="{{ newest_url }}">Open</a>
+    </article>
+    {% endif %}
+
+    {% if search_url %}
+    <article class="samples-landing-card">
+      <h3>Search</h3>
+      <p>Browse the full list and filter by name, label, or number.</p>
+      <a class="samples-landing-cta" href="{{ search_url }}">Browse</a>
+    </article>
+    {% endif %}
+
+    <article class="samples-landing-card">
+      <h3>Magic Nav</h3>
+      <p>
+        Type an identifier in the top-bar Magic Nav input: <code>12345</code> for a sample,
+        <code>pr456</code> for a project, <code>sub210</code> for a submitter, <code>/prep</code> to jump to the prep bench.
+        Click the <strong>?</strong> next to the input for the full syntax.
+      </p>
+    </article>
+
+    <article class="samples-landing-card">
+      <h3>Go back</h3>
+      <p>Or just return to where you came from.</p>
+      <a class="samples-landing-cta" href="{{ back_url or '/' }}" data-history-back data-fallback="{{ back_url or '/' }}">Back</a>
+    </article>
+  </div>
+
+  {% if requested_path %}
+  <p class="not-found-meta">
+    Requested path: <code>{{ requested_path }}</code>
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

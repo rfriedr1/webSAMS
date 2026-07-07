@@ -53,17 +53,27 @@ def _submitter_cursor(data: dict[str, object]) -> NavCursor:
     )
 
 
+SUBMITTER_LIST_DEFAULT_LIMIT = 500
+PROJECT_LIST_DEFAULT_LIMIT = 500
+
+
 @router.get("/submitters")
 def submitters_page(
     request: Request,
+    show_all: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
+    """Submitters list. Capped at SUBMITTER_LIST_DEFAULT_LIMIT rows by
+    default — the full set is ~2 700 rows and rendering all of them
+    pushed the page to ~860 KB. Users who really want everything can
+    pass `?show_all=true`."""
     settings = get_settings()
     submitters = []
     error: str | None = None
     error_trace: str | None = None
+    effective_limit = None if show_all else SUBMITTER_LIST_DEFAULT_LIMIT
     try:
-        submitters = service.list_submitters()
+        submitters = service.list_submitters(limit=effective_limit)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Failed loading submitters list")
         if settings.debug:
@@ -72,6 +82,11 @@ def submitters_page(
         else:
             error = "Failed to load submitters. Enable SAMS_DEBUG=true for traceback details."
 
+    is_truncated = (
+        not show_all
+        and len(submitters) >= SUBMITTER_LIST_DEFAULT_LIMIT
+    )
+
     return templates.TemplateResponse(
         "submitters.html",
         {
@@ -79,6 +94,9 @@ def submitters_page(
             "submitters": submitters,
             "error": error,
             "error_trace": error_trace,
+            "is_truncated": is_truncated,
+            "truncated_limit": SUBMITTER_LIST_DEFAULT_LIMIT,
+            "show_all": show_all,
         },
     )
 
@@ -197,8 +215,14 @@ def submitter_projects_page(request: Request, user_nr: int, service: SamsService
 def projects_page(
     request: Request,
     days_window: int = Query(default=300, ge=1, le=3650),
+    show_all: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
+    """Projects list. The "All Projects" table is capped at
+    PROJECT_LIST_DEFAULT_LIMIT rows by default — the full set runs
+    ~13 000 rows and rendered to a ~9.4 MB HTML response. The "Projects
+    in Progress" table is already filtered by `days_window` so it stays
+    naturally small."""
     settings = get_settings()
     projects_in_progress: list[dict[str, object]] = []
     projects_in_progress_error: str | None = None
@@ -206,6 +230,7 @@ def projects_page(
     projects = []
     error: str | None = None
     error_trace: str | None = None
+    effective_limit = None if show_all else PROJECT_LIST_DEFAULT_LIMIT
     try:
         projects_in_progress = service.get_projects_in_progress(days_window=days_window)
     except Exception as exc:  # noqa: BLE001
@@ -216,7 +241,7 @@ def projects_page(
         else:
             projects_in_progress_error = "Failed to load projects in progress. Enable SAMS_DEBUG=true for traceback details."
     try:
-        projects = service.list_projects()
+        projects = service.list_projects(limit=effective_limit)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Failed loading projects list")
         if settings.debug:
@@ -224,6 +249,11 @@ def projects_page(
             error_trace = traceback.format_exc()
         else:
             error = "Failed to load projects. Enable SAMS_DEBUG=true for traceback details."
+
+    is_truncated = (
+        not show_all
+        and len(projects) >= PROJECT_LIST_DEFAULT_LIMIT
+    )
 
     return templates.TemplateResponse(
         "projects.html",
@@ -236,6 +266,9 @@ def projects_page(
             "projects": projects,
             "error": error,
             "error_trace": error_trace,
+            "is_truncated": is_truncated,
+            "truncated_limit": PROJECT_LIST_DEFAULT_LIMIT,
+            "show_all": show_all,
         },
     )
 

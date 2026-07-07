@@ -1,6 +1,11 @@
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
 
+  // Human-friendly thousands separator. The user's locale dictates the
+  // grouping character (1,234 vs 1.234); we don't need to fight that.
+  const formatRowNumber = (n) =>
+    typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : String(n);
+
   const compareCellValues = (left, right) => {
     const leftTrimmed = left.trim();
     const rightTrimmed = right.trim();
@@ -322,8 +327,31 @@
       status.append(visible, document.createTextNode(" / "), total, document.createTextNode(" shown"));
       tools.append(status);
     }
-    visible.textContent = String(rowCount);
-    total.textContent = String(rowCount);
+    visible.textContent = formatRowNumber(rowCount);
+    total.textContent = formatRowNumber(rowCount);
+
+    // Big-table affordance: when a table holds enough rows to slow the
+    // user down with scroll-and-scan, label the status as a badge and
+    // prepend a "type to filter" hint. The threshold is intentionally
+    // conservative — 200 is enough rows that scroll becomes a chore.
+    const status = container.querySelector(".table-tool-status");
+    if (status) {
+      const BIG_THRESHOLD = 200;
+      const isBig = rowCount >= BIG_THRESHOLD;
+      status.classList.toggle("is-big-dataset", isBig);
+      let hint = container.querySelector("[data-table-big-hint]");
+      if (isBig) {
+        if (!hint) {
+          hint = document.createElement("p");
+          hint.className = "table-big-hint";
+          hint.setAttribute("data-table-big-hint", "");
+          hint.textContent = "Large table — type to filter or sort a column.";
+          tools.parentNode?.insertBefore(hint, tools.nextSibling);
+        }
+      } else if (hint) {
+        hint.remove();
+      }
+    }
 
     return {
       searchInput,
@@ -507,8 +535,8 @@
           visible += 1;
         }
       });
-      visibleCounter.textContent = String(visible);
-      totalCounter.textContent = String(entries.length);
+      visibleCounter.textContent = formatRowNumber(visible);
+      totalCounter.textContent = formatRowNumber(entries.length);
       emptyMessage.hidden = visible !== 0;
       updateDownloadState();
     };

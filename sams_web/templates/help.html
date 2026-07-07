@@ -4,83 +4,136 @@
 <section class="panel">
   <div class="panel-head">
     <h2>Help Center</h2>
-    <p>Reference for key navigation and input shortcuts in SAMS Web.</p>
+    <p>Reference for how to navigate, edit, and find things in SAMS Web.</p>
   </div>
 
-  <div class="card">
-    <h3>Magic Nav</h3>
+  <nav class="help-toc" aria-label="Help sections">
+    <a href="#help-navigate">Navigate</a>
+    <a href="#help-edit">Edit</a>
+    <a href="#help-find">Find</a>
+    <a href="#help-feedback">Feedback &amp; status</a>
+    <a href="#help-settings">Settings</a>
+  </nav>
+
+  <div class="card" id="help-navigate">
+    <h3>Navigate</h3>
+    <p>SAMS gives you four ways to jump around — pick whichever one fits the moment.</p>
+    <ul>
+      <li>
+        <strong>Magic Nav</strong> (top bar):
+        type an ID and press Open. Click the small <strong>?</strong> next to the input for the syntax cheat sheet, or see the patterns below.
+        <ul>
+          {% for rule in magic_nav_rules %}
+          <li><kbd>{{ rule.example }}</kbd> — {{ rule.description }}</li>
+          {% endfor %}
+          <li><kbd>/prep</kbd> · <kbd>/graph</kbd> · <kbd>/ana</kbd> jump to the matching Lab page.</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Command palette</strong>:
+        press <kbd>Ctrl/⌘ K</kbd> (or click <em>Search &amp; jump</em> in the top bar) to open a full-text search across every page, magic command, pinned page, and recent page.
+        Arrow keys to move, Enter to open, Esc to close.
+      </li>
+      <li>
+        <strong>Pinned &amp; Recent</strong>:
+        the strip below the top bar shows your pinned and recently-visited pages.
+        Click the <strong>☆</strong> to pin the current page (or press <kbd>Ctrl/⌘ Shift P</kbd>); up to 12 stay pinned until you unpin them.
+        Recent tracks your last 8 pages automatically.
+      </li>
+      <li>
+        <strong>Detail page arrows</strong>:
+        on a record, the small <kbd>‹</kbd> / <kbd>›</kbd> step to the previous / next record. Or press <kbd>[</kbd> / <kbd>]</kbd> (or <kbd>j</kbd> / <kbd>k</kbd>) for the same.
+      </li>
+      <li>
+        <strong>Back</strong>:
+        every detail page has a Back link that returns to where you came from, falling back to a sensible default (e.g. the project listing) if the browser history doesn't match.
+      </li>
+    </ul>
+  </div>
+
+  <div class="card" id="help-edit">
+    <h3>Edit</h3>
     <p>
-      Magic Nav is the quick jump field in the top bar. Enter an identifier and press <strong>Open</strong> to navigate
-      directly to the related detail page.
-    </p>
-    <p>Magic commands start with <code>/</code> (for example <code>/prep</code>).</p>
-    <p>
-      For preparation and target details, use dotted numeric IDs:
-      <code>sample.prep</code> (for example <code>45230.1</code>) and
-      <code>sample.prep.target</code> (for example <code>45230.1.1</code>).
+      All detail pages (sample, preparation, target, project, submitter) follow the same edit model.
     </p>
     <ul>
-      {% for rule in magic_nav_rules %}
-      <li><strong>{{ rule.example }}</strong>: {{ rule.description }}</li>
-      {% endfor %}
-      <li><strong>unknown pattern</strong>: patch shows <code>unknown ID</code> and invalid IDs show inline error feedback.</li>
-      <li><strong>validation</strong>: if a matching record is not found, navigation is blocked and an inline message is shown.</li>
+      <li>
+        <strong>Quick-edit one field</strong>:
+        double-click a field's value to edit just that field. Press Enter to save (or Ctrl/⌘ Enter for comments), Esc to cancel.
+      </li>
+      <li>
+        <strong>Batch edit</strong>:
+        click <strong>Edit</strong> (or press <kbd>e</kbd>) to open every field at once. Make your changes, click <strong>Save</strong> (<kbd>Ctrl/⌘ S</kbd>) or <strong>Cancel</strong> (<kbd>Esc</kbd>).
+        While editing, the toolbar shows <em>N fields changed</em> so you know exactly what's pending.
+      </li>
+      <li>
+        <strong>Unsaved changes</strong>:
+        if you try to leave or cancel while you have edits, SAMS asks whether to <em>Discard</em>, <em>Save</em>, or <em>Keep editing</em> — your work is never lost silently.
+      </li>
+      <li>
+        <strong>Save status</strong>:
+        after a save, the toolbar shows a green <em>Saved · just now</em> hint that updates relative time as you keep working.
+      </li>
+      <li>
+        <strong>Warnings</strong>:
+        when a value falls outside a Lab Warning Threshold (see Settings), the affected card turns red and an inline hint explains what's off.
+      </li>
     </ul>
-    <p class="muted">
-      This section is generated from the current Magic Nav routing rules, so it stays aligned when prefixes are added or changed.
+
+    <p>
+      All keyboard shortcuts on a detail page:
     </p>
+    <ul>
+      <li><kbd>e</kbd> — toggle edit mode</li>
+      <li><kbd>Esc</kbd> — cancel edit mode (or close the unsaved-changes prompt)</li>
+      <li><kbd>Ctrl/⌘ S</kbd> — save</li>
+      <li><kbd>[</kbd> / <kbd>j</kbd> — previous record</li>
+      <li><kbd>]</kbd> / <kbd>k</kbd> — next record</li>
+      <li><kbd>?</kbd> — open the cheat-sheet overlay (same content, on top of the current page)</li>
+    </ul>
+    <p class="muted">Shortcuts are suppressed while you're typing in an input — except Save, which always works.</p>
   </div>
 
-  <div class="card">
+  <div class="card" id="help-find">
+    <h3>Find</h3>
+    <ul>
+      <li>
+        <strong>Tables</strong> have a search box (substring match across all visible columns) and a Column dropdown to scope the search.
+        Click a column header to sort; click again to reverse.
+        On large tables (200+ rows) you'll see a row-count badge and a hint to filter — typing in the search is much faster than scrolling.
+      </li>
+      <li>
+        <strong>Table export</strong>:
+        click the ↓ icon to download the currently-visible rows as Excel-compatible XML.
+      </li>
+      <li>
+        <strong>Global search</strong>:
+        the <em>Search</em> page (top nav) takes a context (Submitter / Project / Sample / Preparation / Target) and a phrase. Results are clickable and inherit the table's search/sort/export tools.
+      </li>
+    </ul>
+  </div>
+
+  <div class="card" id="help-feedback">
+    <h3>Feedback &amp; status</h3>
+    <ul>
+      <li><strong>Toasts</strong> (top-right) confirm one-off actions like Save, Pin, and bench commits. They auto-dismiss after ~4.5 seconds.</li>
+      <li><strong>Saved hint</strong> (next to Edit/Save) persists after a save so you can confirm at a glance — even if you missed the toast.</li>
+      <li><strong>Progress bar</strong> (top of viewport) sweeps during navigation and form submission.</li>
+      <li><strong>Error summary</strong>: if Save fails, a banner at the top of the detail page lists every failing field with a click-to-jump link.</li>
+    </ul>
+  </div>
+
+  <div class="card" id="help-settings">
     <h3>Settings</h3>
     <p>
-      The <strong>Settings</strong> page is the central place for system-level configuration values that should be
-      changeable without editing code.
+      The <strong>Setup</strong> page is the central place for system-level configuration that should be changeable without editing code.
     </p>
     <ul>
-      <li><strong>Standard Inventory Thresholds</strong>: controls the warning colors used on the dashboard standard indicators and mini-bars.</li>
-      <li><strong>Graphitization Systems</strong>: controls the list of selectable systems used in the Graphitization Bench batch builder.</li>
-      <li><strong>Storage</strong>: settings are saved in the shared setup data file and are applied when the related pages are loaded.</li>
+      <li><strong>Standard Inventory Thresholds</strong> — controls the warning colours on the dashboard standards row and mini-bars. Hover a dashboard card for the active rule.</li>
+      <li><strong>Graphitization Systems</strong> — the selectable systems used in the Graphitization Bench batch builder. One entry per line.</li>
+      <li><strong>Lab Warning Thresholds</strong> — the per-field warning rules that highlight detail-page cards (e.g. Total C below 500 µg, Yield below 0.5 %). New thresholds added here automatically surface on the matching detail pages.</li>
     </ul>
-    <p class="muted">
-      Use one line per entry for graphitization systems. These values are used to build batch names in the form
-      <code>graph_YYMMDD_system</code>.
-    </p>
-  </div>
-
-  <div class="card">
-    <h3>Command Palette Shortcut</h3>
-    <p>
-      Use <kbd>Command</kbd> + <kbd>K</kbd> on macOS (or <kbd>Ctrl</kbd> + <kbd>K</kbd> on Windows) to open the
-      command palette from anywhere in the app.
-    </p>
-    <ul>
-      <li><strong>Type to search</strong>: filters available navigation targets and actions shown in the main navigation area.</li>
-      <li><strong>Arrow keys</strong>: move through the suggestions.</li>
-      <li><strong>Enter</strong>: open the selected item.</li>
-      <li><strong>Escape</strong>: close the command palette.</li>
-      <li><strong>Cmd/Ctrl + K again</strong>: toggles the command palette closed.</li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <h3>Detail Page Keyboard Shortcuts</h3>
-    <p>
-      These shortcuts are active on any detail page (sample, preparation, target, project, submitter).
-      They're suppressed while typing inside an input or textarea, with one exception:
-      <strong>Save</strong> works even while typing.
-    </p>
-    <ul>
-      <li><kbd>e</kbd> &nbsp;— toggle edit mode (same as clicking <strong>Edit</strong> / <strong>Cancel</strong>).</li>
-      <li><kbd>Esc</kbd> &nbsp;— cancel edit mode (when in edit mode).</li>
-      <li><kbd>Ctrl</kbd> + <kbd>S</kbd> (or <kbd>Cmd</kbd> + <kbd>S</kbd>) &nbsp;— save changes.</li>
-      <li><kbd>[</kbd> &nbsp;or&nbsp; <kbd>j</kbd> &nbsp;— open the previous record.</li>
-      <li><kbd>]</kbd> &nbsp;or&nbsp; <kbd>k</kbd> &nbsp;— open the next record.</li>
-      <li><kbd>?</kbd> &nbsp;— show this list as an overlay on the current page.</li>
-    </ul>
-    <p class="muted">
-      The <kbd>?</kbd> overlay is generated from the same source as this list, so it stays in sync if shortcuts change.
-    </p>
+    <p class="muted">Settings persist in <code>setup_data.json</code> and are applied when the related pages load.</p>
   </div>
 </section>
 {% endblock %}

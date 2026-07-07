@@ -270,6 +270,11 @@ templates.env.globals["navigation_command_entries"] = NAVIGATION_COMMAND_ENTRIES
 templates.env.globals["resolve_active_module"] = resolve_active_module
 templates.env.globals["is_subnav_active"] = is_subnav_active
 templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().database_name})"
+# Cache-buster query value appended to every /static/* URL. Templates
+# reference it via `css_v` so a child template (e.g. lab_queue.html) can
+# load page-specific CSS/JS while still hitting the same cached asset URL
+# the base template uses. Bump on every release-touching-static-assets.
+templates.env.globals["css_v"] = "20260503-2"
 
 
 def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

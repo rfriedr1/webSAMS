@@ -276,10 +276,19 @@ def build_project_headline(project: Any) -> dict[str, Any]:
     places that need to change.
     """
     return {
+        "project": format_project_value("project", project.project),
         "in_date": format_project_value("in_date", project.in_date),
         "desired_date": format_project_value("desired_date", project.desired_date),
         "out_date": format_project_value("out_date", project.out_date),
         "comment": format_project_value("project_comment", project.project_comment),
+    }
+
+
+def build_submitter_headline(submitter: Any) -> dict[str, Any]:
+    return {
+        "salutation": format_user_value("salutation", submitter.salutation),
+        "first_name": format_user_value("first_name", submitter.first_name),
+        "last_name": format_user_value("last_name", submitter.last_name),
     }
 
 
@@ -288,6 +297,7 @@ SUBMITTER_DETAIL_PAGE = DetailPageConfig(
     update_config=SUBMITTER_DETAIL,
     edit_form_id="submitter-detail-edit-form",
     sections_builder=build_user_sections,
+    headline_builder=build_submitter_headline,
 )
 
 

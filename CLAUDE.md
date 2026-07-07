@@ -154,6 +154,13 @@
 - Empty / sentinel values: render as muted italic `—` (see UX/UI Invariants for the full empty-value rule).
 
 ## Frontend Modules and Shared Behaviours
+- **Headline values come from the headline builders, never raw ORM attributes.** Every value a detail-page card displays must route through the entity's `build_*_headline` (which calls `format_*_value`) — templates read `{name}_headline.<key>`. Passing `sample.type` directly leaks legacy sentinel strings like `"undefined"` and sentinel dates into the UI. Editable cards pass `display_value={name}_headline.<key>` alongside `raw_value`.
+- **Global asset bundles**: `base.html` loads `/static/bundle.css` + `/static/bundle.js` (concatenated + minified in `main.py`, cached per process, `Cache-Control: immutable`). **Bump the `css_v` global in `routers/pages_shared.py` whenever any static asset changes** — it's the cache-bust signal. Bench CSS/JS load only on the bench page via `extra_styles`/`extra_scripts` blocks.
+- **`[hidden]` always wins**: `style-core.css` has a global `[hidden] { display: none !important; }` reset. Never work around it with a class-based show/hide; toggle the `hidden` property.
+- **Design tokens**: type scale (`--text-xs` … `--text-3xl`, `--text-h2/h3/h4`) and 4px spacing scale (`--space-1` … `--space-6`) live in `:root` in `style-core.css`. New CSS should reference tokens, not ad-hoc rem values.
+- **Big list pages truncate server-side**: `/projects` and `/submitters` cap at 500 rows with a "Showing first N … load all" banner (`?show_all=true` disables). Follow this pattern for any new list page over a full table.
+- **Starlette is pinned `<1.0`** in `pyproject.toml`: Starlette 1.0 changed `TemplateResponse(name, ctx)` → `TemplateResponse(request, name, ctx)`. Migrate all ~27 call sites before lifting the pin.
+- **Sub-nav rows only render for modules with 2+ destinations** — single-chip sub-navs that duplicate the main nav item are deliberately removed (`navigation.py`).
 - **Toasts**: `window.SAMSToast.show(message, kind, { duration })`. `kind` defaults to `info`; `duration` defaults to ~4.5s, pass `0` for sticky. Auto-fires on save query params.
 - **Keyboard shortcuts within a record** (active when the page contains `[data-edit-scope]`): `e` toggle edit, `Esc` cancel, `Ctrl/Cmd + S` save (always intercepted, even while typing), `[` or `j` previous record, `]` or `k` next record, `?` open the cheat-sheet overlay. Suppressed while typing in inputs (except Save).
 - **Searchable selects**: any `<select>` with more than 8 real options is auto-enhanced into a type-to-filter combobox by `searchable-select.js`. Mark a select with `data-no-searchable` to opt out. The shim commits back to the native `<select>` so server-side form handling is unchanged.

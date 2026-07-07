@@ -52,7 +52,14 @@
 
   <div class="cards cards-standards">
     {% for item in standards_cards %}
-    <article class="indicator-{{ item.status }}"><h3>{{ item.label }}</h3><p>{{ item.value }}</p></article>
+    <article
+      class="indicator-{{ item.status }}"
+      {% if item.rule_summary %}title="{{ item.label }} · current {{ item.value }} · {{ item.rule_summary }}"
+      aria-label="{{ item.label }}: {{ item.value }}. {{ item.rule_summary }}"{% endif %}
+    >
+      <h3>{{ item.label }}</h3>
+      <p>{{ item.value }}</p>
+    </article>
     {% endfor %}
   </div>
 

@@ -144,6 +144,15 @@ def build_detail_page_context(
         if config.warnings_builder
         else {}
     )
+    # Index warnings by the section-grid row key they pertain to, so the
+    # field-row macro can decorate the row with the same red/⚠ treatment
+    # the headline card uses. The original `warnings` dict (threshold-key
+    # → outcome) stays available for the headline cards.
+    warnings_by_field = {
+        outcome.field_key: outcome
+        for outcome in warnings.values()
+        if outcome is not None and getattr(outcome, "field_key", "")
+    }
 
     standard: dict[str, object] = {
         "request": request,
@@ -162,6 +171,7 @@ def build_detail_page_context(
         f"{name}_edit_initial_mode": edit_state.edit_initial_mode,
         f"{name}_headline": headline,
         f"{name}_warnings": warnings,
+        f"{name}_warnings_by_field": warnings_by_field,
         f"previous_{name}_nr": cursor.previous_nr,
         f"next_{name}_nr": cursor.next_nr,
         f"{name}_count": cursor.count,

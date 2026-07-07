@@ -13,10 +13,61 @@
   --danger: #b84a4a;
   --shadow: 0 12px 30px rgba(16, 46, 61, 0.08);
   --radius: 16px;
+
+  /* Type scale — explicit so headings don't depend on browser defaults +
+     font-weight to establish hierarchy. A 1.18× geometric ratio gives
+     enough contrast between levels without exploding the page. The
+     `--text-h*` aliases pin h2/h3/h4 to specific steps. */
+  --text-xs: 0.72rem;
+  --text-sm: 0.84rem;
+  --text-md: 1rem;
+  --text-lg: 1.18rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.66rem;
+  --text-3xl: 1.96rem;
+  --text-h2: var(--text-2xl);
+  --text-h3: var(--text-lg);
+  --text-h4: var(--text-md);
+
+  /* Spacing scale — 4 px grid replacing the 19 ad-hoc rem values
+     scattered across the stylesheets. Components should reference these
+     instead of hard-coding. */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem;  /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem;    /* 16px */
+  --space-5: 1.5rem;  /* 24px */
+  --space-6: 2rem;    /* 32px */
 }
+
+/* Heading defaults — keep weight + line-height in one place so every
+   surface that drops an h2/h3/h4 inherits the same scale regardless of
+   panel context. Page-specific overrides can still raise the size if a
+   surface needs it (e.g., a hero h2 on a landing page). */
+h1, h2, h3, h4 {
+  font-family: var(--font-ui);
+  line-height: 1.25;
+  margin: 0 0 var(--space-2);
+}
+
+h2 { font-size: var(--text-h2); font-weight: 800; letter-spacing: -0.005em; }
+h3 { font-size: var(--text-h3); font-weight: 700; }
+h4 { font-size: var(--text-h4); font-weight: 700; }
 
 * {
   box-sizing: border-box;
+}
+
+/* The `hidden` attribute only works via the UA stylesheet's
+   `[hidden] { display: none }` — which ANY author `display:` rule
+   overrides (author styles beat UA styles regardless of specificity).
+   Several components set `display: inline-flex` on elements that JS
+   toggles via `.hidden = true` (magic-nav patch, quick-access groups,
+   edit-status pill), which made them render as empty ghost pills.
+   This reset makes `hidden` always win, as every modern CSS baseline
+   recommends. */
+[hidden] {
+  display: none !important;
 }
 
 html,
@@ -230,15 +281,47 @@ h6 {
 }
 
 .command-palette-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
   min-height: 1.95rem;
-  min-width: 3.1rem;
   border-radius: 999px;
   border-color: #9dbdcc;
   background: #ffffff;
   color: #25596f;
-  padding: 0.26rem 0.62rem;
+  padding: 0.26rem 0.42rem 0.26rem 0.7rem;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
+}
+
+.command-palette-trigger-label {
+  white-space: nowrap;
+}
+
+/* On narrow viewports the label collapses, leaving just the keycap so
+   the topbar still has room for Magic Nav. */
+@media (max-width: 860px) {
+  .command-palette-trigger-label {
+    display: none;
+  }
+  .command-palette-trigger {
+    padding: 0.26rem 0.5rem;
+  }
+}
+
+.command-palette-trigger-kbd {
+  display: inline-block;
+  padding: 0.04rem 0.34rem;
+  border: 1px solid #b9cdd7;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #f3f8fb;
+  color: #1f3138;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .magic-identifier-shell {
@@ -316,6 +399,72 @@ h6 {
   line-height: 1;
 }
 
+/* Small "?" help button next to Magic Nav — opens a syntax cheat sheet.
+   Sized down so it doesn't compete with the primary Open button. */
+.magic-identifier-form .magic-identifier-help {
+  min-height: 1.95rem;
+  min-width: 1.95rem;
+  padding: 0;
+  border-radius: 999px;
+  border-color: #b9cdd7;
+  background: #f3f8fb;
+  color: #2e5e76;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.magic-identifier-form .magic-identifier-help:hover {
+  background: #e2eef4;
+  color: #1f4d61;
+}
+
+/* Help-page table-of-contents row at the top */
+.help-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.2rem 0 0.9rem;
+}
+
+.help-toc a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cfdee7;
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2d5f74;
+  background: #f8fcfe;
+  text-decoration: none;
+}
+
+.help-toc a:hover,
+.help-toc a:focus-visible {
+  color: #1f4f63;
+  border-color: #a7c2d0;
+  background: #edf6fb;
+}
+
+/* Rotating placeholder: fade the placeholder text out for ~220 ms while
+   the next example is swapped in. `::placeholder` opacity is animatable
+   in modern browsers; reduced-motion users skip the fade entirely. */
+.magic-identifier-form input[type="text"]::placeholder {
+  transition: opacity 220ms ease;
+  opacity: 0.62;
+}
+
+.magic-identifier-form input[type="text"].is-placeholder-fading::placeholder {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magic-identifier-form input[type="text"]::placeholder,
+  .magic-identifier-form input[type="text"].is-placeholder-fading::placeholder {
+    transition: none;
+  }
+}
+
 .page {
   width: min(1240px, 96%);
   margin: 1rem auto 1.5rem;
@@ -382,23 +531,44 @@ h6 {
   background: rgba(252, 254, 255, 0.92);
 }
 
+/* Pin toggle styled as a chip with a "Pin" / "Pinned" label, matching
+   the chip vocabulary used by quick-access-link and the breadcrumb's
+   nav-back-arrow. Avoids visual mismatch with its neighbours. */
 .quick-pin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
   min-height: 1.75rem;
-  min-width: 1.75rem;
-  width: 1.75rem;
   border-radius: 999px;
-  border-color: #9dbccc;
-  background: #ffffff;
+  border: 1px solid #cfdee7;
+  background: #f8fcfe;
   color: #2a5f76;
-  padding: 0;
-  font-size: 0.9rem;
+  padding: 0.18rem 0.72rem 0.18rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   line-height: 1;
+}
+
+.quick-pin-toggle-glyph {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.quick-pin-toggle:hover,
+.quick-pin-toggle:focus-visible {
+  background: #edf6fb;
+  border-color: #a7c2d0;
 }
 
 .quick-pin-toggle.is-pinned {
   border-color: #2f728a;
   color: #ffffff;
   background: linear-gradient(130deg, #2f728a, #3d849d);
+}
+
+.quick-pin-toggle.is-pinned:hover,
+.quick-pin-toggle.is-pinned:focus-visible {
+  filter: brightness(1.05);
 }
 
 .quick-access-group {
@@ -447,10 +617,113 @@ h6 {
   background: #edf6fb;
 }
 
+/* Freshly-pinned link briefly slides in and pulses so the user sees
+   the action took effect. Removed after 1.2 s in JS. Respects
+   prefers-reduced-motion. */
+.quick-access-link.is-newly-pinned {
+  animation: quick-access-pin-in 600ms ease both;
+  border-color: var(--brand-2, #2f738b);
+  box-shadow: 0 0 0 2px rgba(47, 115, 139, 0.18);
+}
+
+@keyframes quick-access-pin-in {
+  from { transform: translateY(-4px) scale(0.92); opacity: 0; }
+  to   { transform: translateY(0) scale(1);      opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-access-link.is-newly-pinned {
+    animation: none;
+  }
+}
+
 .quick-access-empty {
   color: #8a9da7;
   font-size: 0.74rem;
   font-weight: 600;
+}
+
+/* Base `.cards` grid — used everywhere KPI tiles or headline cards
+   appear (dashboard, samples landing, every detail page's headline
+   block). Moved out of style-benches.css when bench CSS was made
+   page-specific, since these rules are needed on the 95 % of pages
+   that aren't the bench. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: 0.66rem;
+  margin: 0.8rem 0 1rem;
+}
+
+.cards article {
+  border-radius: 14px;
+  border: 1px solid #d8e1e6;
+  background: linear-gradient(180deg, #ffffff, #f5fafc);
+  /* Padding mirrors the panel container's clamp so cards visually
+     "breathe at the same rate" as the panel they sit inside. */
+  padding: clamp(0.7rem, 1vw, 0.95rem);
+}
+
+.cards h3 {
+  margin: 0;
+  color: #567281;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.cards p {
+  margin: var(--space-2) 0 0;
+  /* Drop from 1.45rem so the KPI number stops out-ranking the page h2
+     (`var(--text-2xl)` = 1.66rem). It's still the biggest body text on
+     the card, but no longer the loudest element on the entire page. */
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+/* Dashboard "Standards Ready" row — tighter columns and indicator-tinted
+   borders/backgrounds. */
+.cards-standards {
+  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+}
+
+.cards-standards article {
+  border-width: 1px;
+  position: relative;
+}
+
+/* Colour-as-signal discipline: only critical (red) and warning (yellow)
+   tint the card so the eye lands on items that actually need action.
+   Good and neutral keep the default surface — same as KPI tiles — so
+   the dashboard reads as "5 KPIs + however many standards need
+   attention" instead of "10 colourful tiles". */
+.cards-standards article.indicator-critical {
+  border-color: #d08a8a;
+  background: linear-gradient(180deg, #fff5f5, #fdecec);
+  box-shadow: 0 1px 0 0 rgba(212, 102, 102, 0.08);
+}
+
+.cards-standards article.indicator-critical::before {
+  content: "⚠";
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  font-size: 0.95rem;
+  color: #b94f4f;
+  line-height: 1;
+}
+
+.cards-standards article.indicator-warning {
+  border-color: #d9b87a;
+  background: linear-gradient(180deg, #fffaf0, #fff5dd);
+}
+
+/* Good and neutral inherit the default `.cards article` surface — no
+   green or grey tint. Removed to cut visual noise on the dashboard. */
+.cards-standards article.indicator-good,
+.cards-standards article.indicator-neutral {
+  /* No-op; default `.cards article` styling applies. */
 }
 
 .panel {
@@ -472,11 +745,13 @@ h6 {
 .panel h3,
 .panel h4 {
   margin-top: 0;
-  margin-bottom: 0.6rem;
-  font-family: var(--font-ui);
-  font-weight: 800;
-  color: #1f3138;
+  margin-bottom: var(--space-3);
+  color: var(--ink);
 }
+
+.panel h2 { font-weight: 800; }
+.panel h3 { font-weight: 700; }
+.panel h4 { font-weight: 700; }
 
 .panel p {
   margin-top: 0;
@@ -631,6 +906,64 @@ button:focus-visible,
   *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+
+/* ---- Tablet breakpoint (≤1024 px) ------------------------------------
+   Between the desktop and the small-phone breakpoints. Tightens the
+   most expensive horizontal blocks so iPads, split-screens, and narrow
+   laptop windows stop overflowing. */
+@media (max-width: 1024px) {
+  /* Section grids drop one column earlier on tablet. */
+  .user-section-grid,
+  .project-section-grid,
+  .sample-section-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  /* Topbar: brand + magic-nav + actions wrap into 2 rows so the long
+     Magic Nav placeholder doesn't crowd the Search & jump trigger. */
+  .topbar-row {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .magic-identifier-shell {
+    order: 3;
+    flex: 1 0 100%;
+  }
+
+  /* Wide tables — give them horizontal scroll with a faint right-edge
+     shadow so the user knows there's more. */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background-image:
+      linear-gradient(to right, var(--surface), var(--surface)),
+      linear-gradient(to right, var(--surface), var(--surface)),
+      radial-gradient(farthest-side at 100% 50%, rgba(16, 46, 61, 0.18), rgba(16, 46, 61, 0));
+    background-position: 0 0, 100% 0, 100% 0;
+    background-repeat: no-repeat;
+    background-color: var(--surface);
+    background-size: 28px 100%, 28px 100%, 14px 100%;
+    background-attachment: local, local, scroll;
+  }
+
+  /* The detail-page sample-head-row title + edit toolbar stacks so the
+     h2 always gets its full width. */
+  .sample-head-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sample-head-row > .detail-edit-toolbar {
+    justify-content: flex-end;
+  }
+
+  /* Dashboard cards collapse one column earlier. */
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
   }
 }
 

@@ -32,7 +32,7 @@
 {% set field_error = field_errors.get(field_name) if field_errors is not none else none %}
 {% set editor_value = form_values.get(field_name, raw_value or '') if form_values is not none else (raw_value or '') %}
 {% set display_text = display_value if display_value is not none else raw_value %}
-<article{% if card_class %} class="{{ card_class }}"{% endif %}>
+<article id="field-{{ entity }}-{{ field_key }}"{% if card_class %} class="{{ card_class }}"{% endif %}>
   <h3>{{ label }}</h3>
   <div class="detail-field-shell detail-field-shell-card{% if field_error %} has-error{% endif %}" data-detail-entity="{{ entity }}" data-field-key="{{ field_key }}" data-field-kind="{{ kind }}">
     <div class="detail-field-display{% if kind == 'multiline' %} is-multiline{% endif %}" data-field-display>{% if display_text is none or (display_text is string and display_text|trim == '') %}<span class="detail-empty">—</span>{% else %}{{ display_text }}{% endif %}</div>
@@ -104,12 +104,21 @@
   editor_value_overrides=None,
   select_options_by_field=None,
   required_fields=(),
-  field_errors=None
+  field_errors=None,
+  field_warnings=None
 ) -%}
 {% set kind = row.kind or 'text' %}
 {% set row_classes = 'detail-field-row' %}
 {% if row_class %}
 {% set row_classes = row_classes ~ ' ' ~ row_class %}
+{% endif %}
+{% set warning = none %}
+{% if field_warnings is not none %}
+{%   set warning = field_warnings.get(row.key) %}
+{% endif %}
+{% set warning_active = warning is not none and warning.triggered %}
+{% if warning_active %}
+{%   set row_classes = row_classes ~ ' has-warning' %}
 {% endif %}
 {% set field_name = entity ~ '__' ~ row.key %}
 {% set is_read_only = false %}
@@ -146,6 +155,7 @@
 {% endif %}
 <div
   class="{{ row_classes }}"
+  id="field-{{ entity }}-{{ row.key }}"
   data-detail-entity="{{ entity }}"
   data-field-key="{{ row.key }}"
   data-field-kind="{{ kind }}"
@@ -261,6 +271,12 @@
       {% endif %}
       {% if field_error %}
       <p class="detail-field-error error">{{ field_error }}</p>
+      {% endif %}
+      {% if warning_active %}
+      <p class="detail-field-warning-hint" role="alert">
+        <span class="card-warning-icon" aria-hidden="true">⚠</span>
+        {{ warning.message }}
+      </p>
       {% endif %}
     </div>
   </dd>

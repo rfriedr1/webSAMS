@@ -1,68 +1,40 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
-{% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
+{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ preparation_edit_initial_mode or 'view' }}">
   <div class="panel-head">
     <div class="sample-head-row">
       <h2>Preparation {{ preparation.prep_nr }} for Sample {{ sample.sample_nr }}</h2>
-      <div class="sample-quick-nav" aria-label="Prep navigation">
-        {% if previous_prep_nr is not none %}
-        <a
-          href="/samples/{{ sample.sample_nr }}/preparations/{{ previous_prep_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Previous prep"
-          title="Previous prep"
-        >&#x2039;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous prep" title="No previous prep">&#x2039;</span>
-        {% endif %}
-        <form method="get" action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}" class="sample-quick-nav-jump">
-          <label for="prep-jump-input" class="sr-only">Prep #</label>
-          <input
-            id="prep-jump-input"
-            name="jump_prep"
-            type="number"
-            min="1"
-            max="{{ max_prep_nr if max_prep_nr > 0 else 1 }}"
-            step="1"
-            value="{{ preparation.prep_nr }}"
-            aria-label="Jump to prep #"
-          />
-          <span class="sample-quick-nav-jump-total">/ {{ max_prep_nr if max_prep_nr > 0 else preparation_count }}</span>
-          <button type="submit">Go</button>
-        </form>
-        {% if next_prep_nr is not none %}
-        <a
-          href="/samples/{{ sample.sample_nr }}/preparations/{{ next_prep_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Next prep"
-          title="Next prep"
-        >&#x203A;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next prep" title="No next prep">&#x203A;</span>
-        {% endif %}
-      </div>
+      {{ render_detail_action_toolbar(preparation_edit_form_id) }}
     </div>
-    <p>
-      Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} - {{ sample.user_label or 'Unnamed Sample' }}</a>
-      {% if project %}
-      | Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
-      {% endif %}
-      {% if user %}
-      | Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
-      {% endif %}
-    </p>
-    <p class="page-actions">
-      <a
-        href="/samples/{{ sample.sample_nr }}"
-        class="nav-back"
-        data-history-back
-        data-fallback="/samples/{{ sample.sample_nr }}"
-      >Back to sample</a>
-    </p>
-    {% call render_detail_feedback_toolbar(preparation_saved, preparation_save_error, "Preparation details were saved.", preparation_edit_form_id) %}
+    <div class="detail-context-strip">
+      <p class="detail-breadcrumb-line">
+        <a href="/samples/{{ sample.sample_nr }}" class="nav-back-arrow" data-history-back data-fallback="/samples/{{ sample.sample_nr }}" aria-label="Back to sample" title="Back to sample">&#x2039; Sample {{ sample.sample_nr }}</a>
+        <span class="detail-breadcrumb-sep">·</span>
+        <a href="/samples/{{ sample.sample_nr }}">{{ sample.user_label or 'Unnamed Sample' }}</a>
+        {% if project %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
+        {% endif %}
+        {% if user %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+        {% endif %}
+      </p>
+      {{ render_detail_quick_nav(
+        entity='preparation',
+        current=preparation.prep_nr,
+        max_nr=max_prep_nr,
+        count=preparation_count,
+        prev_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ previous_prep_nr) if previous_prep_nr is not none else None,
+        next_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ next_prep_nr) if next_prep_nr is not none else None,
+        jump_action='/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr,
+        jump_name='jump_prep',
+      ) }}
+    </div>
+    {{ render_detail_notice_block(preparation_saved, preparation_save_error, "Preparation details were saved.", field_errors=preparation_field_errors, entity="preparation") }}
     <div class="page-actions page-actions-forms">
       <form
         method="post"
@@ -74,7 +46,6 @@
         <button type="submit">+ Prep</button>
       </form>
     </div>
-    {% endcall %}
     <form
       id="{{ preparation_edit_form_id }}"
       method="post"
@@ -86,9 +57,9 @@
   <section class="card-group">
     <h4 class="card-group-title">Batch &amp; Timeline</h4>
     <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('Batch', preparation.batch) }}
-      {{ render_detail_display_card('Prep Start', preparation.prep_start) }}
-      {{ render_detail_display_card('Prep End', preparation.prep_end) }}
+      {{ render_detail_display_card('Batch', preparation_headline.batch) }}
+      {{ render_detail_display_card('Prep Start', preparation_headline.prep_start) }}
+      {{ render_detail_display_card('Prep End', preparation_headline.prep_end) }}
     </div>
   </section>
 
@@ -132,7 +103,8 @@
           editor_value_overrides=preparation_form_values,
           select_options_by_field=preparation_select_options,
           required_fields=preparation_required_fields,
-          field_errors=preparation_field_errors
+          field_errors=preparation_field_errors,
+          field_warnings=preparation_warnings_by_field
         ) }}
         {% endfor %}
       </dl>

@@ -50,12 +50,28 @@ def dashboard(
         }
         for label, key in chart_spec
     ]
+    standards_thresholds = data["standard_thresholds"]
+
+    def _format_threshold_rule(rule: dict[str, int]) -> str:
+        """Compact human description of a standard's threshold rule, shown
+        as a hover tooltip on the dashboard standards-card. Mirrors the
+        language of the Setup → Standard Inventory Thresholds editor so
+        the user's mental model lines up across the two surfaces."""
+        if not rule:
+            return ""
+        return (
+            f"Red below {rule['red_below']}"
+            f" · Yellow {rule['yellow_min']}–{rule['yellow_max']}"
+            f" · Green above {rule['green_above']}"
+        )
+
     standards_cards = [
         {
             "label": label,
             "key": key,
             "value": standards.get(key, 0),
             "status": standard_statuses.get(key, "neutral"),
+            "rule_summary": _format_threshold_rule(standards_thresholds.get(key, {})),
         }
         for label, key in standards_spec
     ]

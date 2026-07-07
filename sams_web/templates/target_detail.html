@@ -1,70 +1,41 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
-{% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
+{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ target_edit_initial_mode or 'view' }}">
   {% set target_back_url = '/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr %}
   <div class="panel-head">
     <div class="sample-head-row">
-      <h2>Target {{ target.target_nr }} (Prep {{ target.prep_nr }}, Sample {{ target.sample_nr }})</h2>
-      <div class="sample-quick-nav" aria-label="Target navigation">
-        {% if previous_target_nr %}
-        <a
-          href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ previous_target_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Previous target"
-          title="Previous target"
-        >&#x2039;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous target" title="No previous target">&#x2039;</span>
-        {% endif %}
-        <form method="get" action="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ target.target_nr }}" class="sample-quick-nav-jump">
-          <label for="target-jump-input" class="sr-only">Target #</label>
-          <input
-            id="target-jump-input"
-            name="jump_target"
-            type="number"
-            min="1"
-            max="{{ max_target_nr if max_target_nr > 0 else 1 }}"
-            step="1"
-            value="{{ target.target_nr }}"
-            aria-label="Jump to target #"
-          />
-          <span class="sample-quick-nav-jump-total">/ {{ max_target_nr if max_target_nr > 0 else target_count }}</span>
-          <button type="submit">Go</button>
-        </form>
-        {% if next_target_nr %}
-        <a
-          href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}/targets/{{ next_target_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Next target"
-          title="Next target"
-        >&#x203A;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next target" title="No next target">&#x203A;</span>
-        {% endif %}
-      </div>
+      <h2>Target {{ target.target_nr }} <span class="detail-h2-context">(Prep {{ target.prep_nr }}, Sample {{ target.sample_nr }})</span></h2>
+      {{ render_detail_action_toolbar(target_edit_form_id) }}
     </div>
-    <p>
-      Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} - {{ sample.user_label or 'Unnamed Sample' }}</a>
-      | Preparation <a href="/samples/{{ sample.sample_nr }}/preparations/{{ preparation.prep_nr }}">{{ preparation.prep_nr }}</a>
-      {% if project %}
-      | Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
-      {% endif %}
-      {% if user %}
-      | Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
-      {% endif %}
-    </p>
-    <p class="page-actions">
-      <a
-        href="{{ target_back_url }}"
-        class="nav-back"
-        data-history-back
-        data-fallback="{{ target_back_url }}"
-      >Back to preparation</a>
-    </p>
-    {% call render_detail_feedback_toolbar(target_saved, target_save_error, "Target details were saved.", target_edit_form_id) %}
+    <div class="detail-context-strip">
+      <p class="detail-breadcrumb-line">
+        <a href="{{ target_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ target_back_url }}" aria-label="Back to preparation" title="Back to preparation">&#x2039; Preparation {{ preparation.prep_nr }}</a>
+        <span class="detail-breadcrumb-sep">·</span>
+        Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} – {{ sample.user_label or 'Unnamed Sample' }}</a>
+        {% if project %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
+        {% endif %}
+        {% if user %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+        {% endif %}
+      </p>
+      {{ render_detail_quick_nav(
+        entity='target',
+        current=target.target_nr,
+        max_nr=max_target_nr,
+        count=target_count,
+        prev_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ previous_target_nr) if previous_target_nr else None,
+        next_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ next_target_nr) if next_target_nr else None,
+        jump_action='/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ target.target_nr,
+        jump_name='jump_target',
+      ) }}
+    </div>
+    {{ render_detail_notice_block(target_saved, target_save_error, "Target details were saved.", field_errors=target_field_errors, entity="target") }}
     <div class="page-actions page-actions-forms">
       <form
         method="post"
@@ -84,7 +55,6 @@
         <button type="submit" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
       </form>
     </div>
-    {% endcall %}
     <form
       id="{{ target_edit_form_id }}"
       method="post"
@@ -96,9 +66,9 @@
   <section class="card-group">
     <h4 class="card-group-title">Graphitization</h4>
     <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('Graph Batch', target.graph_batch) }}
-      {{ render_detail_display_card('Graphitized', target.graphitized) }}
-      {{ render_detail_display_card('Magazine', target.magazine) }}
+      {{ render_detail_display_card('Graph Batch', target_headline.graph_batch) }}
+      {{ render_detail_display_card('Graphitized', target_headline.graphitized) }}
+      {{ render_detail_display_card('Magazine', target_headline.magazine) }}
       {{ render_detail_display_card('Discarded', target_headline.stop, kind='boolean') }}
     </div>
   </section>
@@ -154,7 +124,8 @@
           editor_value_overrides=target_form_values,
           select_options_by_field=target_select_options,
           required_fields=target_required_fields,
-          field_errors=target_field_errors
+          field_errors=target_field_errors,
+          field_warnings=target_warnings_by_field
         ) }}
         {% endfor %}
       </dl>

@@ -16,7 +16,9 @@
     installers.installTableWrapping?.();
     installers.installTableEnhancer?.();
     installers.installMagicIdentifierPatch?.();
+    installers.installMagicIdentifierHelp?.();
     installers.installDetailEditMode?.();
+    installers.installFieldErrorSummary?.();
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();
   });

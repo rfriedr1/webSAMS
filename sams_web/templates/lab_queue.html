@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-benches.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/preparation-bench.js" defer></script>
+<script src="/static/js/graphitization-bench.js" defer></script>
+{% endblock %}
+
 {% block content %}
 {% if not bench_entry_enabled %}
 <section class="panel">
