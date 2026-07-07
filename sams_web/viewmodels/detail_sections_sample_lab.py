@@ -570,7 +570,21 @@ def _decorate_target_sections_with_magazine_links(target: Any) -> list[dict[str,
 
 
 def build_sample_headline(sample: Any) -> dict[str, Any]:
+    """Every value a headline card displays MUST come from here (routed
+    through `format_sample_value`) — never from the raw ORM attribute.
+    The formatter is what maps legacy sentinels ("undefined", "null",
+    pre-1950 dates) to None so the template renders the standard `—`.
+    Passing `sample.type` directly leaked the literal string
+    "undefined" into the Classification cards."""
     return {
+        "user_label": format_sample_value("user_label", sample.user_label),
+        "user_label_nr": format_sample_value("user_label_nr", sample.user_label_nr),
+        "user_desc1": format_sample_value("user_desc1", sample.user_desc1),
+        "user_desc2": format_sample_value("user_desc2", sample.user_desc2),
+        "type": format_sample_value("type", sample.type),
+        "material": format_sample_value("material", sample.material),
+        "fraction": format_sample_value("fraction", sample.fraction),
+        "weight": format_sample_value("weight", sample.weight),
         "c14_age": format_sample_value("c14_age", sample.c14_age),
         "c14_age_sig": format_sample_value("c14_age_sig", sample.c14_age_sig),
         "user_comment": format_sample_value("user_comment", sample.user_comment),
@@ -580,6 +594,9 @@ def build_sample_headline(sample: Any) -> dict[str, Any]:
 
 def build_preparation_headline(preparation: Any) -> dict[str, Any]:
     return {
+        "batch": format_preparation_value("batch", preparation.batch),
+        "prep_start": format_preparation_value("prep_start", preparation.prep_start),
+        "prep_end": format_preparation_value("prep_end", preparation.prep_end),
         "yield_percent": calculate_preparation_yield(
             preparation.weight_start, preparation.weight_end
         ),
@@ -591,6 +608,9 @@ def build_preparation_headline(preparation: Any) -> dict[str, Any]:
 
 def build_target_headline(target: Any) -> dict[str, Any]:
     return {
+        "graph_batch": format_target_value("graph_batch", target.graph_batch),
+        "graphitized": format_target_value("graphitized", target.graphitized),
+        "magazine": format_target_value("magazine", target.magazine),
         "fm": format_target_indicator("fm", target.fm),
         "fm_sig": format_target_indicator("fm_sig", target.fm_sig),
         "dc13": format_target_indicator("dc13", target.dc13),

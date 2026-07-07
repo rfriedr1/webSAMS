@@ -2,9 +2,9 @@
 
 The Magic Nav input box (in `templates/base.html`) accepts a small grammar:
 
-- `123`              → opens sample 123
-- `123.4`            → opens preparation 123/4
-- `123.4.7`          → opens target 123/4/7
+- `12345`            → opens sample 12345
+- `12345.1`          → opens preparation 12345/1
+- `12345.1.1`        → opens target 12345/1/1
 - `pr123`            → opens project 123
 - `sub210`           → opens submitter 210
 - `/prep`, `/graph`, `/ana` → opens the lab workflow page
@@ -113,8 +113,9 @@ def resolve_magic_identifier(raw: str) -> NavTarget | None:
     """Parse `raw` into a `NavTarget`, or return `None` if no pattern matches.
 
     Patterns tried in order: command literal (`/prep`), 3-part numeric
-    (`123.4.7`), 2-part numeric (`123.4`), bare digits (`123`), prefixed
-    (`pr123`, `sub210`). Comparison is case-insensitive on the input.
+    (`12345.1.1`), 2-part numeric (`12345.1`), bare digits (`12345`),
+    prefixed (`pr123`, `sub210`). Comparison is case-insensitive on the
+    input.
     """
     value = raw.strip().lower()
     if value == "":
@@ -235,14 +236,16 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
     """Build the rules table shown on the Help page from the same config
     the parser uses."""
     rules: list[dict[str, str]] = [
+        # Sample numbers are 5 digits in this lab; use a representative
+        # example so the placeholder, help page, and overlay all line up.
         {
             "pattern": "digits only",
-            "example": "45230",
+            "example": "12345",
             "description": f"Opens sample detail (label: {MAGIC_IDENTIFIER_SAMPLE_LABEL}).",
         },
         {
             "pattern": "sample.prep",
-            "example": "45230.1",
+            "example": "12345.1",
             "description": (
                 "Opens preparation detail for sample/preparation "
                 f"(label: {MAGIC_IDENTIFIER_PREPARATION_LABEL})."
@@ -250,7 +253,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
         },
         {
             "pattern": "sample.prep.target",
-            "example": "45230.1.1",
+            "example": "12345.1.1",
             "description": (
                 "Opens target detail for sample/preparation/target "
                 f"(label: {MAGIC_IDENTIFIER_TARGET_LABEL})."
@@ -286,7 +289,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
 
 
 INVALID_MAGIC_NAV_MESSAGE = (
-    "Invalid Magic Nav ID. Use 123, 45230.1, 45230.1.1, "
+    "Invalid Magic Nav ID. Use 12345, 12345.1, 12345.1.1, "
     "pr123, sub210, /prep, /graph, or /ana."
 )
 

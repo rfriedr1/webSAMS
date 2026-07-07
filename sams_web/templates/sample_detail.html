@@ -1,70 +1,44 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
-{% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
+{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ sample_edit_initial_mode or 'view' }}">
   <div class="panel-head">
     <div class="sample-head-row">
       <h2>Sample {{ sample.sample_nr }}: {{ sample.user_label or 'Unnamed Sample' }}</h2>
-      <div class="sample-quick-nav" aria-label="Sample navigation">
-        {% if previous_sample_nr is not none %}
-        <a
-          href="/samples/{{ previous_sample_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Previous sample"
-          title="Previous sample"
-        >&#x2039;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous sample" title="No previous sample">&#x2039;</span>
-        {% endif %}
-        <form method="get" action="/samples/{{ sample.sample_nr }}" class="sample-quick-nav-jump">
-          <label for="sample-jump-input" class="sr-only">Sample #</label>
-          <input
-            id="sample-jump-input"
-            name="jump_sample"
-            type="number"
-            min="1"
-            max="{{ max_sample_nr if max_sample_nr > 0 else 1 }}"
-            step="1"
-            value="{{ sample.sample_nr }}"
-            aria-label="Jump to sample #"
-          />
-          <span class="sample-quick-nav-jump-total">/ {{ max_sample_nr if max_sample_nr > 0 else sample_count }}</span>
-          <button type="submit">Go</button>
-        </form>
-        {% if next_sample_nr is not none %}
-        <a
-          href="/samples/{{ next_sample_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Next sample"
-          title="Next sample"
-        >&#x203A;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next sample" title="No next sample">&#x203A;</span>
-        {% endif %}
-      </div>
+      {{ render_detail_action_toolbar(sample_edit_form_id) }}
     </div>
     {% set sample_back_url = '/search' %}
-    {% if project %}
-    {% set sample_back_url = '/projects/' ~ project.project_nr %}
-    {% endif %}
-    {% if project %}
-    <p>
-      Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} - {{ project.project }}</a>
-      {% if project.status %}
-      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
-      {% endif %}
-      {% if user %}| Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>{% endif %}
-    </p>
-    {% elif user %}
-    <p>Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></p>
-    {% endif %}
-    <p class="page-actions">
-      <a href="{{ sample_back_url }}" class="nav-back" data-history-back data-fallback="{{ sample_back_url }}">Back</a>
-    </p>
-    {% call render_detail_feedback_toolbar(sample_saved, sample_save_error, "Sample details were saved.", sample_edit_form_id) %}{% endcall %}
+    {% if project %}{% set sample_back_url = '/projects/' ~ project.project_nr %}{% endif %}
+    <div class="detail-context-strip">
+      <p class="detail-breadcrumb-line">
+        <a href="{{ sample_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ sample_back_url }}" aria-label="Back" title="Back">&#x2039; Back</a>
+        {% if project %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
+        {% if project.status %}
+        {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+        <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
+        {% endif %}
+        {% endif %}
+        {% if user %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
+        {% endif %}
+      </p>
+      {{ render_detail_quick_nav(
+        entity='sample',
+        current=sample.sample_nr,
+        max_nr=max_sample_nr,
+        count=sample_count,
+        prev_url=('/samples/' ~ previous_sample_nr) if previous_sample_nr is not none else None,
+        next_url=('/samples/' ~ next_sample_nr) if next_sample_nr is not none else None,
+        jump_action='/samples/' ~ sample.sample_nr,
+        jump_name='jump_sample',
+      ) }}
+    </div>
+    {{ render_detail_notice_block(sample_saved, sample_save_error, "Sample details were saved.", field_errors=sample_field_errors, entity="sample") }}
     <form id="{{ sample_edit_form_id }}" method="post" action="/samples/{{ sample.sample_nr }}/save" data-detail-edit-form></form>
   </div>
 
@@ -73,23 +47,23 @@
     <div class="cards sample-identity-cards">
       {{ render_detail_card(
         'sample', 'user_label', 'Sample Label',
-        raw_value=sample.user_label,
+        raw_value=sample.user_label, display_value=sample_headline.user_label,
         form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
       ) }}
       {{ render_detail_card(
         'sample', 'user_label_nr', 'Sample Label #',
-        raw_value=sample.user_label_nr,
+        raw_value=sample.user_label_nr, display_value=sample_headline.user_label_nr,
         form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
       ) }}
       {{ render_detail_card(
         'sample', 'user_desc1', 'Description 1',
-        raw_value=sample.user_desc1, kind='multiline', rows=3,
+        raw_value=sample.user_desc1, display_value=sample_headline.user_desc1, kind='multiline', rows=3,
         card_class='sample-identity-description',
         form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
       ) }}
       {{ render_detail_card(
         'sample', 'user_desc2', 'Description 2',
-        raw_value=sample.user_desc2, kind='multiline', rows=3,
+        raw_value=sample.user_desc2, display_value=sample_headline.user_desc2, kind='multiline', rows=3,
         card_class='sample-identity-description',
         form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
       ) }}
@@ -99,10 +73,10 @@
   <section class="card-group">
     <h4 class="card-group-title">Classification</h4>
     <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('Type', sample.type) }}
-      {{ render_detail_display_card('Material', sample.material) }}
-      {{ render_detail_display_card('Fraction', sample.fraction) }}
-      {{ render_detail_display_card('Weight', sample.weight) }}
+      {{ render_detail_display_card('Type', sample_headline.type) }}
+      {{ render_detail_display_card('Material', sample_headline.material) }}
+      {{ render_detail_display_card('Fraction', sample_headline.fraction) }}
+      {{ render_detail_display_card('Weight', sample_headline.weight) }}
     </div>
   </section>
 

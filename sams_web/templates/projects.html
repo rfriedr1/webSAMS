@@ -28,24 +28,13 @@
   </div>
   {% endif %}
 
-  <section data-table-filter>
-    <h3>Projects in Progress ({{ projects_in_progress|length }})</h3>
-    <p class="table-empty">Window: last {{ days_window }} day{% if days_window != 1 %}s{% endif %}.</p>
+  <details class="table-collapsible" data-table-filter open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Projects in Progress</span>
+      <span class="badge table-summary-count">{{ projects_in_progress|length }} rows · last {{ days_window }} day{% if days_window != 1 %}s{% endif %}</span>
+    </summary>
     <div class="table-wrap">
       <table data-projects-in-progress-table>
-        <colgroup>
-          <col style="width: 34%;" />
-          <col style="width: 10%;" />
-          <col style="width: 9%;" />
-          <col style="width: 9%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.33%;" />
-          <col style="width: 6.35%;" />
-        </colgroup>
         <thead>
           <tr>
             <th>Project</th>
@@ -85,7 +74,20 @@
         </tbody>
       </table>
     </div>
-  </section>
+  </details>
+
+  {% if is_truncated %}
+  <p class="table-truncation-notice">
+    Showing the first <strong>{{ truncated_limit }}</strong> projects below for a fast load.
+    Use the search box to filter loaded rows, or
+    <a href="?days_window={{ days_window }}&show_all=true">load all projects</a>.
+  </p>
+  {% elif show_all %}
+  <p class="table-truncation-notice">
+    Showing all projects.
+    <a href="?days_window={{ days_window }}">Back to fast view</a>
+  </p>
+  {% endif %}
 
   <details class="table-collapsible projects-all-collapsible" data-table-filter>
     <summary class="table-summary">

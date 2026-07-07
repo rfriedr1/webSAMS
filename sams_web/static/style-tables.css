@@ -271,8 +271,10 @@ thead th.table-sortable:focus-visible {
 th,
 td {
   text-align: left;
-  padding: 0.5rem;
-  font-size: 0.86rem;
+  /* Bumped from 0.5rem so rows breathe; eye loses fewer rows when
+     scanning across many columns. */
+  padding: 0.6rem 0.62rem;
+  font-size: var(--text-sm);
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -293,12 +295,15 @@ tbody tr {
   border-bottom: 1px solid #e8eef2;
 }
 
+/* Stronger zebra contrast — the previous #f9fcfe was within 2 % of white
+   and effectively invisible. The eye now picks up the row crossing
+   the table even on 10+ column projects/dashboard tables. */
 tbody tr:nth-child(2n) {
-  background: #f9fcfe;
+  background: #f1f6fa;
 }
 
 tbody tr:hover {
-  background: #eef8fc;
+  background: #e2eff5;
 }
 
 .table-wrap tbody td a {
@@ -307,6 +312,22 @@ tbody tr:hover {
   text-decoration-line: underline;
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.12em;
+}
+
+/* Fitts's law: when a `<td>` contains a single anchor (the typical
+   inline-link navigation pattern), expand the anchor to fill the cell
+   so the entire cell area is the click target. The link still looks
+   like a link — only the hit area grows. `td:has(> a:only-child)` keeps
+   this scoped to cells with exactly one link child; cells with text
+   plus a link fall back to the previous tight target. */
+.table-wrap tbody td:has(> a:only-child) {
+  padding: 0;
+}
+
+.table-wrap tbody td:has(> a:only-child) > a {
+  display: block;
+  /* mirror the default td padding so the inline appearance is preserved */
+  padding: 0.42rem 0.6rem;
 }
 
 .table-wrap tbody td a:visited {
@@ -448,6 +469,43 @@ a:hover {
   border-color: #88afc0;
 }
 
+/* Large-dataset affordance: when a table holds 200+ rows the status
+   shifts from "12 / 12 shown" plain text to a prominent count badge,
+   and an inline hint surfaces below the tools row explaining the
+   filter/sort options. The number itself is also locale-formatted
+   (e.g. 5,012) for readability. */
+.table-tool-status.is-big-dataset {
+  font-weight: 800;
+  color: #1f3138;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #eaf2f6;
+  border: 1px solid #c7d8e0;
+}
+
+.table-big-hint {
+  margin: 0.2rem 0 0.5rem;
+  color: #506a78;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+/* "Showing first N" banner for server-side truncated list views. */
+.table-truncation-notice {
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--brand);
+  background: #f3f9fb;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.table-truncation-notice a {
+  color: var(--brand);
+  font-weight: 700;
+}
+
 .detail-edit-toolbar {
   margin-top: 0.56rem;
   display: flex;
@@ -457,11 +515,217 @@ a:hover {
   gap: 0.5rem;
 }
 
+/* Aggregated dirty / saved status next to the action buttons. Two
+   visual modes: `.is-dirty` (teal — currently changed N fields) and
+   `.is-saved` (green — last saved relative time). Sits left of the
+   buttons via `margin-right: auto`. */
+.detail-edit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin-right: auto;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.detail-edit-status.is-dirty {
+  color: #1f586d;
+  background: #e6f3f7;
+  border-color: #b6d2dd;
+}
+
+.detail-edit-status.is-dirty::before {
+  content: "●";
+  color: #2f7f9a;
+  font-size: 0.62rem;
+}
+
+.detail-edit-status.is-saved {
+  color: #186f3a;
+  background: #dff3e8;
+  border-color: #a8d8b9;
+}
+
+.detail-edit-status.is-saved::before {
+  content: "✓";
+  color: #186f3a;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+[data-edit-scope].is-editing .detail-edit-status.is-saved {
+  /* Hide the saved-hint while editing — irrelevant once changes have
+     started; the dirty count is the relevant message in that state. */
+  display: none;
+}
+
 .sample-head-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.6rem;
+  /* The action toolbar (Edit / Save / Cancel) now lives in this row,
+     right-aligned next to the h2 — modern apps put the primary action
+     on the title line, not under it. */
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.sample-head-row > .detail-edit-toolbar {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.sample-head-row .detail-h2-context {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.72em;
+  letter-spacing: 0;
+}
+
+/* Single-line context strip: breadcrumb on the left, quick-nav pill on
+   the right. Replaces the previous three-line stack of breadcrumb +
+   Back link + nav row. */
+.detail-context-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-breadcrumb-line {
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.detail-breadcrumb-line a:not(.nav-back-arrow) {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.detail-breadcrumb-line a:not(.nav-back-arrow):hover,
+.detail-breadcrumb-line a:not(.nav-back-arrow):focus-visible {
+  text-decoration: underline;
+}
+
+.detail-breadcrumb-sep {
+  color: #a8b6bf;
+  font-size: 0.85em;
+}
+
+/* Back chip — uses the chevron + label pattern, matches the chip
+   vocabulary used elsewhere (pin chip, quick-nav pill). */
+.nav-back-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  padding: 0.18rem 0.6rem;
+  border: 1px solid #cfdee7;
+  border-radius: 999px;
+  background: #f8fcfe;
+  color: var(--brand) !important;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-decoration: none !important;
+}
+
+.nav-back-arrow:hover,
+.nav-back-arrow:focus-visible {
+  background: #edf6fb;
+  border-color: #a7c2d0;
+}
+
+/* Quick-nav pill: ‹ N / max ›. Inputs/buttons styled flat so the pill
+   reads as positional info, not a form. */
+.detail-quick-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.08rem;
+  padding: 0.18rem 0.34rem;
+  border: 1px solid #cfdee7;
+  border-radius: 999px;
+  background: #f8fcfe;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.detail-quick-nav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.detail-quick-nav-arrow:hover,
+.detail-quick-nav-arrow:focus-visible {
+  background: #e2eef4;
+}
+
+.detail-quick-nav-arrow.is-disabled {
+  color: #b6c5cd;
+  pointer-events: none;
+}
+
+.detail-quick-nav-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin: 0;
+}
+
+.detail-quick-nav-jump input[type="number"] {
+  width: 4.2rem;
+  min-height: 1.5rem;
+  padding: 0.08rem 0.34rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 800;
+  font-size: var(--text-xs);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.detail-quick-nav-jump input[type="number"]::-webkit-outer-spin-button,
+.detail-quick-nav-jump input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.detail-quick-nav-jump input[type="number"]:hover,
+.detail-quick-nav-jump input[type="number"]:focus-visible {
+  border-color: #a7c2d0;
+  background: #ffffff;
+  outline: none;
+}
+
+.detail-quick-nav-of {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .sample-head-row h2 {

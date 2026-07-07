@@ -20,6 +20,19 @@
   </div>
   {% endif %}
 
+  {% if is_truncated %}
+  <p class="table-truncation-notice">
+    Showing the first <strong>{{ truncated_limit }}</strong> submitters for a fast load.
+    Use the search box below to find specific entries, or
+    <a href="?show_all=true">load all submitters</a>.
+  </p>
+  {% elif show_all %}
+  <p class="table-truncation-notice">
+    Showing all submitters.
+    <a href="?">Back to fast view</a>
+  </p>
+  {% endif %}
+
   <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Type to filter loaded submitters">
     <div class="table-wrap submitters-table-wrap">
       <table data-submitters-table>

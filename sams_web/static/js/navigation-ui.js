@@ -290,11 +290,15 @@
       }
       const isPinned = pinned.some((item) => item.url === currentUrl);
       pinButton.classList.toggle("is-pinned", isPinned);
-      pinButton.title = isPinned ? "Unpin current page" : "Pin current page";
+      pinButton.title = isPinned ? "Unpin current page (Ctrl/Cmd + Shift + P)" : "Pin current page (Ctrl/Cmd + Shift + P)";
       pinButton.setAttribute("aria-label", isPinned ? "Unpin current page" : "Pin current page");
-      const icon = pinButton.querySelector("span[aria-hidden='true']");
+      const icon = pinButton.querySelector(".quick-pin-toggle-glyph");
       if (icon) {
         icon.textContent = isPinned ? "★" : "☆";
+      }
+      const label = pinButton.querySelector("[data-pin-label]");
+      if (label) {
+        label.textContent = isPinned ? "Pinned" : "Pin";
       }
     };
 
@@ -307,10 +311,15 @@
       saveStoredPages(RECENT_PAGES_STORAGE_KEY, mergedRecent);
     }
 
-    pinButton.addEventListener("click", () => {
+    // Pinning is silent today; users frequently miss whether the click
+    // registered. Toast + briefly highlighting the newly-pinned entry
+    // makes the action observable. The animation respects reduced-motion
+    // via a `prefers-reduced-motion` CSS guard.
+    const togglePin = () => {
       const pinned = loadStoredPages(PINNED_PAGES_STORAGE_KEY);
       const existingIndex = pinned.findIndex((item) => normalizeRelativeUrl(item.url) === currentUrl);
-      if (existingIndex >= 0) {
+      const wasPinned = existingIndex >= 0;
+      if (wasPinned) {
         pinned.splice(existingIndex, 1);
       } else {
         pinned.unshift({ label: currentLabel, url: currentUrl });
@@ -320,6 +329,38 @@
         normalizeCollection(pinned, MAX_PINNED_PAGES),
       );
       sync();
+      // Brief slide-in highlight on the freshly pinned entry.
+      if (!wasPinned) {
+        const firstLink = pinnedHost.querySelector(".quick-access-link");
+        if (firstLink) {
+          firstLink.classList.add("is-newly-pinned");
+          setTimeout(() => firstLink.classList.remove("is-newly-pinned"), 1200);
+        }
+      }
+      // Toast confirmation. The toast module gracefully no-ops if absent.
+      if (window.SAMSToast && typeof window.SAMSToast.show === "function") {
+        window.SAMSToast.show(
+          wasPinned ? `Unpinned "${currentLabel}"` : `Pinned "${currentLabel}"`,
+          "info",
+        );
+      }
+    };
+    pinButton.addEventListener("click", togglePin);
+
+    // Keyboard shortcut Ctrl/Cmd+Shift+P toggles pin from anywhere. Skipped
+    // while the user is typing in a form control so the shortcut never
+    // hijacks a real keystroke.
+    document.addEventListener("keydown", (ev) => {
+      const target = ev.target;
+      const isTyping =
+        target instanceof HTMLElement &&
+        (target.matches("input, textarea, select, [contenteditable='true']"));
+      if (isTyping) return;
+      const modPressed = ev.metaKey || ev.ctrlKey;
+      if (!modPressed || !ev.shiftKey) return;
+      if (ev.key.toLowerCase() !== "p") return;
+      ev.preventDefault();
+      togglePin();
     });
 
     sync();
@@ -332,6 +373,28 @@
     if (!root || !input || !list) {
       return;
     }
+
+    // Render Ctrl/Cmd glyphs and shortcut hints based on the user's
+    // platform — Mac users see ⌘K, everyone else sees Ctrl K. Falls back
+    // gracefully if `navigator.platform` is missing (older browsers).
+    const platform = (navigator.userAgentData?.platform || navigator.platform || "").toLowerCase();
+    const isMac = platform.includes("mac") || platform.includes("iphone") || platform.includes("ipad");
+    const modGlyph = isMac ? "⌘" : "Ctrl";
+    const modGlyphSep = isMac ? "" : " ";
+    document.querySelectorAll("[data-platform-kbd]").forEach((el) => {
+      const trigger = el.closest("[data-platform-shortcut]");
+      const key = trigger?.dataset.platformShortcut || "K";
+      el.textContent = `${modGlyph}${modGlyphSep}${key}`;
+    });
+    document.querySelectorAll("[data-platform-shortcut]").forEach((el) => {
+      const key = el.dataset.platformShortcut || "K";
+      const title = el.getAttribute("title");
+      if (title) {
+        el.setAttribute("title", title.replace(/Ctrl/, isMac ? "⌘" : "Ctrl"));
+      }
+      // Re-target the data attribute for any future scripts hooking in.
+      el.dataset.modKey = isMac ? "Meta" : "Control";
+    });
 
     const openTriggers = document.querySelectorAll("[data-command-palette-open]");
     const closeTriggers = root.querySelectorAll("[data-command-palette-close]");

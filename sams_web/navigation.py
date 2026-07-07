@@ -12,7 +12,7 @@ MAIN_NAV_ITEMS: tuple[dict[str, Any], ...] = (
     {"key": "samples", "module": "sample_management", "label": "Samples", "href": "/samples", "external": False},
     {"key": "lab", "module": "lab_operations", "label": "Lab", "href": "/lab/preparation", "external": False},
     {"key": "search", "module": "search", "label": "Search", "href": "/search?global=1", "external": False},
-    {"key": "setup", "module": "setup", "label": "Settings", "href": "/setup", "external": False},
+    {"key": "setup", "module": "setup", "label": "Setup", "href": "/setup", "external": False},
     {"key": "help", "module": "help", "label": "Help", "href": "/help", "external": False},
     {"key": "api_docs", "module": "api_docs", "label": "API Docs", "href": "/docs", "external": True},
 )
@@ -28,15 +28,11 @@ SUB_NAV_ITEMS: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "graphitization", "label": "Graphitization", "href": "/lab/graphitization", "external": False},
         {"key": "analysis", "label": "Analysis", "href": "/lab/analysis", "external": False},
     ),
-    "search": (
-        {"key": "global_search", "label": "Global Search", "href": "/search?global=1", "external": False},
-    ),
-    "setup": (
-        {"key": "system_setup", "label": "System Settings", "href": "/setup", "external": False},
-    ),
-    "help": (
-        {"key": "help_center", "label": "Help Center", "href": "/help", "external": False},
-    ),
+    # Search / Setup / Help deliberately have NO sub-nav: each previously
+    # showed a single chip duplicating the main nav item ("System
+    # Settings" under Settings, etc.) — a whole extra header row with
+    # zero navigation value. Sub-nav rows only render for modules with
+    # 2+ real destinations.
     "api_docs": (
         {"key": "openapi", "label": "OpenAPI", "href": "/docs", "external": True},
         {"key": "redoc", "label": "ReDoc", "href": "/redoc", "external": True},
@@ -52,7 +48,7 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
     {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
     {"label": "Search: Global", "href": "/search?global=1"},
-    {"label": "Settings", "href": "/setup"},
+    {"label": "Setup", "href": "/setup"},
     {"label": "Help", "href": "/help"},
     {"label": "API Docs", "href": "/docs"},
 )

@@ -17,23 +17,30 @@
     {% endif %}
 
     {% if newest_sample_nr is not none %}
-    <article class="samples-landing-card">
+    {# Primary CTA — most common path. Filled card on the brand gradient
+       so it's the unambiguous "start here". The other cards stay quiet
+       so this one truly leads. #}
+    <article class="samples-landing-card samples-landing-card-primary">
       <h3>Newest sample</h3>
       <p>The most recently created sample is <strong>{{ newest_sample_nr }}</strong>.</p>
-      <a href="/samples/{{ newest_sample_nr }}" class="samples-landing-cta">Open sample {{ newest_sample_nr }}</a>
+      <a href="/samples/{{ newest_sample_nr }}" class="samples-landing-cta">Open sample {{ newest_sample_nr }} &rarr;</a>
     </article>
     {% endif %}
 
     <article class="samples-landing-card">
       <h3>Browse all samples</h3>
       <p>Search across every sample in the database with text matching across labels, descriptions, comments and IDs.</p>
-      <a href="/search?context=samples" class="samples-landing-cta">Search samples</a>
+      <a href="/search?context=samples" class="samples-landing-cta samples-landing-cta-secondary">Search samples</a>
     </article>
+  </div>
 
-    <article class="samples-landing-card">
-      <h3>Magic Nav</h3>
-      <p>Jump straight to a sample by number using the Magic Nav field in the topbar — type <code>123</code> for sample, <code>123.4</code> for prep, <code>123.4.7</code> for target.</p>
-    </article>
+  {# Magic-Nav explainer demoted from a card row to a subtle help block —
+     it teaches a feature, not an action; shouldn't share visual weight
+     with the primary CTA. #}
+  <p class="samples-landing-hint">
+    <strong>Tip:</strong> jump straight to a record by number using the Magic Nav field in the topbar —
+    <code>12345</code> for sample, <code>12345.1</code> for prep, <code>12345.1.1</code> for target.
+  </p>
   </div>
 
   {% if newest_sample_nr is none %}

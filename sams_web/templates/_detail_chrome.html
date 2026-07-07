@@ -1,7 +1,54 @@
-{% macro render_detail_feedback_toolbar(saved, save_error, saved_message, form_id) -%}
-  {% if caller is defined %}
-  {{ caller() }}
-  {% endif %}
+{#-
+  Detail-page chrome macros.
+
+    render_detail_action_toolbar(form_id)
+      → the Edit/Save/Cancel buttons + dirty/saved status pill. Renders
+        inside the title row, right-aligned next to the h2 (modern apps
+        put the primary action on the title line, not under it).
+
+    render_detail_notice_block(...)
+      → the saved-banner / save-error / field-error-summary. Renders
+        below the title row before the cards.
+
+    render_detail_quick_nav(...)
+      → the "‹ N / max ›" prev/jump/next pill on the breadcrumb line.
+-#}
+
+{% macro render_detail_action_toolbar(form_id) -%}
+  <div class="detail-edit-toolbar">
+    {# Aggregated dirty-state / saved-just-now status. JS toggles `hidden`
+       and updates the message; see detail-edit-mode.js. #}
+    <span class="detail-edit-status" data-edit-status hidden></span>
+    <button
+      type="button"
+      class="detail-edit-toggle"
+      data-edit-toggle
+      data-edit-label-default="Edit"
+      data-edit-label-active="View"
+      data-edit-title-default="Edit this record (E). Double-click any field for single-field quick edit."
+      data-edit-title-active="Leave edit mode (E). You'll be asked before discarding unsaved changes."
+      title="Edit this record (E). Double-click any field for single-field quick edit."
+    >Edit</button>
+    <button
+      type="submit"
+      class="detail-edit-save"
+      data-edit-save
+      form="{{ form_id }}"
+      title="Save changes (Ctrl/Cmd + S). Works even while typing in a field."
+      hidden
+    >Save</button>
+    <button
+      type="button"
+      class="detail-edit-cancel"
+      data-edit-cancel
+      title="Cancel edit (Esc). You'll be asked before discarding unsaved changes."
+      hidden
+    >Cancel</button>
+  </div>
+{%- endmacro %}
+
+
+{% macro render_detail_notice_block(saved, save_error, saved_message, field_errors=None, entity='') -%}
   {% if saved %}
   <div class="result-box">{{ saved_message }}</div>
   {% endif %}
@@ -11,9 +58,61 @@
     <p>{{ save_error }}</p>
   </div>
   {% endif %}
-  <div class="detail-edit-toolbar">
-    <button type="button" class="detail-edit-toggle" data-edit-toggle data-edit-label-default="Edit" data-edit-label-active="View">Edit</button>
-    <button type="submit" class="detail-edit-save" data-edit-save form="{{ form_id }}" hidden>Save</button>
-    <button type="button" class="detail-edit-cancel" data-edit-cancel hidden>Cancel</button>
+  {# Aggregated field-error summary. On a tall record an error on a buried
+     field would otherwise live below the fold; this lists every failing
+     field with an in-page anchor and companion JS scrolls it into view. #}
+  {% if field_errors %}
+  <div class="inline-notice inline-notice-error field-error-summary" role="alert" data-field-error-summary>
+    <strong>Couldn't save — {{ field_errors|length }} issue{% if field_errors|length != 1 %}s{% endif %} to fix.</strong>
+    <ul>
+      {% for field_name, message in field_errors.items() %}
+      {% set field_key = field_name.split('__', 1)[-1] %}
+      <li>
+        <a href="#field-{{ entity }}-{{ field_key }}" data-field-error-jump="{{ field_key }}" data-entity="{{ entity }}">
+          {{ field_key|replace('_', ' ')|title }}
+        </a>
+        <span>— {{ message }}</span>
+      </li>
+      {% endfor %}
+    </ul>
   </div>
+  {% endif %}
+{%- endmacro %}
+
+
+{#- Reusable "‹ N / max ›" quick-nav pill for detail pages. Renders to
+    the right of the breadcrumb line, where positional info belongs —
+    not on the title row competing with the h2.
+
+    `entity` selects ARIA labels; `current` / `max_nr` / `count` size
+    the input + label; `prev_url` / `next_url` are the prev/next
+    anchors (or None to disable). `jump_action` is the form GET target.
+-#}
+{% macro render_detail_quick_nav(entity, current, max_nr, count, prev_url, next_url, jump_action, jump_name) -%}
+  <span class="detail-quick-nav" aria-label="{{ entity|title }} navigation">
+    {% if prev_url %}
+    <a href="{{ prev_url }}" class="detail-quick-nav-arrow" aria-label="Previous {{ entity }}" title="Previous {{ entity }} ([)">&#x2039;</a>
+    {% else %}
+    <span class="detail-quick-nav-arrow is-disabled" aria-label="No previous {{ entity }}" title="No previous {{ entity }}">&#x2039;</span>
+    {% endif %}
+    <form method="get" action="{{ jump_action }}" class="detail-quick-nav-jump" aria-label="Jump to {{ entity }}">
+      <label class="sr-only" for="{{ entity }}-jump-input">{{ entity|title }} #</label>
+      <input
+        id="{{ entity }}-jump-input"
+        name="{{ jump_name }}"
+        type="number"
+        min="1"
+        max="{{ max_nr if max_nr and max_nr > 0 else 1 }}"
+        step="1"
+        value="{{ current }}"
+        aria-label="Jump to {{ entity }} #"
+      />
+      <span class="detail-quick-nav-of">/ {{ max_nr if max_nr and max_nr > 0 else count }}</span>
+    </form>
+    {% if next_url %}
+    <a href="{{ next_url }}" class="detail-quick-nav-arrow" aria-label="Next {{ entity }}" title="Next {{ entity }} (])">&#x203A;</a>
+    {% else %}
+    <span class="detail-quick-nav-arrow is-disabled" aria-label="No next {{ entity }}" title="No next {{ entity }}">&#x203A;</span>
+    {% endif %}
+  </span>
 {%- endmacro %}

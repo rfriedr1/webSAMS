@@ -1,59 +1,37 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
-{% from "_detail_chrome.html" import render_detail_feedback_toolbar %}
+{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ project_edit_initial_mode or 'view' }}">
   <div class="panel-head">
     <div class="sample-head-row">
       <h2>Project {{ project.project_nr }}: {{ project.project or 'Untitled Project' }}</h2>
-      <div class="sample-quick-nav" aria-label="Project navigation">
-        {% if previous_project_nr is not none %}
-        <a
-          href="/projects/{{ previous_project_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Previous project"
-          title="Previous project"
-        >&#x2039;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No previous project" title="No previous project">&#x2039;</span>
-        {% endif %}
-        <form method="get" action="/projects/{{ project.project_nr }}" class="sample-quick-nav-jump">
-          <label for="project-jump-input" class="sr-only">Project #</label>
-          <input
-            id="project-jump-input"
-            name="jump_project"
-            type="number"
-            min="1"
-            max="{{ max_project_nr if max_project_nr > 0 else 1 }}"
-            step="1"
-            value="{{ project.project_nr }}"
-            aria-label="Jump to project #"
-          />
-          <span class="sample-quick-nav-jump-total">/ {{ max_project_nr if max_project_nr > 0 else project_count }}</span>
-          <button type="submit">Go</button>
-        </form>
-        {% if next_project_nr is not none %}
-        <a
-          href="/projects/{{ next_project_nr }}"
-          class="sample-quick-nav-link sample-quick-nav-arrow"
-          aria-label="Next project"
-          title="Next project"
-        >&#x203A;</a>
-        {% else %}
-        <span class="sample-quick-nav-disabled sample-quick-nav-arrow" aria-label="No next project" title="No next project">&#x203A;</span>
-        {% endif %}
-      </div>
+      {{ render_detail_action_toolbar(project_edit_form_id) }}
     </div>
-    <p>
-      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
-      {% if user %} | Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>{% endif %}
-    </p>
-    <p class="page-actions">
-      <a href="/projects" class="nav-back" data-history-back data-fallback="/projects">Back</a>
-    </p>
-    {% call render_detail_feedback_toolbar(project_saved, project_save_error, "Project details were saved.", project_edit_form_id) %}{% endcall %}
+    <div class="detail-context-strip">
+      <p class="detail-breadcrumb-line">
+        <a href="/projects" class="nav-back-arrow" data-history-back data-fallback="/projects" aria-label="Back to projects" title="Back to projects">&#x2039; Projects</a>
+        <span class="detail-breadcrumb-sep">·</span>
+        {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+        <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
+        {% if user %}
+        <span class="detail-breadcrumb-sep">·</span>
+        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>
+        {% endif %}
+      </p>
+      {{ render_detail_quick_nav(
+        entity='project',
+        current=project.project_nr,
+        max_nr=max_project_nr,
+        count=project_count,
+        prev_url=('/projects/' ~ previous_project_nr) if previous_project_nr is not none else None,
+        next_url=('/projects/' ~ next_project_nr) if next_project_nr is not none else None,
+        jump_action='/projects/' ~ project.project_nr,
+        jump_name='jump_project',
+      ) }}
+    </div>
+    {{ render_detail_notice_block(project_saved, project_save_error, "Project details were saved.", field_errors=project_field_errors, entity="project") }}
     <form id="{{ project_edit_form_id }}" method="post" action="/projects/{{ project.project_nr }}/save" data-detail-edit-form></form>
   </div>
 
@@ -65,6 +43,7 @@
         'project',
         'Project Name',
         raw_value=project.project,
+        display_value=project_headline.project,
         form_id=project_edit_form_id,
         form_values=project_form_values,
         field_errors=project_field_errors,
@@ -97,6 +76,7 @@
         'project_comment',
         'Project Comment',
         raw_value=project.project_comment,
+        display_value=project_headline.comment,
         form_id=project_edit_form_id,
         form_values=project_form_values,
         field_errors=project_field_errors,

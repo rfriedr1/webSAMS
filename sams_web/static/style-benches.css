@@ -54,10 +54,15 @@
 }
 
 .prep-bench-card {
+  position: relative;
   border: 1px solid #d7e1e7;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff, #f6fbfd);
-  padding: 0.72rem;
+  /* Stronger left accent + brand-coloured title turn each section into
+     a clear "chapter" of the bench form — same visual vocabulary as
+     the detail-page card-group. */
+  padding: 0.85rem 0.9rem 0.85rem 1.1rem;
+  border-left: 3px solid var(--brand);
 }
 
 .prep-bench-card-head {
@@ -66,13 +71,17 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.55rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e3ebef;
 }
 
 .prep-bench-card-head h4 {
   margin: 0;
-  color: #2b4a58;
-  font-size: 0.86rem;
+  color: var(--brand);
+  font-size: var(--text-xs);
   font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .prep-bench-context-grid {
@@ -458,59 +467,7 @@
   }
 }
 
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
-  gap: 0.66rem;
-  margin: 0.8rem 0 1rem;
-}
-
-.cards-standards {
-  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
-}
-
-.cards-standards article {
-  border-width: 2px;
-}
-
-.cards-standards article.indicator-critical {
-  border-color: #dca0a0;
-  background: linear-gradient(180deg, #fff8f8, #ffefef);
-}
-
-.cards-standards article.indicator-warning {
-  border-color: #e6cd9b;
-  background: linear-gradient(180deg, #fffcf4, #fff5dd);
-}
-
-.cards-standards article.indicator-good {
-  border-color: #9fd4a9;
-  background: linear-gradient(180deg, #f4fdf7, #e9f8ed);
-}
-
-.cards-standards article.indicator-neutral {
-  border-color: #c8d4dc;
-  background: linear-gradient(180deg, #f9fbfd, #f2f7fa);
-}
-
-.cards article {
-  border-radius: 14px;
-  border: 1px solid #d8e1e6;
-  background: linear-gradient(180deg, #ffffff, #f5fafc);
-  padding: 0.72rem;
-}
-
-.cards h3 {
-  margin: 0;
-  color: #567281;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.cards p {
-  margin: 0.35rem 0 0;
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #153543;
-}
+/* Base `.cards` styles moved to style-core.css so they're available on
+   every page (dashboard KPI cards, sample/project/target headline cards,
+   etc.). Only bench-page-specific rules remain in this file. */
 

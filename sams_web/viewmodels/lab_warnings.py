@@ -32,12 +32,19 @@ class WarningOutcome:
     `actual` are kept around so the message can mention the configured
     bound, and so future tooling (e.g. an audit log) can inspect the
     numbers without re-evaluating.
+
+    `field_key` is the section-grid row key the warning attaches to —
+    e.g. `"total_c_ug"`. Used by `build_detail_page_context` to derive
+    a `{name}_warnings_by_field` lookup so the section-grid macro can
+    show the same red/⚠ treatment the headline card uses, instead of
+    the warning living only on the headline.
     """
 
     triggered: bool
     threshold: float
     actual: float | None
     message: str
+    field_key: str = ""
 
 
 def _below_minimum_outcome(
@@ -45,6 +52,7 @@ def _below_minimum_outcome(
     threshold_key: str,
     actual: float | None,
     thresholds: dict[str, Any],
+    field_key: str = "",
 ) -> WarningOutcome | None:
     """Generic 'value-below-minimum' check. Returns None if the
     threshold is not configured (so callers can omit the entry from
@@ -65,6 +73,7 @@ def _below_minimum_outcome(
         threshold=threshold_value,
         actual=actual,
         message=f"Below {formatted_threshold} {field.unit} minimum",
+        field_key=field_key,
     )
 
 
@@ -83,6 +92,7 @@ def evaluate_target_warnings(target: Any, thresholds: dict[str, Any]) -> dict[st
         threshold_key="target_total_c_ug_min",
         actual=_coerce_float(total_c_ug),
         thresholds=thresholds,
+        field_key="total_c_ug",
     )
     return {"target_total_c_ug_min": outcome} if outcome else {}
 
@@ -97,5 +107,6 @@ def evaluate_preparation_warnings(
         threshold_key="preparation_yield_percent_min",
         actual=yield_percent,
         thresholds=thresholds,
+        field_key="yield_percent",
     )
     return {"preparation_yield_percent_min": outcome} if outcome else {}
