@@ -20,6 +20,11 @@
      `--text-h*` aliases pin h2/h3/h4 to specific steps. */
   --text-xs: 0.72rem;
   --text-sm: 0.84rem;
+  /* Body / value copy. Sits between sm and md because field values,
+     card text and table cells all lived at 0.88–0.96rem: pushing them
+     to md inflated every page, pulling them to sm made values the
+     same size as their labels. */
+  --text-base: 0.92rem;
   --text-md: 1rem;
   --text-lg: 1.18rem;
   --text-xl: 1.4rem;
@@ -160,7 +165,7 @@ h6 {
   place-items: center;
   color: #fff;
   font-weight: 800;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.03em;
   padding: 0 0.45rem;
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
@@ -169,14 +174,14 @@ h6 {
 
 .brand h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--text-md);
   font-weight: 800;
   line-height: 1.1;
 }
 
 .brand p {
   margin: 0.1rem 0 0;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -199,7 +204,7 @@ h6 {
   justify-content: center;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--text-base);
   color: #34505d;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -240,7 +245,7 @@ h6 {
   justify-content: center;
   text-decoration: none;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: #325362;
   border: 1px solid #ccdbe3;
   border-radius: 999px;
@@ -290,7 +295,7 @@ h6 {
   background: #ffffff;
   color: #25596f;
   padding: 0.26rem 0.42rem 0.26rem 0.7rem;
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -318,7 +323,7 @@ h6 {
   background: #f3f8fb;
   color: #1f3138;
   font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -352,7 +357,7 @@ h6 {
   margin: 0;
   display: block;
   color: #365565;
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -365,7 +370,7 @@ h6 {
   border-radius: 999px;
   border-color: #c6d7e1;
   padding: 0.36rem 0.62rem;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .magic-identifier-patch {
@@ -378,7 +383,7 @@ h6 {
   padding: 0.14rem 0.55rem;
   color: #1f5e77;
   background: #edf7fc;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   text-transform: none;
   white-space: nowrap;
@@ -395,7 +400,7 @@ h6 {
   min-height: 1.95rem;
   border-radius: 999px;
   padding: 0.3rem 0.72rem;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1;
 }
 
@@ -409,7 +414,7 @@ h6 {
   border-color: #b9cdd7;
   background: #f3f8fb;
   color: #2e5e76;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 800;
 }
 
@@ -432,7 +437,7 @@ h6 {
   border: 1px solid #cfdee7;
   border-radius: 999px;
   padding: 0.22rem 0.7rem;
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: #2d5f74;
   background: #f8fcfe;
@@ -497,7 +502,7 @@ h6 {
   border: 1px solid #d4e0e8;
   border-radius: 999px;
   padding: 0.2rem 0.6rem;
-  font-size: 0.77rem;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 
@@ -521,7 +526,7 @@ h6 {
 
 .breadcrumb-separator {
   color: #7893a0;
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 
@@ -549,13 +554,13 @@ h6 {
   background: #f8fcfe;
   color: #2a5f76;
   padding: 0.18rem 0.72rem 0.18rem 0.55rem;
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   line-height: 1;
 }
 
 .quick-pin-toggle-glyph {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   line-height: 1;
 }
 
@@ -585,7 +590,7 @@ h6 {
 
 .quick-access-label {
   color: #55707f;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -606,7 +611,7 @@ h6 {
   text-decoration: none;
   color: #2d5f74;
   background: #f8fcfe;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   line-height: 1.2;
   max-width: 14rem;
@@ -644,7 +649,7 @@ h6 {
 
 .quick-access-empty {
   color: #8a9da7;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
@@ -672,7 +677,7 @@ h6 {
 .cards h3 {
   margin: 0;
   color: #567281;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -714,7 +719,7 @@ h6 {
   position: absolute;
   top: 0.45rem;
   right: 0.55rem;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   color: #b94f4f;
   line-height: 1;
 }
@@ -813,7 +818,7 @@ h6 {
   border-radius: 10px;
   background: #fff;
   padding: 0.6rem;
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
 }
 
 label {
@@ -821,7 +826,7 @@ label {
   gap: 0.45rem;
   align-items: center;
   color: #3e5662;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
 }
 
 input,
@@ -982,7 +987,7 @@ button:focus-visible,
   }
 
   .brand h1 {
-    font-size: 0.95rem;
+    font-size: var(--text-base);
   }
 
   /* The topbar grid drops to two rows: brand + magic-nav, then nav row. */
