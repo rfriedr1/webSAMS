@@ -1,0 +1,350 @@
+{#- Preparation bench entry panel. Included from lab_queue.html, which owns the
+    queue tables; the matching Python side is sams_web/preparation_bench.py.
+    Jinja `include` shares the caller's context, so every variable the
+    router puts in the lab_queue context is available here. -#}
+<section class="panel" id="prep-bench-entry" data-prep-bench>
+  <details class="table-collapsible" open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Preparation Bench Entry</span>
+      <span class="badge table-summary-count">Open</span>
+    </summary>
+    <div style="margin-top: 0.7rem;">
+      <p style="margin: 0 0 0.75rem; color: var(--muted);">Touch-friendly entry screen for preparation weights, dates, and preparation notes.</p>
+
+      <form method="get" action="/lab/preparation" class="prep-bench-lookup-form" data-prep-bench-lookup-form>
+        <input type="hidden" name="show_on_hold" value="{{ 'true' if show_on_hold else 'false' }}" />
+        <label class="prep-bench-lookup-field">
+          <span>Sample #</span>
+          <input
+            type="text"
+            name="bench_sample_nr"
+            value="{{ bench_sample_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Scan barcode or enter sample number"
+            data-prep-bench-scan-input
+          />
+        </label>
+
+        <label class="prep-bench-lookup-field prep-bench-prep-picker">
+          <span>
+            Prep #
+            <span class="prep-bench-lookup-meta">
+              {% if bench_entry and bench_entry.preparations %}
+              ({{ bench_entry.preparations|length }} prep{% if bench_entry.preparations|length != 1 %}s{% endif %})
+              {% else %}
+              (count n/a)
+              {% endif %}
+            </span>
+          </span>
+          {% set prep_lookup_value = bench_prep_nr_query or (bench_entry.preparation.prep_nr if bench_entry else '') %}
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="bench_prep_nr"
+            value="{{ prep_lookup_value }}"
+            inputmode="numeric"
+            autocomplete="off"
+            {% if bench_entry and bench_entry.preparations %}
+            list="prep-bench-prep-options"
+            {% endif %}
+            data-prep-bench-prep-input
+          />
+        </label>
+        {% if bench_entry and bench_entry.preparations %}
+        <datalist id="prep-bench-prep-options">
+          {% for prep_option in bench_entry.preparations %}
+          <option value="{{ prep_option.prep_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+
+        <button type="submit" class="prep-bench-load-button">Load</button>
+      </form>
+
+      {% if bench_saved or bench_notice %}
+      <div class="inline-notice">
+        <strong>{% if bench_saved %}Saved.{% else %}Notice.{% endif %}</strong>
+        {% if bench_notice %}
+        <p>{{ bench_notice }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if bench_error %}
+      <p class="error">{{ bench_error }}</p>
+      {% endif %}
+
+      {% if bench_entry %}
+      {% set bench_sample = bench_entry.sample %}
+      {% set bench_project = bench_entry.project %}
+      {% set bench_user = bench_entry.user %}
+      {% set bench_prep = bench_entry.preparation %}
+      {% set bench_values = bench_form_values or {} %}
+      {% set bench_errors = bench_field_errors or {} %}
+
+      <form method="post" action="/lab/preparation/bench/save" class="prep-bench-form" data-prep-bench-save-form>
+    <input type="hidden" name="bench__sample_nr" value="{{ bench_sample.sample_nr }}" />
+    <input type="hidden" name="bench__prep_nr" value="{{ bench_prep.prep_nr }}" />
+    <input type="hidden" name="bench__show_on_hold" value="{{ '1' if show_on_hold else '0' }}" />
+
+    <div class="prep-bench-layout">
+      <div class="prep-bench-column prep-bench-column-main">
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Sample Context</h4>
+            <span class="badge status-pill">Prep # {{ bench_prep.prep_nr }}</span>
+          </div>
+          <div class="prep-bench-context-grid">
+            <article class="detail-item">
+              <h4>Last Name</h4>
+              <p>
+                {% if bench_user and bench_user.user_nr and bench_user.last_name %}
+                <a href="/submitters/{{ bench_user.user_nr }}" class="table-link">{{ bench_user.last_name }}</a>
+                {% else %}
+                {{ bench_user.last_name if bench_user and bench_user.last_name else '—' }}
+                {% endif %}
+              </p>
+            </article>
+            <article class="detail-item">
+              <h4>Project</h4>
+              <p>
+                {% if bench_project and bench_project.project_nr and bench_project.project %}
+                <a href="/projects/{{ bench_project.project_nr }}" class="table-link">{{ bench_project.project }}</a>
+                {% else %}
+                {{ bench_project.project if bench_project and bench_project.project else '—' }}
+                {% endif %}
+              </p>
+            </article>
+            <article class="detail-item">
+              <h4>Sample Label</h4>
+              <p>{{ bench_sample.user_label or '—' }}</p>
+            </article>
+            <article class="detail-item">
+              <h4>Sample Label #</h4>
+              <p>{{ bench_sample.user_label_nr or '—' }}</p>
+            </article>
+            <article class="detail-item">
+              <h4>Material</h4>
+              <p>{{ bench_sample.material or '—' }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Weights and Dates</h4>
+          </div>
+          <div class="prep-bench-grid">
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_start') %} has-error{% endif %}">
+              <label for="bench-weight-start">Weight Start</label>
+              <input
+                id="bench-weight-start"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_start"
+                value="{{ bench_values['bench__weight_start'] if 'bench__weight_start' in bench_values else (bench_prep.weight_start if bench_prep.weight_start is not none else '') }}"
+                data-prep-bench-weight-start
+              />
+              {% if bench_errors.get('bench__weight_start') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_start'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__prep_start') %} has-error{% endif %}">
+              <label for="bench-prep-start">Prep Start</label>
+              {% set bench_prep_start_value = bench_values['bench__prep_start'] if 'bench__prep_start' in bench_values else ((bench_prep.prep_start.strftime('%Y-%m-%d')) if bench_prep.prep_start else '') %}
+              <input
+                id="bench-prep-start"
+                type="date"
+                name="bench__prep_start"
+                value="{{ bench_prep_start_value }}"
+                data-prep-bench-prep-start
+              />
+              {% if bench_errors.get('bench__prep_start') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_start'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_medium') %} has-error{% endif %}">
+              <label for="bench-weight-medium">Weight Mid</label>
+              <input
+                id="bench-weight-medium"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_medium"
+                value="{{ bench_values['bench__weight_medium'] if 'bench__weight_medium' in bench_values else (bench_prep.weight_medium if bench_prep.weight_medium is not none else '') }}"
+                data-prep-bench-weight-medium
+              />
+              {% if bench_errors.get('bench__weight_medium') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_medium'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_medium_2') %} has-error{% endif %}">
+              <label for="bench-weight-medium-2">Weight Mid 2</label>
+              <input
+                id="bench-weight-medium-2"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_medium_2"
+                value="{{ bench_values['bench__weight_medium_2'] if 'bench__weight_medium_2' in bench_values else (bench_prep.weight_medium_2 if bench_prep.weight_medium_2 is not none else '') }}"
+                data-prep-bench-weight-medium-2
+              />
+              {% if bench_errors.get('bench__weight_medium_2') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_medium_2'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__weight_end') %} has-error{% endif %}">
+              <label for="bench-weight-end">Weight End</label>
+              <input
+                id="bench-weight-end"
+                type="number"
+                step="any"
+                inputmode="decimal"
+                name="bench__weight_end"
+                value="{{ bench_values['bench__weight_end'] if 'bench__weight_end' in bench_values else (bench_prep.weight_end if bench_prep.weight_end is not none else '') }}"
+                data-prep-bench-weight-end
+              />
+              {% if bench_errors.get('bench__weight_end') %}<p class="prep-bench-field-error">{{ bench_errors['bench__weight_end'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field{% if bench_errors.get('bench__prep_end') %} has-error{% endif %}">
+              <label for="bench-prep-end">Prep End</label>
+              {% set bench_prep_end_value = bench_values['bench__prep_end'] if 'bench__prep_end' in bench_values else ((bench_prep.prep_end.strftime('%Y-%m-%d')) if bench_prep.prep_end else '') %}
+              <input
+                id="bench-prep-end"
+                type="date"
+                name="bench__prep_end"
+                value="{{ bench_prep_end_value }}"
+                data-prep-bench-prep-end
+              />
+              {% if bench_errors.get('bench__prep_end') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_end'] }}</p>{% endif %}
+            </div>
+
+            <div class="prep-bench-field prep-bench-field-readonly prep-bench-field-span-2">
+              <label>Yield (%)</label>
+              {% set bench_yield_value = bench_values['bench__yield_percent_display'] if 'bench__yield_percent_display' in bench_values else (bench_entry.yield_percent if bench_entry.yield_percent is not none else '') %}
+              <div class="prep-bench-readout" data-prep-bench-yield>{{ bench_yield_value or '—' }}</div>
+              <input type="hidden" name="bench__yield_percent_display" value="{{ bench_yield_value or '' }}" data-prep-bench-yield-hidden />
+            </div>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Preparation Steps</h4>
+          </div>
+          <div class="prep-bench-step-edit-grid">
+            {% for step_index in range(1, 6) %}
+            {% set step_field = 'step' ~ step_index ~ '_method' %}
+            {% set field_name = 'bench__' ~ step_field %}
+            {% set step_value = bench_values[field_name] if field_name in bench_values else (bench_prep|attr(step_field) or '') %}
+            <div class="prep-bench-field{% if bench_errors.get(field_name) %} has-error{% endif %}">
+              <label for="prep-bench-{{ step_field }}">Step {{ step_index }} Method</label>
+              <select id="prep-bench-{{ step_field }}" name="{{ field_name }}">
+                <option value="">—</option>
+                {% for method_value in bench_method_options or [] %}
+                <option value="{{ method_value }}" {% if step_value|string == method_value|string %}selected{% endif %}>{{ method_value }}</option>
+                {% endfor %}
+              </select>
+              {% if bench_errors.get(field_name) %}<p class="prep-bench-field-error">{{ bench_errors[field_name] }}</p>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <div class="prep-bench-column prep-bench-column-side">
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Flags and Storage</h4>
+          </div>
+          <div class="prep-bench-flag-list">
+            <label class="prep-bench-checkbox-row{% if bench_errors.get('bench__s_no_leftover') %} has-error{% endif %}">
+              <input type="hidden" name="bench__s_no_leftover" value="0" />
+              {% set s_no_leftover_checked = (bench_values.get('bench__s_no_leftover') if 'bench__s_no_leftover' in bench_values else bench_sample.s_no_leftover)|string %}
+              <input
+                type="checkbox"
+                name="bench__s_no_leftover"
+                value="1"
+                data-prep-bench-no-leftover
+                {% if s_no_leftover_checked in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %}
+              />
+              <span>No Leftover</span>
+            </label>
+
+            <label class="prep-bench-checkbox-row is-readonly">
+              <input
+                type="checkbox"
+                disabled
+                data-prep-bench-return-to-sender
+                {% if bench_project and (bench_project.return_to_sender or 0) %}checked{% endif %}
+              />
+              <span>Return to Sender (project)</span>
+            </label>
+
+            <div class="prep-bench-storage-row">
+              <div>
+                <span class="prep-bench-storage-label">Sample Storage Location</span>
+                {% set bench_storage_value = bench_values['bench__s_storage_loc'] if 'bench__s_storage_loc' in bench_values else (bench_sample.s_storage_loc or '') %}
+                <input
+                  type="text"
+                  class="prep-bench-storage-input{% if bench_errors.get('bench__s_storage_loc') %} is-error{% endif %}"
+                  name="bench__s_storage_loc"
+                  value="{{ bench_storage_value }}"
+                  placeholder="—"
+                  aria-label="Sample Storage Location"
+                  data-prep-bench-storage-location
+                />
+                {% if bench_errors.get('bench__s_storage_loc') %}<p class="prep-bench-field-error">{{ bench_errors['bench__s_storage_loc'] }}</p>{% endif %}
+                <p class="prep-bench-field-warning" data-prep-bench-storage-warning hidden></p>
+              </div>
+              <label class="prep-bench-checkbox-row is-readonly">
+                <input type="checkbox" disabled {% if bench_storage_value|string|trim %}checked{% endif %} data-prep-bench-sample-archived />
+                <span>Sample Archived</span>
+              </label>
+            </div>
+
+            <label class="prep-bench-checkbox-row{% if bench_errors.get('bench__stop') %} has-error{% endif %}">
+              <input type="hidden" name="bench__stop" value="0" />
+              {% set bench_stop_checked = (bench_values.get('bench__stop') if 'bench__stop' in bench_values else bench_prep.stop)|string %}
+              <input
+                type="checkbox"
+                name="bench__stop"
+                value="1"
+                {% if bench_stop_checked in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %}
+              />
+              <span>Discarded</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="prep-bench-card">
+          <div class="prep-bench-card-head">
+            <h4>Preparation Comment</h4>
+          </div>
+          <div class="prep-bench-field{% if bench_errors.get('bench__prep_comment') %} has-error{% endif %}">
+            <label for="bench-prep-comment">Comment</label>
+            <textarea
+              id="bench-prep-comment"
+              name="bench__prep_comment"
+              rows="5"
+              placeholder="Add lab notes for this preparation"
+            >{{ bench_values['bench__prep_comment'] if 'bench__prep_comment' in bench_values else (bench_prep.prep_comment or '') }}</textarea>
+            {% if bench_errors.get('bench__prep_comment') %}<p class="prep-bench-field-error">{{ bench_errors['bench__prep_comment'] }}</p>{% endif %}
+          </div>
+        </section>
+
+        <section class="prep-bench-actions" data-prep-bench-actions>
+          <button type="submit" name="bench__action" value="save" class="prep-bench-action-primary">Save</button>
+          <button type="submit" name="bench__action" value="save_next" class="prep-bench-action-secondary">Save &amp; Next</button>
+          <button type="reset" class="prep-bench-action-secondary">Cancel</button>
+          <a href="/samples/{{ bench_sample.sample_nr }}/preparations/{{ bench_prep.prep_nr }}" class="prep-bench-link-button">Open Full Preparation</a>
+        </section>
+      </div>
+    </div>
+      </form>
+      {% else %}
+      <p class="table-empty">Scan or enter a sample number to load the active preparation.</p>
+      {% endif %}
+    </div>
+  </details>
+</section>

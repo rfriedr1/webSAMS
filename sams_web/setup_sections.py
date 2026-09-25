@@ -63,13 +63,6 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         status="active",
         form_action="/setup/email_settings",
     ),
-    SetupSection(
-        key="lab_defaults",
-        title="Lab Defaults",
-        description="Future section for global defaults used in project and sample creation.",
-        editable=False,
-        status="planned",
-    ),
 )
 
 SETUP_SECTION_MAP: dict[str, SetupSection] = {section.key: section for section in SETUP_SECTIONS}

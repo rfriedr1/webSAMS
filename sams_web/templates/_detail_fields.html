@@ -301,3 +301,52 @@
 <div class="detail-row-divider" aria-hidden="true"></div>
 {% endif %}
 {%- endmacro %}
+
+{#- ---------------------------------------------------------------------
+    Secondary section grid: the cards below the headline block on every
+    detail page. Five templates used to hand-write this identical loop;
+    a change to the row call (empty-row flag, warnings, label styling)
+    had to be understood in five places. `css_prefix` selects the card
+    family (`sample` / `project` / `user`); `id_prefix` gives each card an
+    id so an in-page TOC can jump to it.
+    --------------------------------------------------------------------- -#}
+{% macro render_detail_sections(
+  sections,
+  entity,
+  css_prefix='sample',
+  form_id='',
+  read_only_fields=(),
+  editor_value_overrides=None,
+  select_options_by_field=None,
+  required_fields=(),
+  field_errors=None,
+  field_warnings=None,
+  id_prefix=None
+) -%}
+<div class="{{ css_prefix }}-section-grid">
+  {% for section in sections %}
+  <article class="{{ css_prefix }}-section-card"{% if id_prefix %} id="{{ id_prefix }}-{{ loop.index }}"{% endif %}>
+    <header class="{{ css_prefix }}-section-head">
+      <h3>{{ section.title }}</h3>
+      <p>{{ section.description }}</p>
+    </header>
+    <dl class="{{ css_prefix }}-field-list">
+      {% for row in section.rows %}
+      {{ render_detail_field_row(
+        row,
+        entity=entity,
+        row_class=css_prefix ~ '-field-row',
+        form_id=form_id,
+        read_only_fields=read_only_fields,
+        editor_value_overrides=editor_value_overrides,
+        select_options_by_field=select_options_by_field,
+        required_fields=required_fields,
+        field_errors=field_errors,
+        field_warnings=field_warnings
+      ) }}
+      {% endfor %}
+    </dl>
+  </article>
+  {% endfor %}
+</div>
+{%- endmacro %}

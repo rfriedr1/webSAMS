@@ -1,0 +1,383 @@
+{#- Graphitization bench entry panel. Included from lab_queue.html, which owns the
+    queue tables; the matching Python side is sams_web/graphitization_bench.py.
+    Jinja `include` shares the caller's context, so every variable the
+    router puts in the lab_queue context is available here. -#}
+<section class="panel" id="graph-bench-entry" data-graph-bench data-graph-bench-current-sample="{{ graph_bench_entry.sample.sample_nr if graph_bench_entry else '' }}" {% if request.query_params.get('graph_batch_saved') == 'true' %}data-graph-batch-saved="true"{% endif %}>
+  <details class="table-collapsible" open>
+    <summary class="table-summary">
+      <span class="table-summary-title">Graphitization Bench Entry</span>
+      <span class="badge table-summary-count">Open</span>
+    </summary>
+    <div style="margin-top: 0.7rem;">
+      <p style="margin: 0 0 0.75rem; color: var(--muted);">Touch-friendly entry for graphitization target handling and batch composition.</p>
+
+      <form method="get" action="/lab/graphitization" class="prep-bench-lookup-form graph-bench-lookup-form" data-graph-bench-lookup-form>
+        {# Stays `type="text"` so a barcode scan is never silently discarded
+           the way a number input drops non-numeric keystrokes. The explicit
+           steppers give it the same up/down affordance as Prep # / Target #.
+           A <div> rather than a <label> so clicking a stepper does not also
+           fire label activation on the input. #}
+        <div class="prep-bench-lookup-field">
+          <label for="graph-bench-sample-nr">Sample #</label>
+          <div class="prep-bench-stepper">
+            <input
+              id="graph-bench-sample-nr"
+              type="text"
+              name="graph_sample_nr"
+              value="{{ graph_sample_nr_query or '' }}"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Scan barcode or enter sample number"
+              data-graph-bench-sample-input
+            />
+            <span class="prep-bench-stepper-buttons">
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-graph-bench-sample-step="1"
+                tabindex="-1"
+                aria-label="Next sample number"
+              >&#9650;</button>
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-graph-bench-sample-step="-1"
+                tabindex="-1"
+                aria-label="Previous sample number"
+              >&#9660;</button>
+            </span>
+          </div>
+        </div>
+        <label class="prep-bench-lookup-field">
+          <span>Prep #</span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="graph_prep_nr"
+            value="{{ graph_prep_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            data-graph-bench-prep-input
+            {% if graph_bench_entry and graph_bench_entry.preparations %}
+            list="graph-bench-prep-options"
+            {% endif %}
+          />
+        </label>
+        <label class="prep-bench-lookup-field">
+          <span>
+            Target #
+            <span class="prep-bench-lookup-meta">
+              {% if graph_bench_entry and graph_bench_entry.targets %}
+              ({{ graph_bench_entry.targets|length }} target{% if graph_bench_entry.targets|length != 1 %}s{% endif %})
+              {% else %}
+              (count n/a)
+              {% endif %}
+            </span>
+          </span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            name="graph_target_nr"
+            value="{{ graph_target_nr_query or '' }}"
+            inputmode="numeric"
+            autocomplete="off"
+            data-graph-bench-target-input
+            {% if graph_bench_entry and graph_bench_entry.targets %}
+            list="graph-bench-target-options"
+            {% endif %}
+          />
+        </label>
+        {% if graph_bench_entry and graph_bench_entry.preparations %}
+        <datalist id="graph-bench-prep-options">
+          {% for prep_option in graph_bench_entry.preparations %}
+          <option value="{{ prep_option.prep_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+        {% if graph_bench_entry and graph_bench_entry.targets %}
+        <datalist id="graph-bench-target-options">
+          {% for target_option in graph_bench_entry.targets %}
+          <option value="{{ target_option.target_nr }}"></option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+        <button type="submit" class="prep-bench-load-button">Load</button>
+      </form>
+
+      {% if graph_saved or graph_notice %}
+      <div class="inline-notice">
+        <strong>{% if graph_saved %}Saved.{% else %}Notice.{% endif %}</strong>
+        {% if graph_notice %}
+        <p>{{ graph_notice }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if graph_batch_notice %}
+      <div class="inline-notice">
+        <strong>Batch Saved.</strong>
+        <p>{{ graph_batch_notice }}</p>
+      </div>
+      {% endif %}
+      {% if graph_batch_error %}
+      <div class="inline-notice inline-notice-error">
+        <strong>Batch Error.</strong>
+        <p>{{ graph_batch_error }}</p>
+      </div>
+      {% endif %}
+      {% if graph_error %}
+      <p class="error">{{ graph_error }}</p>
+      {% endif %}
+
+      {% if graph_bench_entry %}
+      {% set graph_sample = graph_bench_entry.sample %}
+      {% set graph_project = graph_bench_entry.project %}
+      {% set graph_user = graph_bench_entry.user %}
+      {% set graph_prep = graph_bench_entry.preparation %}
+      {% set graph_target = graph_bench_entry.target %}
+      {% set graph_values = graph_form_values or {} %}
+      {% set graph_errors = graph_field_errors or {} %}
+      {% set graph_prep_storage_value = graph_values['graphbench__prep_storage_loc'] if 'graphbench__prep_storage_loc' in graph_values else (graph_sample.prep_storage_loc or '') %}
+
+      <div class="prep-bench-layout">
+        <div class="prep-bench-column prep-bench-column-main">
+          <form method="post" action="/lab/graphitization/bench/save" class="prep-bench-form" data-graph-bench-target-form>
+            <input type="hidden" name="graphbench__sample_nr" value="{{ graph_sample.sample_nr }}" />
+            <input type="hidden" name="graphbench__prep_nr" value="{{ graph_prep.prep_nr }}" />
+            <input type="hidden" name="graphbench__target_nr" value="{{ graph_target.target_nr }}" />
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Sample Context</h4>
+                <span class="badge status-pill">Target # {{ graph_target.target_nr }}</span>
+              </div>
+              <div class="prep-bench-context-grid">
+                <article class="detail-item">
+                  <h4>Last Name</h4>
+                  <p>
+                    {% if graph_user and graph_user.user_nr and graph_user.last_name %}
+                    <a href="/submitters/{{ graph_user.user_nr }}" class="table-link">{{ graph_user.last_name }}</a>
+                    {% else %}
+                    {{ graph_user.last_name if graph_user and graph_user.last_name else '—' }}
+                    {% endif %}
+                  </p>
+                </article>
+                <article class="detail-item">
+                  <h4>Project</h4>
+                  <p>
+                    {% if graph_project and graph_project.project_nr and graph_project.project %}
+                    <a href="/projects/{{ graph_project.project_nr }}" class="table-link">{{ graph_project.project }}</a>
+                    {% else %}
+                    {{ graph_project.project if graph_project and graph_project.project else '—' }}
+                    {% endif %}
+                  </p>
+                </article>
+                <article class="detail-item">
+                  <h4>Sample Label</h4>
+                  <p>{{ graph_sample.user_label or '—' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Sample Label #</h4>
+                  <p>{{ graph_sample.user_label_nr or '—' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Material</h4>
+                  <p>{{ graph_sample.material or '—' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Prep Weight End</h4>
+                  <p>{{ format_table_cell_value('weight_end', graph_prep.weight_end) or '—' }}</p>
+                </article>
+                <article class="detail-item">
+                  <h4>Prep Discarded</h4>
+                  <p>
+                    <input class="detail-boolean-checkbox" type="checkbox" disabled {% if graph_prep.stop %}checked{% endif %} />
+                  </p>
+                </article>
+                <article class="detail-item">
+                  <h4>Graph Batch</h4>
+                  <p>{{ graph_target.graph_batch or '—' }}</p>
+                </article>
+              </div>
+            </section>
+
+            <section class="prep-bench-card">
+              <div class="prep-bench-card-head">
+                <h4>Graphitization Entry</h4>
+              </div>
+              {% if graph_target.graph_batch %}
+              <div class="inline-notice inline-notice-error" style="margin-bottom: 0.7rem;">
+                <strong>Already Assigned.</strong>
+                <p>This target is already in graph batch <code>{{ graph_target.graph_batch }}</code> and cannot be added to another batch.</p>
+              </div>
+              {% endif %}
+              <div class="graph-bench-entry-stack">
+                <div class="prep-bench-field{% if graph_errors.get('graphbench__weight_combustion') %} has-error{% endif %}">
+                  <label for="graphbench-weight-combustion">Weight Combustion</label>
+                  <input
+                    id="graphbench-weight-combustion"
+                    type="number"
+                    step="any"
+                    inputmode="decimal"
+                    name="graphbench__weight_combustion"
+                    value="{{ graph_values['graphbench__weight_combustion'] if 'graphbench__weight_combustion' in graph_values else (graph_target.weight_combustion if graph_target.weight_combustion is not none else '') }}"
+                  />
+                  {% if graph_errors.get('graphbench__weight_combustion') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__weight_combustion'] }}</p>{% endif %}
+                </div>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__p_no_leftover') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__p_no_leftover" value="0" />
+                  {% set graph_p_no_leftover_checked = (graph_values.get('graphbench__p_no_leftover') if 'graphbench__p_no_leftover' in graph_values else graph_prep.p_no_leftover)|string %}
+                  <input type="checkbox" name="graphbench__p_no_leftover" value="1" data-graph-bench-no-leftover {% if graph_p_no_leftover_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>No Leftover (Prep'd Material)</span>
+                </label>
+
+                <label class="prep-bench-checkbox-row is-readonly">
+                  <input type="checkbox" disabled data-graph-bench-return-to-sender {% if graph_project and (graph_project.prep_return_to_sender or 0) %}checked{% endif %} />
+                  <span>Prep Return to Sender (project)</span>
+                </label>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__c_n_isotop_a_moved') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__c_n_isotop_a_moved" value="0" />
+                  {% set graph_cn_moved_checked = (graph_values.get('graphbench__c_n_isotop_a_moved') if 'graphbench__c_n_isotop_a_moved' in graph_values else graph_sample.c_n_isotop_a_moved)|string %}
+                  <input type="checkbox" name="graphbench__c_n_isotop_a_moved" value="1" {% if graph_cn_moved_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>Moved to CN Analysis</span>
+                </label>
+
+                <div class="graph-bench-storage-inline-row">
+                  <div class="prep-bench-field{% if graph_errors.get('graphbench__prep_storage_loc') %} has-error{% endif %}">
+                    <label for="graphbench-prep-storage-loc">Prep Storage Location</label>
+                    <input
+                      id="graphbench-prep-storage-loc"
+                      type="text"
+                      name="graphbench__prep_storage_loc"
+                      value="{{ graph_prep_storage_value }}"
+                      placeholder="—"
+                      data-graph-bench-prep-storage
+                    />
+                    {% if graph_errors.get('graphbench__prep_storage_loc') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__prep_storage_loc'] }}</p>{% endif %}
+                    <p class="prep-bench-field-warning" data-graph-bench-storage-warning hidden></p>
+                  </div>
+
+                  <label class="prep-bench-checkbox-row is-readonly">
+                    <input type="checkbox" disabled {% if graph_prep_storage_value|string|trim %}checked{% endif %} data-graph-bench-prep-archived />
+                    <span>Prep'd Archived</span>
+                  </label>
+                </div>
+
+                <label class="prep-bench-checkbox-row{% if graph_errors.get('graphbench__stop') %} has-error{% endif %}">
+                  <input type="hidden" name="graphbench__stop" value="0" />
+                  {% set graph_stop_checked = (graph_values.get('graphbench__stop') if 'graphbench__stop' in graph_values else graph_target.stop)|string %}
+                  <input type="checkbox" name="graphbench__stop" value="1" {% if graph_stop_checked in ['1','true','True','on','yes'] %}checked{% endif %} />
+                  <span>Discarded</span>
+                </label>
+
+                <div class="prep-bench-field{% if graph_errors.get('graphbench__target_comment') %} has-error{% endif %}">
+                  <label for="graphbench-target-comment">Target Comment</label>
+                  <textarea id="graphbench-target-comment" name="graphbench__target_comment" rows="4" placeholder="Add graphitization notes">{{ graph_values['graphbench__target_comment'] if 'graphbench__target_comment' in graph_values else (graph_target.target_comment or '') }}</textarea>
+                  {% if graph_errors.get('graphbench__target_comment') %}<p class="prep-bench-field-error">{{ graph_errors['graphbench__target_comment'] }}</p>{% endif %}
+                </div>
+              </div>
+            </section>
+
+            <section class="prep-bench-actions" data-graph-bench-target-actions>
+              <button type="submit" name="graphbench__action" value="save" class="prep-bench-action-primary">Save Target</button>
+              <button type="submit" name="graphbench__action" value="save_next" class="prep-bench-action-secondary">Save &amp; Next</button>
+              <button type="reset" class="prep-bench-action-secondary">Cancel</button>
+              <a href="/samples/{{ graph_sample.sample_nr }}/preparations/{{ graph_prep.prep_nr }}/targets/{{ graph_target.target_nr }}" class="prep-bench-link-button">Open Full Target</a>
+            </section>
+          </form>
+        </div>
+
+        <div class="prep-bench-column prep-bench-column-side">
+          <form
+            method="post"
+            action="/lab/graphitization/bench/save-batch"
+            class="prep-bench-form"
+            data-graph-bench-batch-form
+            data-current-target-sample="{{ graph_sample.sample_nr }}"
+            data-current-target-prep="{{ graph_prep.prep_nr }}"
+            data-current-target-target="{{ graph_target.target_nr }}"
+            data-current-target-user-label="{{ graph_sample.user_label or '' }}"
+            data-current-target-has-graph-batch="{% if graph_target.graph_batch %}1{% else %}0{% endif %}"
+            data-current-target-graph-batch="{{ graph_target.graph_batch or '' }}"
+          >
+            <input type="hidden" name="graphbatch__sample_nr" value="{{ graph_sample.sample_nr }}" />
+            <input type="hidden" name="graphbatch__prep_nr" value="{{ graph_prep.prep_nr }}" />
+            <input type="hidden" name="graphbatch__target_nr" value="{{ graph_target.target_nr }}" />
+            <input type="hidden" name="graphbatch__targets_json" value="[]" data-graph-batch-targets-json />
+
+            {# Builder controls and the staged-target list are one task, so
+               they live in one card: the header carries the batch count and
+               the dirty dot, and the target list is an internal subsection
+               rather than a separate box. #}
+            <section class="prep-bench-card graph-batch-builder" data-graph-batch-targets-card>
+              <div class="prep-bench-card-head">
+                <h4>Graph Batch Builder</h4>
+                <span class="badge status-pill" data-graph-batch-count>0</span>
+              </div>
+              <div class="prep-bench-field">
+                <label>Graphitization System</label>
+                <input type="hidden" value="" data-graph-batch-system />
+                <div class="graph-batch-system-pills" role="group" aria-label="Graphitization System">
+                  {% for system_name in graph_batch_system_options or [] %}
+                  <button
+                    type="button"
+                    class="graph-batch-system-pill"
+                    data-graph-batch-system-pill
+                    data-system-value="{{ system_name }}"
+                    aria-pressed="false"
+                  >{{ system_name }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="prep-bench-field" style="margin-top: 0.55rem;">
+                <label for="graph-batch-name">Batch Name</label>
+                <input
+                  id="graph-batch-name"
+                  type="text"
+                  name="graphbatch__batch_name"
+                  value=""
+                  placeholder="graph_YYMMDD_system"
+                  data-graph-batch-name
+                />
+              </div>
+              <div class="prep-bench-flag-list" style="margin-top: 0.65rem;">
+                <button type="button" class="prep-bench-action-secondary" data-graph-batch-add-current>Add Current Target to Batch</button>
+                <button type="button" class="prep-bench-action-secondary" data-graph-batch-clear>Clear Batch</button>
+              </div>
+              <p class="prep-bench-field-error" data-graph-batch-client-error hidden></p>
+
+              <h5 class="prep-bench-subhead">Batch Targets</h5>
+              <div class="table-wrap table-wrap-dashboard graph-batch-staged-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Sample #</th>
+                      <th>Prep #</th>
+                      <th>Target #</th>
+                      <th>Sample Label</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody data-graph-batch-staged-body>
+                    <tr data-graph-batch-empty-row>
+                      <td colspan="5" class="table-empty">No targets added to the batch yet.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="graph-bench-batch-save-actions">
+                <button type="submit" class="prep-bench-action-primary">Save Batch Assignments</button>
+              </div>
+            </section>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <p class="table-empty">Load a target to start graphitization bench entry.</p>
+      {% endif %}
+    </div>
+  </details>
+</section>

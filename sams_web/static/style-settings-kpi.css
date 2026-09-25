@@ -1,14 +1,14 @@
 .setup-note {
   margin: 0.2rem 0 0.8rem;
-  color: #4a6270;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
 }
 
 .setup-note code {
-  border: 1px solid #d8e2e8;
+  border: 1px solid var(--line-soft);
   border-radius: 8px;
   padding: 0.18rem 0.36rem;
-  background: #f8fbfd;
+  background: var(--surface-tint);
 }
 
 .setup-layout {
@@ -28,12 +28,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.08rem;
-  border: 1px solid #d6e0e6;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
   padding: 0.56rem 0.7rem 0.56rem 0.9rem;
   text-decoration: none;
-  background: #f9fcfe;
-  color: #5b6e78;
+  background: var(--surface-tint);
+  color: var(--muted);
 }
 
 .setup-link strong {
@@ -42,7 +42,7 @@
 }
 
 .setup-link span {
-  color: #7b8d97;
+  color: var(--ink-soft);
   font-size: var(--text-xs);
 }
 
@@ -51,7 +51,7 @@
    the active one truly pops. */
 .setup-link.is-active {
   border-color: #89b6c7;
-  background: #eaf4fa;
+  background: var(--brand-tint);
   color: var(--ink);
   box-shadow: inset 3px 0 0 0 var(--brand);
 }
@@ -62,7 +62,7 @@
 }
 
 .setup-link.is-active span {
-  color: #4a6270;
+  color: var(--ink-soft);
 }
 
 .setup-content {
@@ -91,9 +91,9 @@
   align-items: center;
   gap: 0.9rem;
   padding: 0.62rem 0.7rem;
-  border: 1px solid #d8e2e8;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #f9fcfe;
+  background: var(--surface-tint);
 }
 
 .setup-threshold-label {
@@ -105,7 +105,7 @@
 
 .setup-threshold-label strong {
   font-size: var(--text-base);
-  color: #204150;
+  color: var(--ink-strong);
 }
 
 .setup-threshold-label .setup-note {
@@ -125,7 +125,7 @@
 }
 
 .setup-threshold-unit {
-  color: #4a6270;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   font-weight: 700;
 }
@@ -155,9 +155,9 @@
 }
 
 .setup-placeholder {
-  border: 1px dashed #b6cad4;
+  border: 1px dashed var(--line-strong);
   border-radius: 12px;
-  background: #f8fbfd;
+  background: var(--surface-tint);
   padding: 0.75rem;
 }
 
@@ -171,9 +171,9 @@
 
 .setup-placeholder pre {
   margin: 0;
-  border: 1px solid #d9e4ea;
+  border: 1px solid var(--line-soft);
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface-solid);
   padding: 0.6rem;
   overflow: auto;
   font-size: var(--text-sm);
@@ -215,12 +215,12 @@
 
 .status-planned {
   color: #a06b1d;
-  border-color: #e0c89a;
+  border-color: var(--warn-line);
   background: transparent;
 }
 
 .status-running {
-  color: #126582;
+  color: var(--brand-deep);
   border-color: #9bced9;
   background: transparent;
 }
@@ -248,15 +248,15 @@
 .kpi-chart {
   margin-top: 0.25rem;
   border-radius: 14px;
-  border: 1px solid #d7e0e5;
-  background: linear-gradient(180deg, #ffffff, #f9fcfd);
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, var(--surface-solid), var(--surface-tint));
   padding: 0.75rem;
 }
 
 .kpi-chart h3 {
   margin: 0 0 0.7rem;
   font-size: var(--text-base);
-  color: #35505e;
+  color: var(--ink-soft);
 }
 
 .kpi-collapsible {
@@ -281,7 +281,7 @@
 
 .kpi-summary::after {
   content: "▾";
-  color: #4c6674;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   transition: transform 160ms ease;
 }
@@ -291,7 +291,7 @@
 }
 
 .kpi-summary-title {
-  color: #35505e;
+  color: var(--ink-soft);
   font-family: var(--font-ui);
   font-size: var(--text-base);
   font-weight: 700;
@@ -321,7 +321,7 @@
   gap: 0.4rem;
   margin-bottom: 0.26rem;
   font-size: var(--text-sm);
-  color: #4c6674;
+  color: var(--ink-soft);
 }
 
 .kpi-meta strong {
@@ -333,7 +333,7 @@
   width: 100%;
   height: 0.5rem;
   border-radius: 999px;
-  background: #e8eef2;
+  background: var(--line-soft);
   overflow: hidden;
 }
 
@@ -388,7 +388,7 @@
 }
 
 .kpi-fill-threshold-critical {
-  background: linear-gradient(90deg, #be4646, #d86262);
+  background: linear-gradient(90deg, var(--danger), #d86262);
 }
 
 .kpi-fill-threshold-warning {
@@ -644,13 +644,13 @@
   align-items: start;
   gap: var(--space-3);
   padding: 0.62rem 0.7rem;
-  border: 1px solid #d8e2e8;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #f9fcfe;
+  background: var(--surface-tint);
 }
 
 .setup-heading-meta { display: grid; gap: 0.18rem; min-width: 0; }
-.setup-heading-meta strong { font-size: var(--text-base); color: #204150; }
+.setup-heading-meta strong { font-size: var(--text-base); color: var(--ink-strong); }
 .setup-heading-meta .setup-note { margin: 0; font-size: var(--text-xs); overflow-wrap: break-word; }
 
 .setup-heading-input {
@@ -668,10 +668,10 @@
 .setup-template {
   margin: 0 0 var(--space-3);
   padding: 0.7rem 0.85rem 0.85rem;
-  border: 1px solid #d8e2e8;
+  border: 1px solid var(--line-soft);
   border-left: 3px solid var(--brand);
   border-radius: 12px;
-  background: #f9fcfe;
+  background: var(--surface-tint);
 }
 
 .setup-template legend {
@@ -705,10 +705,10 @@
   gap: var(--space-3);
   align-items: start;
   padding: 0.62rem 0.7rem;
-  border: 1px solid #d8e2e8;
+  border: 1px solid var(--line-soft);
   border-left: 3px solid var(--brand-2);
   border-radius: 12px;
-  background: #f9fcfe;
+  background: var(--surface-tint);
 }
 
 .setup-custom-row .import-field > label {
@@ -716,7 +716,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #7b8d97;
+  color: var(--ink-soft);
 }
 
 .setup-custom-row input,
@@ -742,7 +742,7 @@
   cursor: pointer;
 }
 
-.setup-add-row:hover { background: #eaf4fa; border-style: solid; }
+.setup-add-row:hover { background: var(--brand-tint); border-style: solid; }
 
 @media (max-width: 1024px) {
   .setup-custom-row { grid-template-columns: minmax(0, 1fr); }
@@ -778,7 +778,7 @@
   cursor: pointer;
 }
 
-.setup-test-mail-button:hover:not(:disabled) { background: #eaf4fa; }
+.setup-test-mail-button:hover:not(:disabled) { background: var(--brand-tint); }
 .setup-test-mail-button:disabled { opacity: 0.55; cursor: progress; }
 
 .setup-test-mail-status {
@@ -788,5 +788,5 @@
   color: var(--muted);
 }
 
-.setup-test-mail-status.is-ok { color: #186f3a; }
+.setup-test-mail-status.is-ok { color: var(--success); }
 .setup-test-mail-status.is-error { color: var(--danger); }
