@@ -620,3 +620,173 @@
     width: 100%;
   }
 }
+
+/* --- Import Column Headings section ----------------------------------- */
+
+.setup-subhead {
+  margin: var(--space-5) 0 var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line);
+  color: var(--brand);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.setup-subhead:first-of-type { margin-top: var(--space-3); }
+
+.setup-heading-list { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+
+.setup-heading-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: 0.62rem 0.7rem;
+  border: 1px solid #d8e2e8;
+  border-radius: 12px;
+  background: #f9fcfe;
+}
+
+.setup-heading-meta { display: grid; gap: 0.18rem; min-width: 0; }
+.setup-heading-meta strong { font-size: 0.92rem; color: #204150; }
+.setup-heading-meta .setup-note { margin: 0; font-size: 0.75rem; overflow-wrap: break-word; }
+
+.setup-heading-input {
+  width: 100%;
+  min-height: 4.2rem;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+/* --- E-mail templates -------------------------------------------------- */
+
+.setup-template {
+  margin: 0 0 var(--space-3);
+  padding: 0.7rem 0.85rem 0.85rem;
+  border: 1px solid #d8e2e8;
+  border-left: 3px solid var(--brand);
+  border-radius: 12px;
+  background: #f9fcfe;
+}
+
+.setup-template legend {
+  padding: 0 0.4rem;
+  color: var(--brand);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.setup-template legend code {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.setup-template input[type="text"] {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 1024px) {
+  .setup-heading-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Custom import columns -------------------------------------------- */
+
+.setup-custom-list { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+
+.setup-custom-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid #d8e2e8;
+  border-left: 3px solid var(--brand-2);
+  border-radius: 12px;
+  background: #f9fcfe;
+}
+
+.setup-custom-row .import-field > label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #7b8d97;
+}
+
+.setup-custom-row input,
+.setup-custom-row select,
+.setup-custom-row textarea {
+  width: 100%;
+  min-height: 2rem;
+  font-size: 0.86rem;
+}
+
+.setup-custom-row textarea { min-height: 3.6rem; resize: vertical; }
+
+.setup-add-row {
+  margin-top: var(--space-2);
+  min-height: 2.1rem;
+  padding: 0.3rem 0.9rem;
+  border: 1px dashed var(--brand);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.setup-add-row:hover { background: #eaf4fa; border-style: solid; }
+
+@media (max-width: 1024px) {
+  .setup-custom-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Setup → E-mail: test message ------------------------------------- */
+
+.setup-test-mail {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.setup-test-mail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.setup-test-mail-row input[type="email"] { flex: 1 1 20rem; min-width: 0; }
+
+.setup-test-mail-button {
+  min-height: 2.3rem;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.setup-test-mail-button:hover:not(:disabled) { background: #eaf4fa; }
+.setup-test-mail-button:disabled { opacity: 0.55; cursor: progress; }
+
+.setup-test-mail-status {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.setup-test-mail-status.is-ok { color: #186f3a; }
+.setup-test-mail-status.is-error { color: var(--danger); }

@@ -20,20 +20,12 @@
   </div>
   {% endif %}
 
-  {% if is_truncated %}
-  <p class="table-truncation-notice">
-    Showing the first <strong>{{ truncated_limit }}</strong> submitters for a fast load.
-    Use the search box below to find specific entries, or
-    <a href="?show_all=true">load all submitters</a>.
+  <p class="setup-note">
+    All <strong>{{ total_count }}</strong> submitters are loaded — the search box
+    below filters every one of them.
   </p>
-  {% elif show_all %}
-  <p class="table-truncation-notice">
-    Showing all submitters.
-    <a href="?">Back to fast view</a>
-  </p>
-  {% endif %}
 
-  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Type to filter loaded submitters">
+  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Search all {{ total_count }} submitters by name, organisation or institute">
     <div class="table-wrap submitters-table-wrap">
       <table data-submitters-table>
         <thead>
@@ -56,7 +48,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5">No submitters found.</td>
+            <td colspan="5" class="table-empty-row">No submitters found.</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -274,7 +274,7 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 # reference it via `css_v` so a child template (e.g. lab_queue.html) can
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
-templates.env.globals["css_v"] = "20260503-2"
+templates.env.globals["css_v"] = "20260801-25"
 
 
 def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

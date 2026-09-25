@@ -1,4 +1,7 @@
 @echo off
+rem Workstation / development launcher: reinstalls packages on every start,
+rem runs with --reload and listens on 127.0.0.1 only. On a SERVER use
+rem start_server_windows.bat instead (see docs\server_installation.md).
 setlocal
 
 cd /d "%~dp0"
@@ -29,7 +32,7 @@ if errorlevel 1 exit /b 1
 if "%SAMS_SETUP_DATA_FILE%"=="" set "SAMS_SETUP_DATA_FILE=%CD%\sams_web\setup_data.json"
 
 if "%HOST%"=="" set "HOST=127.0.0.1"
-if "%PORT%"=="" set "PORT=8000"
+if "%PORT%"=="" set "PORT=8502"
 
 echo [run] Starting SAMS Web on http://%HOST%:%PORT%
 echo [run] Press Ctrl+C to stop

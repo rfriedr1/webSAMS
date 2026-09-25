@@ -53,27 +53,33 @@ def _submitter_cursor(data: dict[str, object]) -> NavCursor:
     )
 
 
-SUBMITTER_LIST_DEFAULT_LIMIT = 500
 PROJECT_LIST_DEFAULT_LIMIT = 500
 
 
 @router.get("/submitters")
 def submitters_page(
     request: Request,
-    show_all: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
-    """Submitters list. Capped at SUBMITTER_LIST_DEFAULT_LIMIT rows by
-    default — the full set is ~2 700 rows and rendering all of them
-    pushed the page to ~860 KB. Users who really want everything can
-    pass `?show_all=true`."""
+    """Submitters list — the whole table, always.
+
+    This used to cap at 500 rows for page weight, but the in-table filter
+    only narrows rows that are already rendered, so searching "Friedrich"
+    found nothing: the first 500 rows alphabetically stop at
+    "Ebinger-Rist". A silent miss on a record that exists is far worse
+    than the weight, and the full set measures ~846 KB / ~67 ms, so the
+    cap bought little. `/projects` keeps its cap — 12 985 rows render to
+    ~9.2 MB, an order of magnitude more, and has a server-side search
+    box instead.
+    """
     settings = get_settings()
     submitters = []
     error: str | None = None
     error_trace: str | None = None
-    effective_limit = None if show_all else SUBMITTER_LIST_DEFAULT_LIMIT
+    total_count = 0
     try:
-        submitters = service.list_submitters(limit=effective_limit)
+        total_count = service.repo.count_submitters()
+        submitters = service.list_submitters(limit=None)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Failed loading submitters list")
         if settings.debug:
@@ -82,11 +88,6 @@ def submitters_page(
         else:
             error = "Failed to load submitters. Enable SAMS_DEBUG=true for traceback details."
 
-    is_truncated = (
-        not show_all
-        and len(submitters) >= SUBMITTER_LIST_DEFAULT_LIMIT
-    )
-
     return templates.TemplateResponse(
         "submitters.html",
         {
@@ -94,9 +95,7 @@ def submitters_page(
             "submitters": submitters,
             "error": error,
             "error_trace": error_trace,
-            "is_truncated": is_truncated,
-            "truncated_limit": SUBMITTER_LIST_DEFAULT_LIMIT,
-            "show_all": show_all,
+            "total_count": total_count,
         },
     )
 
@@ -215,6 +214,7 @@ def submitter_projects_page(request: Request, user_nr: int, service: SamsService
 def projects_page(
     request: Request,
     days_window: int = Query(default=300, ge=1, le=3650),
+    q: str = Query(default=""),
     show_all: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
@@ -230,6 +230,9 @@ def projects_page(
     projects = []
     error: str | None = None
     error_trace: str | None = None
+    query = q.strip()
+    total_count = 0
+    match_count = 0
     effective_limit = None if show_all else PROJECT_LIST_DEFAULT_LIMIT
     try:
         projects_in_progress = service.get_projects_in_progress(days_window=days_window)
@@ -241,7 +244,9 @@ def projects_page(
         else:
             projects_in_progress_error = "Failed to load projects in progress. Enable SAMS_DEBUG=true for traceback details."
     try:
-        projects = service.list_projects(limit=effective_limit)
+        total_count = service.repo.count_projects()
+        match_count = service.repo.count_projects(query) if query else total_count
+        projects = service.list_projects(query=query or None, limit=effective_limit)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Failed loading projects list")
         if settings.debug:
@@ -269,6 +274,9 @@ def projects_page(
             "is_truncated": is_truncated,
             "truncated_limit": PROJECT_LIST_DEFAULT_LIMIT,
             "show_all": show_all,
+            "query": query,
+            "total_count": total_count,
+            "match_count": match_count,
         },
     )
 

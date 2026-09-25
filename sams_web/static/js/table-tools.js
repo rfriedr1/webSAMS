@@ -412,6 +412,36 @@
     });
   };
 
+  // `2026-01-28` carries two hyphens, and a hyphen is a legal line-break
+  // opportunity, so a narrow column happily renders it as `2026-` /
+  // `01-28`. Detect date columns from their own content — not from the
+  // header wording, which varies per table — and stop them wrapping.
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+  const applyAtomicValueColumnClasses = (headers, entries) => {
+    headers.forEach((header, columnIndex) => {
+      let seen = 0;
+      const allDates = entries.every((entry) => {
+        const cell = entry.row.cells.item(columnIndex);
+        if (!cell) return true;
+        const text = normalizeWhitespace(cell.textContent || "");
+        if (!text || text === "\u2014") return true;
+        seen += 1;
+        return ISO_DATE.test(text);
+      });
+      if (!allDates || seen === 0) {
+        return;
+      }
+      header.classList.add("table-col-atomic");
+      entries.forEach((entry) => {
+        const cell = entry.row.cells.item(columnIndex);
+        if (cell) {
+          cell.classList.add("table-col-atomic");
+        }
+      });
+    });
+  };
+
   const enhanceTableContainer = (container) => {
     if (container.dataset.tableEnhanced === "true") {
       return;
@@ -443,6 +473,7 @@
     }
 
     applyCompactIdentifierColumnClasses(headers, entries);
+    applyAtomicValueColumnClasses(headers, entries);
 
     const sortableHeaders = headers.filter((header) => header.getAttribute("data-no-sort") !== "true");
     sortableHeaders.forEach((header) => {

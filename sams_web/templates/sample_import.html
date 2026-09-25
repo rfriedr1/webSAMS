@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-import.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/sample-import.js?v={{ css_v }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="panel import-panel" data-sample-import>
+  <div class="panel-head">
+    <div class="sample-head-row">
+      <h2>Import Samples</h2>
+    </div>
+    <p class="import-intro">
+      Upload a filled-in submission workbook. Columns may be renamed, reordered, or added —
+      the importer finds them by their headings.
+    </p>
+
+    {# Stepper. JS toggles which stage is visible; steps 1-3 are the
+       import itself, step 4 is the optional confirmation e-mail. #}
+    <ol class="import-steps" data-import-steps aria-label="Import progress">
+      <li class="import-step is-current" data-step="upload">
+        <span class="import-step-mark">1</span><span class="import-step-label">Upload</span>
+      </li>
+      <li class="import-step" data-step="review">
+        <span class="import-step-mark">2</span><span class="import-step-label">Review &amp; fix</span>
+      </li>
+      <li class="import-step" data-step="lab">
+        <span class="import-step-mark">3</span><span class="import-step-label">Lab values</span>
+      </li>
+      <li class="import-step" data-step="done">
+        <span class="import-step-mark">4</span><span class="import-step-label">Imported</span>
+      </li>
+    </ol>
+  </div>
+
+  <p class="import-error" data-import-error role="alert" hidden></p>
+
+  <!-- ============================ STEP 1: UPLOAD ======================= -->
+  <div class="import-stage" data-stage="upload">
+    <label class="import-dropzone" data-dropzone>
+      <input type="file" accept=".xlsx,.xlsm" data-file-input class="sr-only" />
+      <span class="import-dropzone-icon" aria-hidden="true">&#8681;</span>
+      <span class="import-dropzone-title">Drop the submission workbook here</span>
+      <span class="import-dropzone-hint">
+        or <strong>click to choose a file</strong> &middot; .xlsx up to {{ max_upload_mb }} MB
+      </span>
+      <span class="import-dropzone-busy" data-dropzone-busy hidden>
+        <span class="import-spinner" aria-hidden="true"></span> Reading workbook&hellip;
+      </span>
+    </label>
+
+    <div class="import-upload-aside">
+      <article class="import-note">
+        <h3>What gets created</h3>
+        <p>
+          One <strong>project</strong> under the submitter, plus one <strong>sample</strong>
+          per row — each with preparation&nbsp;#1 (carrying the prep steps you choose) and
+          target&nbsp;#1.
+        </p>
+      </article>
+      <article class="import-note">
+        <h3>Returning customers</h3>
+        <p>
+          Existing submitters and their projects are matched automatically. You confirm every
+          match before anything is written.
+        </p>
+      </article>
+      {% if template_available %}
+      <article class="import-note">
+        <h3>Blank template</h3>
+        <p>
+          Need the current form to send to a customer?
+          <a href="/samples/import/template">Download Submit_Samples_Template.xlsx</a>
+        </p>
+      </article>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ============================ STEP 2: REVIEW ======================= -->
+  <div class="import-stage" data-stage="review" hidden>
+    <div class="import-review-head">
+      <p class="import-source" data-source-summary></p>
+      <button type="button" class="import-restart" data-restart>Use a different file</button>
+    </div>
+
+    <section class="import-alerts" data-alerts hidden>
+      <h3 class="import-alerts-title" data-alerts-title></h3>
+      <ul class="import-alert-list" data-alert-list></ul>
+    </section>
+
+    <section class="card-group">
+      <h4 class="card-group-title">Submitter</h4>
+      <div class="import-party" data-submitter></div>
+    </section>
+
+    <section class="card-group">
+      <h4 class="card-group-title">Invoice recipient</h4>
+      <div class="import-party" data-invoice></div>
+    </section>
+
+    <section class="card-group">
+      <h4 class="card-group-title">Project</h4>
+      <div class="import-project" data-project></div>
+    </section>
+
+    <div class="import-actions">
+      <p class="import-actions-status" data-review-status></p>
+      <button type="button" class="import-primary" data-goto-lab>Continue to lab values</button>
+    </div>
+  </div>
+
+  <!-- ============================ STEP 3: LAB VALUES =================== -->
+  <div class="import-stage" data-stage="lab" hidden>
+    <div class="import-review-head">
+      <p class="import-source" data-lab-summary></p>
+      <button type="button" class="import-restart" data-back-review>&#8249; Back to review</button>
+    </div>
+
+    <section class="import-alerts" data-lab-alerts hidden>
+      <h3 class="import-alerts-title" data-lab-alerts-title></h3>
+      <ul class="import-alert-list" data-lab-alert-list></ul>
+    </section>
+
+    {# Groups: rows sharing the customer's own material wording. Setting a
+       group's lab values applies to every row in it — the fast path. #}
+    <section class="card-group">
+      <h4 class="card-group-title">Assign by group</h4>
+      <p class="import-fixups-hint">
+        Rows are grouped by the material the customer wrote. Set the lab's type, material,
+        fraction and preparation steps once per group; individual rows can still be changed
+        in the table below.
+      </p>
+      <div class="import-groups" data-groups></div>
+    </section>
+
+    <section class="card-group">
+      <div class="import-samples-head">
+        <h4 class="card-group-title">Samples</h4>
+        <p class="import-samples-count" data-sample-count></p>
+      </div>
+
+      <details class="table-collapsible import-mapping">
+        <summary class="table-summary">
+          <span class="table-summary-title">Column mapping</span>
+          <span class="badge table-summary-count" data-mapping-count></span>
+        </summary>
+        <div class="import-mapping-body">
+          <p class="import-fixups-hint">
+            How each spreadsheet column was interpreted. To make a heading recognised
+            automatically next time, add it in
+            <a href="/setup?section=import_column_headings">Setup &rarr; Import Column Headings</a>.
+          </p>
+          <div class="import-mapping-grid" data-mapping-grid></div>
+        </div>
+      </details>
+
+      {# Sheet columns are toggleable: this step is about lab vocabulary, so
+         the wide free-text columns start hidden but stay one click away. #}
+      <div class="import-column-toggles" data-column-toggles role="group" aria-label="Sheet columns shown">
+        <span class="import-column-toggles-label">Columns</span>
+        <div class="import-column-chips" data-column-chips></div>
+      </div>
+
+      {# Tick-and-apply toolbar for arbitrary selections. #}
+      <div class="import-bulkbar" data-bulkbar hidden>
+        <span class="import-bulkbar-count" data-bulk-count></span>
+        <select data-bulk-field aria-label="Field to set"></select>
+        <select data-bulk-value aria-label="Value to apply"></select>
+        <button type="button" class="import-secondary" data-bulk-apply>Apply to selected</button>
+        <button type="button" class="import-restart" data-bulk-clear>Clear selection</button>
+      </div>
+
+      <div class="table-wrap import-table-wrap">
+        <table class="import-table" data-sample-table>
+          <thead data-sample-head></thead>
+          <tbody data-sample-body></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="import-actions">
+      <p class="import-actions-status" data-commit-status></p>
+      <button type="button" class="import-primary" data-commit>Import samples</button>
+    </div>
+  </div>
+
+  <!-- ============================ STEP 4: DONE + EMAIL ================= -->
+  <div class="import-stage" data-stage="done" hidden>
+    <div class="import-done" data-done></div>
+    <section class="card-group import-email" data-email-section hidden>
+      <h4 class="card-group-title">Confirmation e-mail</h4>
+      <div data-email></div>
+    </section>
+  </div>
+</section>
+{% endblock %}

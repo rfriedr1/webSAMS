@@ -28,6 +28,7 @@
 - `sams_web/main.py`: FastAPI app setup
 - `sams_web/models.py`: SQLAlchemy ORM models. Class names use domain language (`Submitter`); table names stay legacy (`user_t`).
 - `sams_web/repositories.py`: DB access/query layer
+- `sams_web/sample_import/`: Excel submission-sheet import (see "Sample Import" below)
 - `sams_web/services.py`: business logic/workflows
 - `sams_web/detail_update.py`: generic single-entity form-update primitive (`apply_detail_update` + `DetailUpdateConfig` per entity). All write paths flow through here; per-entity configs live next to the viewmodels.
 - `sams_web/detail_page.py`: generic detail-page context builder (`build_detail_page_context` + `DetailPageConfig`). Read side of detail pages.
@@ -51,11 +52,16 @@
 ## Runtime and Configuration
 - Python environment: `.venv` (local virtual environment)
 - Install: `pip install -e .`
-- Start app: `uvicorn sams_web.main:app --reload`
+- Start app: `uvicorn sams_web.main:app --reload --port 8502` (or `./start_webapp_macos.sh`). **The app runs on port 8502**, not uvicorn's default 8000 — both start scripts default to it; override with `PORT=…`.
 - Default env examples in `.env.example`
+- **Servers**: install from `requirements.lock.txt` (exact pins) + `pip install --no-deps -e .`, start with `start_server_windows.bat` (no `--reload`, no package installs, binds `0.0.0.0`, one worker, honours `.env`). The full procedure is `docs/server_installation.md` — **update it whenever the port, env vars, settings path, start command or dependencies change.** `start_webapp_*.{bat,sh}` are workstation launchers only.
+- **Regenerating the lock** after a deliberate upgrade: `pip freeze --exclude-editable`, then re-add the two platform markers — `uvloop` has no Windows build (`; sys_platform != "win32"`) and `colorama` is Windows-only.
+- **No login exists yet**: the app must stay on the lab network. Planned: IIS in front with Windows Authentication (guide §13).
+- `.gitattributes` forces CRLF for `*.bat` on checkout — cmd.exe mis-parses LF-only batch files.
 - Key variables:
-- `SAMS_DATABASE_URL` (default: `mysql+pymysql://mams:Micadas.1@192.168.123.30/db_dmams`)
-- `SAMS_SETUP_DATA_FILE` (default: `sams_web/setup_data.json`)
+- `SAMS_DATABASE_URL` — **required, no default** (`config.py` refuses to start without it). Format `mysql+pymysql://<USER>:<PASSWORD>@<HOST>/<DATABASE>`; the real value lives only in the gitignored `.env`. Never write credentials into a tracked file.
+- `SAMS_SETUP_DATA_FILE` (default: `sams_web/setup_data.json`) — the **live** settings file. It is gitignored because it holds the SMTP password; on a server point it at an absolute path outside the checkout (e.g. `C:\ProgramData\webSAMS\setup_data.json`) so `git pull` never touches it.
+- `sams_web/setup_data.example.json` is the secret-free, tracked snapshot. `SetupStore` reads it whenever the live file does not exist yet, so a fresh install starts with the lab's settings; the first save writes the live file. To carry a settings change into git, copy it into the example and blank every password.
 
 ## UX/UI Invariants (Keep Consistent)
 - Use modern design patters regarding visual alignment and sizing of UI objects and logical separation of control groups  
@@ -72,14 +78,21 @@
 - Prefer inline links in tables for navigation to details (instead of row-click navigation).
 - Keep link-column style consistent (underlined, colored, bold).
 - In detail cards/views, align field values (text/number/date) to the right for scanability; keep comment/multiline fields left-aligned.
+- **Detail rows whose value is longer than 24 characters stack**: label on its own line, value full-width and left-aligned (`.detail-field-row.is-long-value`, set in `_detail_fields.html` from the value's length). A side-by-side label/value pair only reads well while the value is short; institution names, addresses and e-mails otherwise wrap into ribbons. The rule is length-driven, not field-name-driven, so it holds for every entity.
 - In detail cards/views, do not use per-field hairlines; use subtle divider lines only at explicit group transitions.
+- **The field box (`.detail-field-shell`) is an editing affordance, not decoration.** In view mode it is drawn with a transparent border and no fill, so a section reads as a plain label/value list; the box appears on hover of an editable row, in edit mode, quick-edit, dirty, error and warning states. Keep the border 1px transparent rather than removing it, so switching modes never shifts layout. (Before this, ~40 outlined boxes per detail page — most holding only `—` — were the largest source of visual noise.)
+- **Field labels are sentence case** (`var(--text-sm)`, weight 600, muted). Uppercase tracked text is reserved for `.card-group-title` and section heads, so structure outranks fields.
+- **Empty rows collapse per section.** The row macro adds `.is-empty-value` when `row.value is none`; `detail-empty-fields.js` hides those rows (`.is-empty-hidden`) behind a per-section "N empty fields hidden" toggle whose state persists for the session. Edit mode overrides the hiding through CSS so every field stays fillable, and the toggle itself is hidden while editing. Uses a dedicated class, not `hidden`, precisely so the edit-mode override can win without `!important`.
 - In detail pages, edit mode should be in-place: the same field box switches from display to editor (no duplicated display+editor stacked layout).
 - Minimize layout shift in edit mode (stable row/card height where possible); multiline/comment fields may expand when needed.
 - Highlight editable fields subtly in edit mode and visually mark changed (dirty-dots) fields.
 - Use the same dirty-dot visual pattern for task-focused bench UIs (e.g. `Preparation Bench Entry`, `Graphitization Bench Entry`) so users can quickly see unsaved changes and where they were made.
 - Detail-page edit controls (`Edit`, `Save`, `Cancel`) should be right-aligned and visually lightweight (no persistent instructional hint text).
 - When saving detail-page edits, show clear progress feedback on the `Save` button (spinner/loading state), and temporarily disable edit toolbar buttons to prevent double-submit while the request is in progress.
-- Global search table can allow horizontal scrolling if needed.
+- Tables use `table-layout: auto` with `min-width: 100%`, so each column takes the width its content needs; `.table-wrap` scrolls horizontally when the total exceeds the panel. Never go back to `table-layout: fixed` — it split the width evenly and shredded long values (a project name got the same 109px as a 3-digit count).
+- `td` uses `overflow-wrap: break-word`, never `word-break: break-word` / `overflow-wrap: anywhere`. The latter zeroes the cell's min-content contribution, letting an auto-layout column collapse below its longest word.
+- `thead th` never wraps, so a column is always at least as wide as its own label.
+- Date columns are detected from cell content by `table-tools.js` and tagged `.table-col-atomic` (nowrap + tabular numerals) — a hyphen is a legal break opportunity, so `2026-01-28` otherwise wraps to `2026-` / `01-28`.
 - **Empty values render as a muted italic em-dash (`—`)**, never `Not set` or `null` or `N/A`. The dash uses `.detail-empty` styling (italic, low contrast). The detection helper is `viewmodels.detail_sections_common.is_empty_display_value(value)` — it returns True for `None`, blank/whitespace strings, sentinel string tokens (`"undefined"`, `"null"`, `"n/a"`, `"none"`), and **sentinel dates with year < 1950** (legacy null stand-ins like `1899-12-30`). All `format_*_value` formatters route through this helper. New value formatters should call it; new templates should render the `—` via `<span class="detail-empty">—</span>`.
 - **Long detail-page metadata sections collapse by default.** Use `<details>` (no `open` attribute) for "Additional Metadata" blocks. When the block holds 2+ sections, render an in-page TOC chip row at the top so operators can jump.
 - **Sections whose every row is empty are dropped at build time.** Pass `drop_all_empty_sections=True` to `build_sections(...)` for verbose detail pages (sample currently uses this — preparation/target/project don't, by choice).
@@ -98,6 +111,10 @@
 - `/prep` opens `Lab/Preparation`
 - `/graph` opens `Lab/Graphitization`
 - `/ana` opens `Lab/Analysis`
+- `/sub` opens `Samples/Submitters` (the list — distinct from the `sub<number>` prefix, which opens one submitter)
+- `/proj` opens `Samples/Projects`
+- `/import` opens `Samples/Import`
+- Commands are matched *before* the `pr` / `sub` prefixes and always start with `/`, so a new command can never shadow an identifier form. Add one by extending `MAGIC_IDENTIFIER_COMMAND_ROUTES` + `..._LABELS` in `magic_nav.py`; the `/help` rules table is generated from those dicts, but the cheat-sheet overlay (`magic-nav-ui.js`), the command palette's own `magicCommandMap` (`navigation-ui.js`), the input's rotating placeholders (`base.html`), the `/help` prose list and `not_found.html` are hand-written and must be updated too.
 - Unknown pattern: show `unknown ID`.
 - Not-found IDs: show inline error in the patch area and do not navigate.
 - Keep `/help` updated whenever Magic Nav behavior changes (prefixes, labels, validation, or routing targets).
@@ -156,9 +173,12 @@
 ## Frontend Modules and Shared Behaviours
 - **Headline values come from the headline builders, never raw ORM attributes.** Every value a detail-page card displays must route through the entity's `build_*_headline` (which calls `format_*_value`) — templates read `{name}_headline.<key>`. Passing `sample.type` directly leaks legacy sentinel strings like `"undefined"` and sentinel dates into the UI. Editable cards pass `display_value={name}_headline.<key>` alongside `raw_value`.
 - **Global asset bundles**: `base.html` loads `/static/bundle.css` + `/static/bundle.js` (concatenated + minified in `main.py`, cached per process, `Cache-Control: immutable`). **Bump the `css_v` global in `routers/pages_shared.py` whenever any static asset changes** — it's the cache-bust signal. Bench CSS/JS load only on the bench page via `extra_styles`/`extra_scripts` blocks.
+- **Page-specific JS registers into `window.SAMSAppInstallers`; `app.js` dispatches the list.** `app.js` ships inside `bundle.js`, which is the *first* deferred script, so its dispatch must wait for `DOMContentLoaded` — `document.readyState === "interactive"` is already true while later deferred scripts (the bench modules) are still pending. Running on `interactive` silently no-opped `installers.installGraphitizationBench?.()` and killed both bench UIs. Only `readyState === "complete"` may run immediately.
 - **`[hidden]` always wins**: `style-core.css` has a global `[hidden] { display: none !important; }` reset. Never work around it with a class-based show/hide; toggle the `hidden` property.
 - **Design tokens**: type scale (`--text-xs` … `--text-3xl`, `--text-h2/h3/h4`) and 4px spacing scale (`--space-1` … `--space-6`) live in `:root` in `style-core.css`. New CSS should reference tokens, not ad-hoc rem values.
-- **Big list pages truncate server-side**: `/projects` and `/submitters` cap at 500 rows with a "Showing first N … load all" banner (`?show_all=true` disables). Follow this pattern for any new list page over a full table.
+- **A capped list must never rely on the in-table filter for search.** `table-tools.js` filters only the rows already in the DOM, so on a truncated list it silently reports "no matches" for records that exist — searching *Friedrich* on `/submitters` found nothing because the first 500 rows alphabetically stopped at *Ebinger-Rist*. Either load the whole table or give the page a server-side search box; never a cap plus a client-side filter alone.
+- `/submitters` **loads all rows** (~2 700 → ~846 KB / ~70 ms), so its one search box filters everything.
+- `/projects` keeps the 500-row cap (12 985 rows render to ~9.2 MB, an order of magnitude worse) and instead has a **server-side** search form (`?q=`) covering project name, number, status and submitter, plus `?show_all=true`. `repositories.count_projects()` / `count_submitters()` back the honest "N of M" banners.
 - **Starlette is pinned `<1.0`** in `pyproject.toml`: Starlette 1.0 changed `TemplateResponse(name, ctx)` → `TemplateResponse(request, name, ctx)`. Migrate all ~27 call sites before lifting the pin.
 - **Sub-nav rows only render for modules with 2+ destinations** — single-chip sub-navs that duplicate the main nav item are deliberately removed (`navigation.py`).
 - **Toasts**: `window.SAMSToast.show(message, kind, { duration })`. `kind` defaults to `info`; `duration` defaults to ~4.5s, pass `0` for sticky. Auto-fires on save query params.
@@ -179,6 +199,30 @@
 - Detail-page integration is declarative: the entity's `DetailPageConfig` carries a `warnings_builder` callable, and `build_detail_page_context` exposes results as `{name}_warnings`. Templates branch via `render_detail_display_card(..., warning=*_warnings.get('<threshold_key>'))` — the macro handles the red-card highlight and the inline hint.
 - To add a new warning: (1) append a `LabWarningThresholdField` entry, (2) extend the relevant `evaluate_*_warnings` function (or write a new one + wire it via `warnings_builder`), and (3) reference the warning key in the right card on the detail template. The Setup UI picks up the field automatically.
 
+## Sample Import (Excel submission sheets)
+- Customers return filled-in copies of `templates/Submit_Samples_Template.xlsx`. The importer reads the `.xlsx` **directly** — no CSV export step (that was a legacy Delphi limitation).
+- Wizard at `/samples/import` (Samples → Import), four steps: **Upload → Review & fix → Lab values → Imported (+ e-mail)**.
+- Module layout in `sams_web/sample_import/`:
+	- `vocabulary.py` — normalisation + fuzzy label matching, and the *built-in* heading synonyms.
+	- `fields.py` — **the importable-field registry.** Built-in fields plus operator-defined ones resolved into one `FieldRegistry` (synonyms / labels / allow-list / lookup-backed set). `SAMPLE_TARGET_COLUMNS` is derived from the `Sample` ORM model, so a new model column is automatically available as an import target; `BLOCKED_TARGET_COLUMNS` keeps identity and BATS-owned result columns off-limits.
+	- `workbook.py` — `.xlsx` → normalized `Grid` of `Cell`s; picks the submission worksheet by content score.
+	- `parser.py` — finds the sample-table header by *scoring every row* against the registry's headings, then reads the metadata block above it as `label | value` pairs. **Nothing is addressed by fixed row/column index.**
+	- `draft.py` — typed, JSON-serialisable results; every value carries its source cell address.
+	- `matching.py` — submitter scoring (e-mail ≫ surname+organisation ≫ surname) and lookup resolution.
+	- `commit.py` — the single transaction. `mailer.py` — render + SMTP send. `service.py` — glue for the router.
+- **Adding an import column needs no code change.** Setup → *Import Column Headings* has two parts: extra spellings for built-in fields, and *Additional columns* where the operator picks a target `sample_t` column, a label, and the headings that map to it. Stored in `setup_data.json` as `{"headings": {...}, "custom": [...]}`; the old flat shape is still read.
+- **Layout flexibility.** Header row = whichever row scores ≥ 2 recognised columns (`MIN_HEADER_MATCHES`). Unrecognised columns are kept per-row in `SampleDraft.extras` and offered for manual mapping — data is never silently dropped. Template helper text ("erforderlich/required") is filtered by `is_noise()`.
+- **Controlled vocabularies are enforced server-side.** `material` / `type` / `fraction` must exist in `material_t` / `sampletype_t` / `fraction_t`; near misses are *suggestions*, never silent coercion, and `commit.py` re-validates the browser payload and falls back to `"undefined"`.
+- **Lab values vs customer values.** The customer's own material text is only a *grouping key*. Step 3 groups rows by it and the operator assigns the lab's `type` / `material` / `fraction` plus prep steps 1–5 (`method_t`) per group — with a tick-rows-and-apply toolbar for arbitrary selections, and per-row overrides in the table. Only an exact lookup hit is pre-applied; fuzzy suggestions wait for a click.
+- **Submitter / invoice.** Scored candidates first, a browse-and-search picker over all submitters, or create-new with the full editable field set (incl. `salutation`, `title`, `language`, `user_comment` — `language` selects the e-mail template). The invoice recipient is a *second* `user_t` row linked via `project_t.invoice_nr`, and is matched independently.
+- **Duplicate projects.** When the chosen submitter already has a same/similar-named project, the wizard offers *add to that project* or *create a separate one* with a suggested `<name>_<Month>_<Year>`. Appending skips project creation and leaves the existing project's settings untouched.
+- Project fields come from lookup tables: `projecttype_t`, `research_t`, `reporttype_t`, `advisor_t` (supervisor), plus priority 0/1/2 and the `free_of_charge` / `return_to_sender` / `prep_return_to_sender` flags.
+- Intake defaults (`commit.py`): `status='planned'`, `priority=1`, `price='300'`, `in_date=today`, `desired_date=+90 days`, sample `type/material/fraction='undefined'`, `editable=1`.
+- **Column widths come from the live MySQL schema, not `models.py`** — the ORM over-declares several (`user_label` is 100 in the DB, `material` 20). See `_SAMPLE_WIDTHS` / `_CONTACT_WIDTHS` / `_PROJECT_WIDTHS`.
+- A commit creates, in one transaction: submitter (reused or new) → optional invoice recipient → project (new or existing) → one sample per row, each with preparation #1 carrying its prep steps, and target #1.
+- **Setup → E-mail has a *Send a test e-mail* panel** (`POST /setup/email/test`). It posts the fields as currently typed — unsaved edits included — so settings can be verified before saving; a field sent empty is honoured as empty (blanking the username really does test an unauthenticated relay). The **password is the one exception**: it is never rendered back into the page, and blank means "reuse the stored one" both here and on save. Test sends never copy the configured Bcc.
+- **Confirmation e-mail is never sent automatically.** After a commit the wizard renders the message (recipient, subject, body with `MAMS-<nr>` numbers paired to the customer's labels) and the operator edits, skips, or clicks Send. SMTP settings and per-language templates live in Setup → *E-mail*; `EmailSettingsStore.template_for_language()` picks by the submitter's `language`, falling back to English. Mail failures never roll back the import — the records are already committed.
+
 ## Current Workflow Notes
 - Main navigation labels:
 - `Dashboard`
@@ -189,7 +233,7 @@
 - `Help`
 - `API Docs`
 - Secondary navigation:
-- Under `Samples`: `Sample`, `Projects`, `Submitters`
+- Under `Samples`: `Sample`, `Projects`, `Submitters`, `Import`
 - Under `Lab`: `Preparation`, `Graphitization`, `Analysis`
 - Breadcrumb navigation is shown on pages via the shared `base.html` layout.
 - Dedicated detail pages exist for sample, preparation, and target.
@@ -207,4 +251,4 @@
 - Python syntax/import check: `python3 -m compileall sams_web`
 - Frontend JS syntax check: `for f in sams_web/static/app.js sams_web/static/js/*.js; do node --check "$f"; done`
 - App import smoke: `.venv/bin/python -c "from sams_web.main import app; print(len(app.routes))"`
-- Routes smoke: `for path in / /samples /samples/<n> /projects/<n> /submitters/<n> /lab/preparation /lab/graphitization /search?context=samples; do curl -s -o /dev/null -w "$path -> %{http_code}\n" http://127.0.0.1:8000$path; done`
+- Routes smoke: `for path in / /samples /samples/<n> /projects/<n> /submitters/<n> /lab/preparation /lab/graphitization /search?context=samples; do curl -s -o /dev/null -w "$path -> %{http_code}\n" http://127.0.0.1:8502$path; done`

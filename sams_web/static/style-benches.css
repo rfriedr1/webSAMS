@@ -12,10 +12,59 @@
   align-items: stretch;
 }
 
-.prep-bench-lookup-form .prep-bench-lookup-field > span {
+.prep-bench-lookup-form .prep-bench-lookup-field > span,
+.prep-bench-lookup-form .prep-bench-lookup-field > label {
   color: #4a6674;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+/* Sample # keeps a text input (barcode-safe) but gets the same up/down
+   affordance as the number-input spinners on Prep # / Target #. */
+.prep-bench-stepper {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.prep-bench-stepper > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 1.9rem;
+}
+
+.prep-bench-stepper-buttons {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  display: flex;
+  flex-direction: column;
+  width: 1.6rem;
+  border-left: 1px solid #d7e1e7;
+  border-radius: 0 7px 7px 0;
+  overflow: hidden;
+}
+
+.prep-bench-stepper-button {
+  flex: 1 1 50%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: #f1f7fa;
+  color: #4a6674;
+  font-size: 0.52rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.prep-bench-stepper-button:first-child {
+  border-bottom: 1px solid #dde7ec;
+}
+
+.prep-bench-stepper-button:hover {
+  background: #e2eff5;
+  color: var(--brand);
 }
 
 .prep-bench-lookup-meta {
@@ -327,7 +376,7 @@
   margin: 0.2rem 0 0;
   color: #173744;
   font-weight: 700;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .prep-bench-storage-input {
@@ -404,6 +453,27 @@
 .prep-bench-action-secondary.is-saving::before {
   border-color: rgba(29, 80, 100, 0.22);
   border-top-color: #1d5064;
+}
+
+/* Internal subsection label inside a bench card — subordinate to
+   `.prep-bench-card-head` (no bottom rule, lighter colour), so a card can
+   hold two related groups without reading as two separate boxes. */
+.prep-bench-subhead {
+  margin: 0.85rem 0 0.4rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #e3ebef;
+  color: #4f6a77;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The staged-target table is nested inside the builder card, so it drops
+   the heavy outer chrome the standalone card used to provide. */
+.graph-batch-builder .graph-batch-staged-table-wrap {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .graph-batch-staged-table-wrap {

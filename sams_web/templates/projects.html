@@ -76,15 +76,43 @@
     </div>
   </details>
 
-  {% if is_truncated %}
+  {# Server-side search over every project — the in-table filter only
+     narrows the rows already rendered, which misses everything past the
+     500-row cut-off. #}
+  <form method="get" action="/projects" class="list-search-form" role="search">
+    <label class="sr-only" for="project-search">Search all projects</label>
+    <input
+      id="project-search"
+      type="search"
+      name="q"
+      value="{{ query }}"
+      placeholder="Search all {{ total_count }} projects by name, number, status or submitter"
+      autocomplete="off"
+    />
+    <input type="hidden" name="days_window" value="{{ days_window }}" />
+    {% if show_all %}<input type="hidden" name="show_all" value="true" />{% endif %}
+    <button type="submit" class="list-search-submit">Search</button>
+    {% if query %}<a class="list-search-clear" href="/projects?days_window={{ days_window }}">Clear</a>{% endif %}
+  </form>
+
+  {% if query %}
   <p class="table-truncation-notice">
-    Showing the first <strong>{{ truncated_limit }}</strong> projects below for a fast load.
-    Use the search box to filter loaded rows, or
+    <strong>{{ match_count }}</strong> project{{ '' if match_count == 1 else 's' }}
+    match &ldquo;{{ query }}&rdquo;{% if is_truncated %}, showing the first
+    <strong>{{ truncated_limit }}</strong>{% endif %}.
+    <a href="/projects?days_window={{ days_window }}">Show all projects</a>
+  </p>
+  {% elif is_truncated %}
+  <p class="table-truncation-notice">
+    Showing the first <strong>{{ truncated_limit }}</strong> of
+    <strong>{{ total_count }}</strong> projects below for a fast load.
+    <strong>Use the search box above</strong> to look through all of them &mdash; the
+    filter inside the table only narrows these {{ truncated_limit }} rows. You can also
     <a href="?days_window={{ days_window }}&show_all=true">load all projects</a>.
   </p>
   {% elif show_all %}
   <p class="table-truncation-notice">
-    Showing all projects.
+    Showing all <strong>{{ total_count }}</strong> projects.
     <a href="?days_window={{ days_window }}">Back to fast view</a>
   </p>
   {% endif %}

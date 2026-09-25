@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Iterable
 
-from sqlalchemy import and_, case, func, select, text, tuple_
+from sqlalchemy import and_, case, false, func, select, text, tuple_
 from sqlalchemy.orm import Session, selectinload
 
 from sams_web.models import (
@@ -86,15 +86,64 @@ class SamsRepository:
         )
         return list(self.session.scalars(stmt))
 
-    def list_projects(self, limit: int | None = None) -> list[Project]:
+    def list_projects(
+        self, query: str | None = None, limit: int | None = None
+    ) -> list[Project]:
         stmt = select(Project).options(selectinload(Project.submitter)).order_by(
             case((Project.in_date.is_(None), 1), else_=0).asc(),
             Project.in_date.desc(),
             Project.project_nr.desc(),
         )
+        if query:
+            like = f"%{query}%"
+            # Submitter columns need an explicit join — `selectinload` above
+            # is a loader strategy, not a joined FROM clause.
+            stmt = stmt.outerjoin(Project.submitter).where(
+                Project.project.like(like)
+                | Project.status.like(like)
+                | Submitter.last_name.like(like)
+                | Submitter.first_name.like(like)
+                | Submitter.organisation.like(like)
+                # A bare number is almost always a project number.
+                | (
+                    Project.project_nr == int(query.strip())
+                    if query.strip().isdigit()
+                    else false()
+                )
+            )
         if limit is not None and limit > 0:
             stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
+
+    def count_projects(self, query: str | None = None) -> int:
+        stmt = select(func.count()).select_from(Project)
+        if query:
+            like = f"%{query}%"
+            stmt = stmt.outerjoin(Project.submitter).where(
+                Project.project.like(like)
+                | Project.status.like(like)
+                | Submitter.last_name.like(like)
+                | Submitter.first_name.like(like)
+                | Submitter.organisation.like(like)
+                | (
+                    Project.project_nr == int(query.strip())
+                    if query.strip().isdigit()
+                    else false()
+                )
+            )
+        return int(self.session.scalar(stmt) or 0)
+
+    def count_submitters(self, query: str | None = None) -> int:
+        stmt = select(func.count()).select_from(Submitter)
+        if query:
+            like = f"%{query}%"
+            stmt = stmt.where(
+                Submitter.last_name.like(like)
+                | Submitter.first_name.like(like)
+                | Submitter.organisation.like(like)
+                | Submitter.institute.like(like)
+            )
+        return int(self.session.scalar(stmt) or 0)
 
     def get_project(self, project_nr: int) -> Project | None:
         return self.session.get(Project, project_nr)
@@ -571,6 +620,39 @@ class SamsRepository:
             """
         )
         return [row[0] for row in self.session.execute(stmt).all() if row[0] is not None]
+
+    def get_advisors(self) -> list[str]:
+        """Supervisors/advisors from `advisor_t`, used for `project_t.supervisor`."""
+        stmt = text(
+            """
+            SELECT advisor
+            FROM advisor_t
+            ORDER BY
+              CASE WHEN indexnr IS NULL THEN 1 ELSE 0 END ASC,
+              indexnr ASC,
+              advisor ASC
+            """
+        )
+        return [row[0] for row in self.session.execute(stmt).all() if row[0] is not None]
+
+    def find_projects_for_submitter(self, user_nr: int, limit: int = 60) -> list[Project]:
+        """Projects already owned by a submitter, newest first.
+
+        Feeds the import wizard's duplicate-project check: an operator
+        importing a second batch for the same customer should be able to
+        append to the running project instead of creating a near-duplicate.
+        """
+        stmt = (
+            select(Project)
+            .where(Project.user_nr == user_nr)
+            .order_by(
+                case((Project.in_date.is_(None), 1), else_=0).asc(),
+                Project.in_date.desc(),
+                Project.project_nr.desc(),
+            )
+            .limit(limit)
+        )
+        return list(self.session.scalars(stmt))
 
     def get_projects_in_progress(
         self,
