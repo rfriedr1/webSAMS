@@ -18,7 +18,7 @@ python -m pip install -e .
 
 export SAMS_SETUP_DATA_FILE="${SAMS_SETUP_DATA_FILE:-$SCRIPT_DIR/sams_web/setup_data.json}"
 
-PORT="${PORT:-8000}"
+PORT="${PORT:-8502}"
 HOST="${HOST:-127.0.0.1}"
 
 echo "[run] Starting SAMS Web on http://${HOST}:${PORT}"

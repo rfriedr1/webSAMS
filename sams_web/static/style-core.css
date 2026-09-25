@@ -472,6 +472,11 @@ h6 {
 
 .context-strip {
   display: grid;
+  /* Without an explicit track the implicit `auto` column sized itself to
+     the pinned/recent strip's max-content (~1230px) and pushed the whole
+     page into horizontal scroll below 1024px. `minmax(0, 1fr)` pins the
+     track to the container so the chips wrap instead. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.52rem;
   margin-bottom: 0.85rem;
 }

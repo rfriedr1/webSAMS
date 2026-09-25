@@ -10,6 +10,7 @@
   <nav class="help-toc" aria-label="Help sections">
     <a href="#help-navigate">Navigate</a>
     <a href="#help-edit">Edit</a>
+    <a href="#help-import">Import</a>
     <a href="#help-find">Find</a>
     <a href="#help-feedback">Feedback &amp; status</a>
     <a href="#help-settings">Settings</a>
@@ -27,6 +28,11 @@
           <li><kbd>{{ rule.example }}</kbd> — {{ rule.description }}</li>
           {% endfor %}
           <li><kbd>/prep</kbd> · <kbd>/graph</kbd> · <kbd>/ana</kbd> jump to the matching Lab page.</li>
+          <li><kbd>/sub</kbd> · <kbd>/proj</kbd> · <kbd>/import</kbd> jump to Submitters, Projects, and Sample&nbsp;Import.</li>
+          <li>
+            A command always starts with <kbd>/</kbd>, so <kbd>/sub</kbd> (the submitter <em>list</em>)
+            and <kbd>sub210</kbd> (submitter&nbsp;210's <em>record</em>) are different things.
+          </li>
         </ul>
       </li>
       <li>
@@ -92,6 +98,83 @@
       <li><kbd>?</kbd> — open the cheat-sheet overlay (same content, on top of the current page)</li>
     </ul>
     <p class="muted">Shortcuts are suppressed while you're typing in an input — except Save, which always works.</p>
+  </div>
+
+  <div class="card" id="help-import">
+    <h3>Import samples from Excel</h3>
+    <p>
+      <strong>Samples → Import</strong> takes a filled-in submission workbook (<code>.xlsx</code>)
+      and creates the project and all its samples in one go. Four steps:
+      <strong>Upload → Review &amp; fix → Lab values → Imported</strong>. Nothing is written to the
+      database until you press <em>Import samples</em> at the end of step&nbsp;3.
+    </p>
+    <ul>
+      <li>
+        <strong>Layout is flexible.</strong> Columns are found by their headings, so the customer
+        may rename, reorder, or add columns without breaking the import. Anything unrecognised is
+        kept and shown under <em>Column mapping</em>, where you can map it yourself or leave it out.
+      </li>
+      <li>
+        <strong>Submitter and invoice recipient are matched separately.</strong> Returning customers
+        are scored on e-mail, name and organisation, with the reasons shown. Confirm the match, use
+        <em>Browse all submitters</em> to search the whole address book, or choose
+        <em>Create a new submitter</em> and fill in the full contact record (salutation, title,
+        language, comment — the language decides which confirmation-mail template is used).
+        If the sheet carries a separate billing address, the same picker appears for the invoice
+        recipient.
+      </li>
+      <li>
+        <strong>Duplicate projects are caught.</strong> If the submitter already has a project with
+        the same or a similar name, you're asked whether to <em>add the samples to that project</em>
+        (its settings stay untouched) or to <em>create a separate one</em> — with a suggested
+        <code>Name_Month_Year</code> variant. Project type, research field, report type, supervisor
+        and priority come from the lab's own lists; the free-of-charge and return-of-material
+        flags are tick boxes.
+      </li>
+      <li>
+        <strong>Lab values are yours, not the customer's.</strong> Step&nbsp;3 groups the rows by the
+        material the customer wrote (<em>collagen</em>, <em>charcoal</em>, …) and lets you set the
+        lab's own type, material and fraction plus preparation steps&nbsp;1–5 for a whole group at
+        once. Close spellings are offered as suggestion chips — only an exact match is filled in for
+        you, so a guess is never made on your behalf. For anything that doesn't fit a group, tick
+        the rows you want and use <em>Apply to selected</em>, or edit a single row inline.
+        Unresolved lookups are saved as <code>undefined</code> rather than as free text.
+      </li>
+      <li>
+        <strong>Everything is editable before import.</strong> Correct any cell in the preview,
+        untick rows you don't want, and adjust the project name and dates. The
+        <em>Import samples</em> button stays disabled until the listed problems are fixed.
+      </li>
+      <li>
+        <strong>What gets created:</strong> the submitter (if new), the project, one sample per row,
+        and for each sample a preparation&nbsp;#1 carrying its prep steps plus an empty
+        target&nbsp;#1. If anything fails, nothing is written at all.
+      </li>
+      <li>
+        <strong>Check the mail settings first.</strong> Setup &rarr; E-mail has a
+        <em>Send a test e-mail</em> box: type any address, press the button, and SAMS
+        delivers one short message using the settings as currently typed &mdash; so you
+        can verify them before saving. Leave the password blank to reuse the stored one.
+      </li>
+      <li>
+        <strong>The confirmation e-mail is never sent by itself.</strong> After the import, step&nbsp;4
+        shows the finished message — recipient, subject, and the body pairing each new
+        <code>MAMS-…</code> number with the customer's own label. Edit it, skip it, or press
+        <em>Send</em>. Server settings and the per-language templates live in
+        <a href="/setup?section=email_settings">Setup → E-mail</a>; until a mail server is
+        configured, Send stays disabled.
+      </li>
+      <li>
+        <strong>Teaching the importer a new column</strong> needs no developer.
+        <a href="/setup?section=import_column_headings">Setup → Import Column Headings</a> lets you add extra
+        spellings for the fields SAMS already knows, and define entirely new columns by picking the
+        sample field the value should land in. The next import picks them up automatically.
+      </li>
+      <li>
+        Need the blank form to send a customer?
+        <a href="/samples/import/template">Download the template</a> from the upload step.
+      </li>
+    </ul>
   </div>
 
   <div class="card" id="help-find">

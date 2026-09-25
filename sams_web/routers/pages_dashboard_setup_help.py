@@ -2,15 +2,26 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from sams_web.dependencies import get_service
 from sams_web.services import SamsService
 from sams_web.lab_warning_thresholds import LAB_WARNING_THRESHOLD_FIELDS
+from sams_web.import_settings import (
+    EMAIL_SERVER_FIELDS,
+    EmailSettingsStore,
+    stored_password_applies,
+)
+from sams_web.sample_import.mailer import EmailError, RenderedEmail, send_email
+from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS
 from sams_web.setup_sections import (
+    SETUP_SECTION_EMAIL,
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+    SETUP_SECTION_IMPORT_HEADINGS,
     SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_STANDARD_THRESHOLDS,
 )
@@ -20,6 +31,7 @@ from sams_web.magic_nav import build_magic_nav_rules
 from sams_web.routers.pages_shared import build_threshold_rows, templates
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/")
@@ -145,6 +157,95 @@ def help_page(request: Request):
     )
 
 
+@router.post("/setup/email/test")
+async def setup_email_test(
+    request: Request,
+    service: SamsService = Depends(get_service),
+):
+    """Send a one-off test message so the operator can verify SMTP settings.
+
+    Uses the values currently in the form rather than the saved ones, so
+    settings can be checked *before* committing them. A blank password
+    field falls back to the stored password, which lets the operator
+    retest without retyping it.
+    """
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        return JSONResponse({"detail": "Malformed request payload."}, status_code=400)
+
+    to_address = str(body.get("to_address") or "").strip()
+    if not to_address or "@" not in to_address:
+        return JSONResponse(
+            {"detail": "Enter the address the test should be sent to."}, status_code=400
+        )
+
+    store = EmailSettingsStore(service.setup_store)
+    saved = store.load()
+    settings: dict[str, Any] = {}
+    for field in EMAIL_SERVER_FIELDS:
+        # A field the form did not send at all falls back to the saved
+        # value; one that was sent *empty* is honoured as empty. Blanking
+        # the username to test an unauthenticated relay has to actually
+        # drop the username, not silently reuse the stored one.
+        settings[field.key] = (
+            body[field.key] if field.key in body else saved.get(field.key, field.default)
+        )
+    # The password is the one exception: a blank box reuses the stored
+    # secret — but ONLY when the connection target is the stored one.
+    # Host, port, security and user all come from the request, so without
+    # this check anyone who can reach the app could point the host at a
+    # server they control and have SAMS log in there with the real mailbox
+    # password.
+    if not str(settings.get("smtp_password") or ""):
+        if stored_password_applies(settings, saved):
+            settings["smtp_password"] = saved.get("smtp_password", "")
+        elif str(settings.get("smtp_user") or "").strip():
+            return JSONResponse(
+                {
+                    "detail": (
+                        "Enter the password for this server. The stored password is "
+                        "only reused for the saved server, port, security mode and username."
+                    )
+                },
+                status_code=400,
+            )
+
+    if not str(settings.get("smtp_host") or "").strip():
+        return JSONResponse({"detail": "Set an SMTP server first."}, status_code=400)
+    if not str(settings.get("from_address") or "").strip():
+        return JSONResponse({"detail": "Set a From address first."}, status_code=400)
+
+    message = RenderedEmail(
+        to_address=to_address,
+        subject="SAMS test e-mail",
+        body=(
+            "This is a test message from SAMS Web.\n\n"
+            "If you are reading it, the outgoing mail settings under\n"
+            "Setup -> E-mail are working.\n\n"
+            f"Server:  {settings.get('smtp_host')}:{settings.get('smtp_port')} "
+            f"({settings.get('smtp_security')})\n"
+            f"From:    {settings.get('from_address')}\n"
+            f"Sent to: {to_address}\n"
+        ),
+        from_address=str(settings.get("from_address") or ""),
+        from_name=str(settings.get("from_name") or ""),
+        reply_to=str(settings.get("reply_to") or ""),
+        # Deliberately no Bcc: a connection test should not copy anyone.
+        bcc="",
+    )
+    try:
+        send_email(message, settings)
+    except EmailError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    except Exception:  # noqa: BLE001
+        logger.exception("Unexpected failure sending test e-mail")
+        return JSONResponse(
+            {"detail": "The test e-mail could not be sent."}, status_code=500
+        )
+    return JSONResponse({"sent": True, "to_address": to_address})
+
+
 @router.post("/setup/{section_key}")
 async def setup_section_submit(
     request: Request,
@@ -166,6 +267,22 @@ async def setup_section_submit(
     elif section_key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
         for field in LAB_WARNING_THRESHOLD_FIELDS:
             payload[field.key] = form.get(field.key)
+    elif section_key == SETUP_SECTION_IMPORT_HEADINGS:
+        # One newline-separated textarea per built-in sample field...
+        for field_name in SAMPLE_COLUMN_SYNONYMS:
+            payload[field_name] = form.get(f"heading_{field_name}", "")
+        # ...plus any number of operator-defined custom columns, which
+        # arrive as three parallel repeating lists.
+        payload["custom_target"] = form.getlist("custom_target")
+        payload["custom_label"] = form.getlist("custom_label")
+        payload["custom_headings"] = form.getlist("custom_headings")
+    elif section_key == SETUP_SECTION_EMAIL:
+        for field in EMAIL_SERVER_FIELDS:
+            payload[field.key] = form.get(field.key, "")
+        # Template subject/body arrive as template_<lang>_subject/_body.
+        for key in form.keys():
+            if key.startswith("template_"):
+                payload[key] = form.get(key, "")
 
     try:
         service.update_setup_section(section_key=section_key, payload=payload)

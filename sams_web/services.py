@@ -22,11 +22,20 @@ from sams_web.viewmodels.detail_sections_user_project import (
     SUBMITTER_DETAIL,
 )
 from sams_web.setup_sections import (
+    SETUP_SECTION_EMAIL,
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
+    SETUP_SECTION_IMPORT_HEADINGS,
     SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_MAP,
     SETUP_SECTION_STANDARD_THRESHOLDS,
     SETUP_SECTIONS,
+)
+from sams_web.import_settings import (
+    EMAIL_PLACEHOLDERS,
+    EMAIL_SERVER_FIELDS,
+    EmailSettingsStore,
+    ImportHeadingStore,
+    available_targets,
 )
 from sams_web.setup_store import SetupStore
 from sams_web.thresholds import THRESHOLD_FIELDS, ThresholdRule, ThresholdStore
@@ -163,8 +172,8 @@ class SamsService:
             return None
         return data
 
-    def list_projects(self, limit: int | None = None):
-        return self.repo.list_projects(limit=limit)
+    def list_projects(self, query: str | None = None, limit: int | None = None):
+        return self.repo.list_projects(query=query, limit=limit)
 
     def get_project_details(self, project_nr: int):
         project = self.repo.get_project(project_nr)
@@ -613,6 +622,48 @@ class SamsService:
                 ],
             }
 
+        if section.key == SETUP_SECTION_IMPORT_HEADINGS:
+            store = ImportHeadingStore(self.setup_store)
+            custom_rows = store.custom_rows_for_editor()
+            return {
+                **base_payload,
+                "kind": "import_headings",
+                "storage_section": store.section_key,
+                "heading_rows": store.rows_for_editor(),
+                "custom_rows": custom_rows,
+                "target_columns": available_targets(
+                    {r["target"] for r in custom_rows}
+                ),
+            }
+        if section.key == SETUP_SECTION_EMAIL:
+            store = EmailSettingsStore(self.setup_store)
+            settings = store.load()
+            return {
+                **base_payload,
+                "kind": "email_settings",
+                "storage_section": store.section_key,
+                "email_fields": [
+                    {
+                        "key": f.key,
+                        "label": f.label,
+                        "description": f.description,
+                        "kind": f.kind,
+                        "options": list(f.options),
+                        "value": settings.get(f.key, f.default),
+                    }
+                    for f in EMAIL_SERVER_FIELDS
+                ],
+                "email_templates": [
+                    {"code": code, **tpl}
+                    for code, tpl in sorted((settings.get("templates") or {}).items())
+                ],
+                "email_placeholders": [
+                    {"token": token, "description": desc}
+                    for token, desc in EMAIL_PLACEHOLDERS
+                ],
+                "email_configured": store.is_configured(),
+            }
+
         return {
             **base_payload,
             "kind": "placeholder",
@@ -685,6 +736,24 @@ class SamsService:
                     }
                     for field in LAB_WARNING_THRESHOLD_FIELDS
                 ],
+            }
+        if section.key == SETUP_SECTION_IMPORT_HEADINGS:
+            store = ImportHeadingStore(self.setup_store)
+            store.update(payload)
+            return {
+                "kind": "import_headings",
+                "storage_file": str(self.setup_store.path),
+                "storage_section": store.section_key,
+                "heading_rows": store.rows_for_editor(),
+                "custom_rows": store.custom_rows_for_editor(),
+            }
+        if section.key == SETUP_SECTION_EMAIL:
+            store = EmailSettingsStore(self.setup_store)
+            store.update(payload)
+            return {
+                "kind": "email_settings",
+                "storage_file": str(self.setup_store.path),
+                "storage_section": store.section_key,
             }
         raise ValueError("No update handler configured for this setup section.")
 

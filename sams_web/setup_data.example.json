@@ -1,0 +1,80 @@
+{
+  "email_settings": {
+    "bcc": "",
+    "from_address": "c14@ceza.de",
+    "from_name": "CEZA C14 Laboratory",
+    "reply_to": "c14@ceza.de",
+    "smtp_host": "smtpout.secureserver.net",
+    "smtp_password": "",
+    "smtp_port": 587,
+    "smtp_security": "starttls",
+    "smtp_user": "c14@ceza.de",
+    "templates": {
+      "de": {
+        "body": "Sehr geehrte/r {submitter_name},\r\n\r\nvielen Dank f\u00fcr Ihre Einsendung. Wir haben {sample_count} Probe(n) f\u00fcr das Projekt {project_nr} \u201e{project_name}\u201c erhalten und unter den folgenden Labornummern registriert:\r\n\r\n{sample_list}\r\n\r\nBitte geben Sie diese Labornummern bei R\u00fcckfragen zu dieser Einsendung an. Wir melden uns, sobald die Messungen abgeschlossen sind.\r\n\r\nMit freundlichen Gr\u00fc\u00dfen\r\n{lab_name}\r\n",
+        "label": "German",
+        "language": "de",
+        "subject": "CEZA C14 \u2014 Eingang Ihrer Proben (Projekt {project_nr})"
+      },
+      "en": {
+        "body": "Dear {submitter_name},\r\n\r\nthank you for your submission. We have received {sample_count} sample(s) for project {project_nr} \u201c{project_name}\u201d and registered them under the following laboratory numbers:\r\n\r\n{sample_list}\r\n\r\nPlease quote these laboratory numbers in any correspondence about this submission. We will contact you once the measurements are complete.\r\n\r\nKind regards,\r\n{lab_name}\r\n",
+        "label": "English",
+        "language": "en",
+        "subject": "CEZA C14 \u2014 your samples have been received (project {project_nr})"
+      }
+    }
+  },
+  "graphitization_systems": [
+    "mag",
+    "age.1",
+    "age.2",
+    "age64.1",
+    "age64.2",
+    "autosampler"
+  ],
+  "import_profiles": {},
+  "lab_defaults": {},
+  "lab_warning_thresholds": {
+    "preparation_yield_percent_min": 0.5,
+    "target_total_c_ug_min": 500.0
+  },
+  "notifications": {},
+  "standard_inventory_thresholds": {
+    "blanks": {
+      "green_above": 8,
+      "red_below": 5,
+      "yellow_max": 8,
+      "yellow_min": 5
+    },
+    "iaea_c6": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "iaea_c7": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "iaea_c8": {
+      "green_above": 3,
+      "red_below": 1,
+      "yellow_max": 3,
+      "yellow_min": 2
+    },
+    "oxas": {
+      "green_above": 14,
+      "red_below": 9,
+      "yellow_max": 14,
+      "yellow_min": 9
+    },
+    "pferde": {
+      "green_above": 3,
+      "red_below": 2,
+      "yellow_max": 3,
+      "yellow_min": 2
+    }
+  }
+}

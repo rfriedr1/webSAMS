@@ -167,6 +167,9 @@
             <dt><kbd>/prep</kbd></dt><dd>Jump to Lab/Preparation</dd>
             <dt><kbd>/graph</kbd></dt><dd>Jump to Lab/Graphitization</dd>
             <dt><kbd>/ana</kbd></dt><dd>Jump to Lab/Analysis</dd>
+            <dt><kbd>/sub</kbd></dt><dd>Jump to Submitters</dd>
+            <dt><kbd>/proj</kbd></dt><dd>Jump to Projects</dd>
+            <dt><kbd>/import</kbd></dt><dd>Jump to Sample Import</dd>
           </dl>
           <p class="shortcut-cheatsheet-hint">Or press <kbd>Ctrl/⌘ K</kbd> to open the full command palette.</p>
         </div>`;

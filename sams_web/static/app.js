@@ -1,10 +1,16 @@
 (() => {
+  // `interactive` does NOT mean we may run yet. Deferred scripts execute
+  // after parsing but *before* DOMContentLoaded, and bundle.js (which
+  // carries this file) is the first of them — so running here fired the
+  // installer list before the page-specific bench modules had registered
+  // theirs, and `installers.installGraphitizationBench?.()` silently
+  // no-opped. Only `complete` is safe to run against immediately.
   const ready = (fn) => {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", fn, { once: true });
+    if (document.readyState === "complete") {
+      fn();
       return;
     }
-    fn();
+    document.addEventListener("DOMContentLoaded", fn, { once: true });
   };
 
   ready(() => {
@@ -18,6 +24,7 @@
     installers.installMagicIdentifierPatch?.();
     installers.installMagicIdentifierHelp?.();
     installers.installDetailEditMode?.();
+    installers.installDetailEmptyFields?.();
     installers.installFieldErrorSummary?.();
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();

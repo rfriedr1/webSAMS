@@ -1,6 +1,10 @@
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
   const STORAGE_KEY = "sams_graph_batch_staging";
+  // Loading the next target is a GET navigation, so the batch header
+  // (system + name) has to survive the reload the same way the staged
+  // target list does — otherwise the operator retypes it per target.
+  const BATCH_META_KEY = "sams_graph_batch_meta";
   const LAST_PREP_STORAGE_LOCATION_KEY = "sams_graph_bench_last_prep_storage_location";
 
   const parseJson = (raw, fallback) => {
@@ -156,6 +160,38 @@
           };
           sampleLookupInput.addEventListener("input", clearDependentLookupFieldsIfSampleChanged);
           sampleLookupInput.addEventListener("change", clearDependentLookupFieldsIfSampleChanged);
+
+          // Up/down steppers for Sample #, matching the native spinners on
+          // Prep # / Target #: step the number, drop the now-stale prep and
+          // target, and load the new sample straight away.
+          bench.querySelectorAll("[data-graph-bench-sample-step]").forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) {
+              return;
+            }
+            button.addEventListener("click", () => {
+              const delta = Number.parseInt(button.dataset.graphBenchSampleStep || "0", 10);
+              if (!Number.isFinite(delta) || delta === 0) {
+                return;
+              }
+              const raw = sampleLookupInput.value.trim();
+              // Empty field: start from whichever sample is on the bench.
+              const base = Number.parseInt(
+                raw !== "" ? raw : bench.dataset.graphBenchCurrentSample || "",
+                10,
+              );
+              if (!Number.isFinite(base)) {
+                sampleLookupInput.focus();
+                return;
+              }
+              const next = Math.max(1, base + delta);
+              if (String(next) === raw) {
+                return;
+              }
+              sampleLookupInput.value = String(next);
+              clearDependentLookupFieldsIfSampleChanged();
+              lookupForm.requestSubmit();
+            });
+          });
         }
 
         if (prepLookupInput instanceof HTMLInputElement) {
@@ -391,6 +427,20 @@
         clientError.textContent = message;
       };
 
+      const saveBatchMeta = () => {
+        if (!(systemField instanceof HTMLInputElement)) {
+          return;
+        }
+        const meta = {
+          system: systemField.value.trim(),
+          batch_name:
+            batchNameInput instanceof HTMLInputElement ? batchNameInput.value.trim() : "",
+          dirty: batchNameDirty,
+          generated: lastGeneratedName,
+        };
+        window.sessionStorage.setItem(BATCH_META_KEY, JSON.stringify(meta));
+      };
+
       const saveStagedTargets = () => {
         window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stagedTargets));
         if (targetsJsonField instanceof HTMLInputElement) {
@@ -460,6 +510,7 @@
           const current = batchNameInput.value.trim();
           batchNameDirty = current !== "" && current !== lastGeneratedName;
           clearClientError();
+          saveBatchMeta();
         });
       }
 
@@ -478,6 +529,22 @@
         });
       };
 
+      // Restore the batch header before the pills are wired, so the initial
+      // syncSystemPills() below lights up the remembered system.
+      if (bench.dataset.graphBatchSaved !== "true") {
+        const meta = parseJson(window.sessionStorage.getItem(BATCH_META_KEY) || "null", null);
+        if (meta && typeof meta === "object") {
+          if (systemField instanceof HTMLInputElement && typeof meta.system === "string") {
+            systemField.value = meta.system;
+          }
+          if (batchNameInput instanceof HTMLInputElement && typeof meta.batch_name === "string") {
+            batchNameInput.value = meta.batch_name;
+          }
+          lastGeneratedName = typeof meta.generated === "string" ? meta.generated : "";
+          batchNameDirty = meta.dirty === true;
+        }
+      }
+
       if (systemField instanceof HTMLInputElement && systemPillButtons.length > 0) {
         systemPillButtons.forEach((button) => {
           if (!(button instanceof HTMLButtonElement)) {
@@ -492,6 +559,7 @@
             syncSystemPills();
             clearClientError();
             maybeGenerateBatchName();
+            saveBatchMeta();
           });
         });
         syncSystemPills();
@@ -584,6 +652,7 @@
 
       if (bench.dataset.graphBatchSaved === "true") {
         window.sessionStorage.removeItem(STORAGE_KEY);
+        window.sessionStorage.removeItem(BATCH_META_KEY);
       }
 
       const storedTargets = parseJson(window.sessionStorage.getItem(STORAGE_KEY) || "[]", []);

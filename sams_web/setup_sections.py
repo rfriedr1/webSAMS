@@ -8,6 +8,8 @@ from dataclasses import dataclass
 SETUP_SECTION_STANDARD_THRESHOLDS = "standard_inventory_thresholds"
 SETUP_SECTION_GRAPHITIZATION_SYSTEMS = "graphitization_systems"
 SETUP_SECTION_LAB_WARNING_THRESHOLDS = "lab_warning_thresholds"
+SETUP_SECTION_IMPORT_HEADINGS = "import_column_headings"
+SETUP_SECTION_EMAIL = "email_settings"
 
 
 @dataclass(frozen=True)
@@ -46,18 +48,20 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         form_action="/setup/lab_warning_thresholds",
     ),
     SetupSection(
-        key="import_profiles",
-        title="Import Profiles",
-        description="Future section for mapping and profile templates per laboratory form.",
-        editable=False,
-        status="planned",
+        key=SETUP_SECTION_IMPORT_HEADINGS,
+        title="Import Column Headings",
+        description="Extra spellings the sample importer accepts for each column, plus additional columns you define yourself, so a customer's own wording is recognised automatically.",
+        editable=True,
+        status="active",
+        form_action="/setup/import_column_headings",
     ),
     SetupSection(
-        key="notifications",
-        title="Notifications",
-        description="Future section for email alerts and warning rules.",
-        editable=False,
-        status="planned",
+        key=SETUP_SECTION_EMAIL,
+        title="E-mail",
+        description="Outgoing mail server and the confirmation templates sent to submitters after an import.",
+        editable=True,
+        status="active",
+        form_action="/setup/email_settings",
     ),
     SetupSection(
         key="lab_defaults",

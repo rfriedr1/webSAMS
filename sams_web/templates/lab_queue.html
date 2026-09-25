@@ -5,8 +5,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/preparation-bench.js" defer></script>
-<script src="/static/js/graphitization-bench.js" defer></script>
+<script src="/static/js/preparation-bench.js?v={{ css_v }}" defer></script>
+<script src="/static/js/graphitization-bench.js?v={{ css_v }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -379,7 +379,7 @@
 {% endif %}
 
 {% if graph_bench_entry_enabled %}
-<section class="panel" id="graph-bench-entry" data-graph-bench {% if request.query_params.get('graph_batch_saved') == 'true' %}data-graph-batch-saved="true"{% endif %}>
+<section class="panel" id="graph-bench-entry" data-graph-bench data-graph-bench-current-sample="{{ graph_bench_entry.sample.sample_nr if graph_bench_entry else '' }}" {% if request.query_params.get('graph_batch_saved') == 'true' %}data-graph-batch-saved="true"{% endif %}>
   <details class="table-collapsible" open>
     <summary class="table-summary">
       <span class="table-summary-title">Graphitization Bench Entry</span>
@@ -389,18 +389,42 @@
       <p style="margin: 0 0 0.75rem; color: var(--muted);">Touch-friendly entry for graphitization target handling and batch composition.</p>
 
       <form method="get" action="/lab/graphitization" class="prep-bench-lookup-form graph-bench-lookup-form" data-graph-bench-lookup-form>
-        <label class="prep-bench-lookup-field">
-          <span>Sample #</span>
-          <input
-            type="text"
-            name="graph_sample_nr"
-            value="{{ graph_sample_nr_query or '' }}"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="Scan barcode or enter sample number"
-            data-graph-bench-sample-input
-          />
-        </label>
+        {# Stays `type="text"` so a barcode scan is never silently discarded
+           the way a number input drops non-numeric keystrokes. The explicit
+           steppers give it the same up/down affordance as Prep # / Target #.
+           A <div> rather than a <label> so clicking a stepper does not also
+           fire label activation on the input. #}
+        <div class="prep-bench-lookup-field">
+          <label for="graph-bench-sample-nr">Sample #</label>
+          <div class="prep-bench-stepper">
+            <input
+              id="graph-bench-sample-nr"
+              type="text"
+              name="graph_sample_nr"
+              value="{{ graph_sample_nr_query or '' }}"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Scan barcode or enter sample number"
+              data-graph-bench-sample-input
+            />
+            <span class="prep-bench-stepper-buttons">
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-graph-bench-sample-step="1"
+                tabindex="-1"
+                aria-label="Next sample number"
+              >&#9650;</button>
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-graph-bench-sample-step="-1"
+                tabindex="-1"
+                aria-label="Previous sample number"
+              >&#9660;</button>
+            </span>
+          </div>
+        </div>
         <label class="prep-bench-lookup-field">
           <span>Prep #</span>
           <input
@@ -661,9 +685,14 @@
             <input type="hidden" name="graphbatch__target_nr" value="{{ graph_target.target_nr }}" />
             <input type="hidden" name="graphbatch__targets_json" value="[]" data-graph-batch-targets-json />
 
-            <section class="prep-bench-card">
+            {# Builder controls and the staged-target list are one task, so
+               they live in one card: the header carries the batch count and
+               the dirty dot, and the target list is an internal subsection
+               rather than a separate box. #}
+            <section class="prep-bench-card graph-batch-builder" data-graph-batch-targets-card>
               <div class="prep-bench-card-head">
                 <h4>Graph Batch Builder</h4>
+                <span class="badge status-pill" data-graph-batch-count>0</span>
               </div>
               <div class="prep-bench-field">
                 <label>Graphitization System</label>
@@ -696,21 +725,16 @@
                 <button type="button" class="prep-bench-action-secondary" data-graph-batch-clear>Clear Batch</button>
               </div>
               <p class="prep-bench-field-error" data-graph-batch-client-error hidden></p>
-            </section>
 
-            <section class="prep-bench-card" data-graph-batch-targets-card>
-              <div class="prep-bench-card-head">
-                <h4>Batch Targets</h4>
-                <span class="badge status-pill" data-graph-batch-count>0</span>
-              </div>
+              <h5 class="prep-bench-subhead">Batch Targets</h5>
               <div class="table-wrap table-wrap-dashboard graph-batch-staged-table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>sample_nr</th>
-                      <th>prep_nr</th>
-                      <th>target_nr</th>
-                      <th>user_label</th>
+                      <th>Sample #</th>
+                      <th>Prep #</th>
+                      <th>Target #</th>
+                      <th>Sample Label</th>
                       <th></th>
                     </tr>
                   </thead>

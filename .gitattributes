@@ -1,0 +1,7 @@
+# cmd.exe mis-parses labels and blocks in LF-only batch files, so check
+# every .bat out with CRLF on Windows no matter how the repo is cloned.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Shell scripts must stay LF or bash on macOS/Linux rejects them.
+*.sh  text eol=lf

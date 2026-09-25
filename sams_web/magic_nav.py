@@ -49,15 +49,23 @@ MAGIC_IDENTIFIER_PREFIX_LABELS: dict[str, str] = {
 MAGIC_IDENTIFIER_SAMPLE_LABEL = "sample number"
 MAGIC_IDENTIFIER_PREPARATION_LABEL = "preparation"
 MAGIC_IDENTIFIER_TARGET_LABEL = "target"
+# Command literals are matched before the `sub123` / `pr123` prefixes, and
+# the leading slash keeps `/sub` distinct from the `sub<number>` form.
 MAGIC_IDENTIFIER_COMMAND_ROUTES: dict[str, str] = {
     "/prep": "/lab/preparation",
     "/graph": "/lab/graphitization",
     "/ana": "/lab/analysis",
+    "/sub": "/submitters",
+    "/proj": "/projects",
+    "/import": "/samples/import",
 }
 MAGIC_IDENTIFIER_COMMAND_LABELS: dict[str, str] = {
     "/prep": "magic command: preparation",
     "/graph": "magic command: graphitization",
     "/ana": "magic command: analysis",
+    "/sub": "magic command: submitters",
+    "/proj": "magic command: projects",
+    "/import": "magic command: sample import",
 }
 
 
@@ -290,7 +298,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
 
 INVALID_MAGIC_NAV_MESSAGE = (
     "Invalid Magic Nav ID. Use 12345, 12345.1, 12345.1.1, "
-    "pr123, sub210, /prep, /graph, or /ana."
+    "pr456, sub210, or a command: /prep, /graph, /ana, /sub, /proj, /import."
 )
 
 

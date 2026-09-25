@@ -5,3 +5,18 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# Live runtime settings: holds the SMTP password and each server's own state.
+# The secret-free, version-controlled snapshot is sams_web/setup_data.example.json,
+# which a fresh install reads until its first save (see sams_web/setup_store.py).
+sams_web/setup_data.json
+
+# A real customer submission (names, e-mail addresses) used for testing the
+# importer — never publish it. The blank Submit_Samples_Template.xlsx IS tracked.
+templates/example_import.xlsx
+
+# Server-side logs written by the Windows service (docs/server_installation.md)
+logs/
+
+# Per-user Claude Code permissions — local to each machine
+.claude/settings.local.json

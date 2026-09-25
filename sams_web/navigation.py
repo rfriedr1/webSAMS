@@ -22,6 +22,7 @@ SUB_NAV_ITEMS: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "sample", "label": "Sample", "href": "/samples", "external": False},
         {"key": "projects", "label": "Projects", "href": "/projects", "external": False},
         {"key": "submitters", "label": "Submitters", "href": "/submitters", "external": False},
+        {"key": "import", "label": "Import", "href": "/samples/import", "external": False},
     ),
     "lab_operations": (
         {"key": "preparation", "label": "Preparation", "href": "/lab/preparation", "external": False},
@@ -44,6 +45,7 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Samples: Sample", "href": "/samples"},
     {"label": "Samples: Projects", "href": "/projects"},
     {"label": "Samples: Submitters", "href": "/submitters"},
+    {"label": "Samples: Import from Excel", "href": "/samples/import"},
     {"label": "Lab Operations: Preparation", "href": "/lab/preparation"},
     {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
     {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
@@ -97,10 +99,14 @@ def is_subnav_active(request: Request, module: str, item_key: str) -> bool:
     search_global = _query_value(query, "global")
 
     if module == "sample_management":
+        if item_key == "import":
+            return path.startswith("/samples/import")
         if item_key == "sample":
+            # `/samples/import` has its own chip; without this guard both
+            # "Sample" and "Import" would highlight on the import page.
             return (
                 (path.startswith("/search") and search_context == "samples" and search_global != "1")
-                or path.startswith("/samples")
+                or (path.startswith("/samples") and not path.startswith("/samples/import"))
             )
         if item_key == "projects":
             return path.startswith("/projects") or (path.startswith("/search") and search_context == "projects" and search_global != "1")

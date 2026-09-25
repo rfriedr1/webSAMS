@@ -486,10 +486,15 @@
       if (!normalized) {
         return null;
       }
+      // Mirrors MAGIC_IDENTIFIER_COMMAND_ROUTES in magic_nav.py — keep the
+      // two in step when adding a command.
       const magicCommandMap = {
         "/prep": "/lab/preparation",
         "/graph": "/lab/graphitization",
         "/ana": "/lab/analysis",
+        "/sub": "/submitters",
+        "/proj": "/projects",
+        "/import": "/samples/import",
       };
       if (Object.prototype.hasOwnProperty.call(magicCommandMap, normalized)) {
         return {

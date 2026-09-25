@@ -1,5 +1,9 @@
 .table-wrap {
-  overflow-x: hidden;
+  /* Was `hidden`, which forced every column to squeeze into the
+     container no matter how much text it held. `auto` shows a scrollbar
+     only when the table genuinely overflows, which beats unreadable
+     columns. */
+  overflow-x: auto;
   overflow-y: auto;
   max-height: min(62dvh, 36rem);
   border-radius: 12px;
@@ -226,8 +230,15 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 }
 
 table {
-  width: 100%;
-  table-layout: fixed;
+  /* `fixed` split the width evenly across every column, so an 11-column
+     list gave a project name the same 109px as a 3-digit count and
+     shredded it into a 10-line ribbon. `auto` lets each column take what
+     its content needs; `min-width: 100%` keeps a narrow table filling the
+     panel, and the wrapper scrolls horizontally when the total no longer
+     fits. */
+  width: auto;
+  min-width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
 }
 
@@ -235,6 +246,11 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 1;
+  /* A header is a label, not prose: letting "Days In Prep" wrap made the
+     column only as wide as "Days" (32px) and stacked the header three
+     rows deep. Not wrapping means the column is always at least as wide
+     as its own label; the wrapper scrolls if the total overflows. */
+  white-space: nowrap;
   background: linear-gradient(180deg, #eef5f8, #e7eef3);
   border-bottom: 1px solid #d1dbe2;
 }
@@ -276,9 +292,21 @@ td {
   padding: 0.6rem 0.62rem;
   font-size: var(--text-sm);
   white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  /* `anywhere` also zeroes the cell's min-content contribution, so an
+     auto-layout column could collapse far below its longest word — a
+     project name shredded into a 10-line ribbon in an 88px column.
+     `break-word` keeps words intact and gives the column a real floor;
+     the wrapper scrolls horizontally when the total no longer fits. */
+  overflow-wrap: break-word;
   vertical-align: top;
+}
+
+/* Columns whose every value is a single atomic token (ISO dates today).
+   Tagged by table-tools.js from cell content, so no per-table wiring. */
+th.table-col-atomic,
+td.table-col-atomic {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 th.table-col-compact-id,
@@ -829,3 +857,45 @@ a:hover {
   margin: 0.36rem 0 0;
   color: #842f2f;
   font-size: 0.78rem;
+
+/* ---- list-page server-side search -------------------------------------
+   Distinct from the in-table filter: this one submits to the server and
+   searches the whole table, so a capped list can still find a record that
+   was never rendered. */
+
+.list-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.list-search-form input[type="search"] {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.list-search-submit {
+  min-height: 2.3rem;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  background: linear-gradient(130deg, var(--brand), var(--brand-2));
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.list-search-submit:hover { filter: brightness(1.06); }
+
+.list-search-clear {
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .list-search-form input[type="search"] { flex-basis: 100%; }
+}

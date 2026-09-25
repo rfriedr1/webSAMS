@@ -109,6 +109,265 @@
           <button type="submit">Save {{ active_section.title }}</button>
         </div>
       </form>
+      {% elif active_section.kind == "import_headings" %}
+      <form method="post" action="{{ active_section.form_action }}">
+        <p class="setup-note">
+          The importer already recognises the headings listed under each field. Add any extra
+          wording your customers use — one per line. New spellings are <em>added</em> to the
+          built-in list, so the standard template keeps working.
+        </p>
+        <div class="setup-heading-list">
+          {% for row in active_section.heading_rows %}
+          <div class="setup-heading-row">
+            <div class="setup-heading-meta">
+              <strong>{{ row.label }}</strong>
+              <span class="setup-note">Recognised: {{ row.builtin | join(", ") }}</span>
+            </div>
+            <label class="sr-only" for="heading-{{ row.key }}">Extra headings for {{ row.label }}</label>
+            <textarea
+              id="heading-{{ row.key }}"
+              name="heading_{{ row.key }}"
+              rows="3"
+              class="setup-heading-input"
+              placeholder="One extra heading per line"
+              spellcheck="false"
+            >{{ row.custom_text }}</textarea>
+          </div>
+          {% endfor %}
+        </div>
+        <h4 class="setup-subhead">Additional columns</h4>
+        <p class="setup-note">
+          Add a column the standard form doesn't have. Pick which sample field the value should
+          be stored in, give it a label for the review screen, and list the headings customers
+          use for it. New rows appear in the import automatically — no code change needed.
+        </p>
+
+        <div class="setup-custom-list" data-custom-rows>
+          {% for row in active_section.custom_rows %}
+          <div class="setup-custom-row">
+            <div class="import-field">
+              <label>Stored in</label>
+              <select name="custom_target">
+                <option value="">— remove this column —</option>
+                {% for col in active_section.target_columns %}
+                <option value="{{ col.name }}" {% if col.name == row.target %}selected{% endif %}>
+                  {{ col.label }} ({{ col.name }}{% if col.is_lookup %}, from list{% endif %})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="import-field">
+              <label>Label</label>
+              <input type="text" name="custom_label" value="{{ row.label }}" />
+            </div>
+            <div class="import-field">
+              <label>Headings (one per line)</label>
+              <textarea name="custom_headings" rows="3" spellcheck="false">{{ row.headings_text }}</textarea>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {# Blank row template cloned by the Add button; `disabled` keeps
+           an unused template out of the form submission. #}
+        <template data-custom-template>
+          <div class="setup-custom-row">
+            <div class="import-field">
+              <label>Stored in</label>
+              <select name="custom_target">
+                <option value="">— choose a sample field —</option>
+                {% for col in active_section.target_columns %}
+                <option value="{{ col.name }}">{{ col.label }} ({{ col.name }}{% if col.is_lookup %}, from list{% endif %})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="import-field">
+              <label>Label</label>
+              <input type="text" name="custom_label" />
+            </div>
+            <div class="import-field">
+              <label>Headings (one per line)</label>
+              <textarea name="custom_headings" rows="3" spellcheck="false"></textarea>
+            </div>
+          </div>
+        </template>
+
+        <button type="button" class="setup-add-row" data-add-custom-row>+ Add a column</button>
+
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
+
+      <script>
+        // Clone the blank row template when the operator adds a column.
+        // Kept inline because it is three lines and scoped to this page.
+        (() => {
+          const button = document.querySelector("[data-add-custom-row]");
+          const host = document.querySelector("[data-custom-rows]");
+          const tpl = document.querySelector("[data-custom-template]");
+          if (!button || !host || !tpl) return;
+          button.addEventListener("click", () => {
+            host.appendChild(tpl.content.cloneNode(true));
+            host.lastElementChild?.querySelector("select")?.focus();
+          });
+        })();
+      </script>
+
+      {% elif active_section.kind == "email_settings" %}
+      <form method="post" action="{{ active_section.form_action }}" data-email-settings-form>
+        {% if not active_section.email_configured %}
+        <p class="table-truncation-notice">
+          E-mail is not configured yet. Set at least the <strong>SMTP server</strong> and a
+          <strong>From address</strong> before confirmation e-mails can be sent.
+        </p>
+        {% endif %}
+
+        <h4 class="setup-subhead">Outgoing mail server</h4>
+        <div class="setup-threshold-list">
+          {% for field in active_section.email_fields %}
+          <div class="setup-threshold-row">
+            <label class="setup-threshold-label" for="email-{{ field.key }}">
+              <strong>{{ field.label }}</strong>
+              <span class="setup-note">{{ field.description }}</span>
+            </label>
+            <div class="setup-threshold-input">
+              {% if field.kind == "select" %}
+              <select id="email-{{ field.key }}" name="{{ field.key }}">
+                {% for option in field.options %}
+                <option value="{{ option }}" {% if option == field.value %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              {# The stored password is never rendered back into the page —
+                 it would sit in the HTML source (and in every test-mail
+                 request) in cleartext. Blank means "keep the stored one". #}
+              <input
+                id="email-{{ field.key }}"
+                type="{{ 'number' if field.kind == 'number' else ('password' if field.kind == 'password' else 'text') }}"
+                name="{{ field.key }}"
+                {% if field.kind == 'password' %}
+                value=""
+                autocomplete="new-password"
+                placeholder="{{ 'Stored — leave blank to keep it' if field.value else 'Not set' }}"
+                {% else %}
+                value="{{ field.value }}"
+                {% endif %}
+              />
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <h4 class="setup-subhead">Confirmation templates</h4>
+        <p class="setup-note">
+          One template per language. The submitter's <code>language</code> field decides which is
+          used; English is the fallback. Available placeholders:
+        </p>
+        <div class="setup-preview-chips">
+          {% for ph in active_section.email_placeholders %}
+          <span class="badge status-pill" title="{{ ph.description }}">{{ ph.token }}</span>
+          {% endfor %}
+        </div>
+
+        {% for tpl in active_section.email_templates %}
+        <fieldset class="setup-template">
+          <legend>{{ tpl.label }} <code>({{ tpl.code }})</code></legend>
+          <label class="setup-list-editor-label" for="tpl-{{ tpl.code }}-subject">Subject</label>
+          <input id="tpl-{{ tpl.code }}-subject" type="text" name="template_{{ tpl.code }}_subject" value="{{ tpl.subject }}" />
+          <label class="setup-list-editor-label" for="tpl-{{ tpl.code }}-body">Body</label>
+          <textarea id="tpl-{{ tpl.code }}-body" name="template_{{ tpl.code }}_body" rows="12" class="setup-list-editor" spellcheck="false">{{ tpl.body }}</textarea>
+        </fieldset>
+        {% endfor %}
+
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
+
+      {# Sits outside the settings form (forms cannot nest) and reads the
+         fields above live, so settings can be checked before saving. #}
+      <section class="setup-test-mail" data-email-test>
+        <h4 class="setup-subhead">Send a test e-mail</h4>
+        <p class="setup-note">
+          Delivers one short message using the settings above &mdash; including any
+          unsaved changes, so you can check them before saving. Leave the password
+          blank to reuse the stored one.
+        </p>
+        <div class="setup-test-mail-row">
+          <label class="sr-only" for="email-test-to">Send the test to</label>
+          <input
+            id="email-test-to"
+            type="email"
+            data-email-test-to
+            placeholder="your.name@ceza.de"
+            autocomplete="off"
+          />
+          <button type="button" class="setup-test-mail-button" data-email-test-send>
+            Send test e-mail
+          </button>
+        </div>
+        <p class="setup-test-mail-status" data-email-test-status role="status" hidden></p>
+      </section>
+
+      <script>
+        // Scoped to this section, like the custom-columns cloner above.
+        (() => {
+          const root = document.querySelector("[data-email-test]");
+          const form = document.querySelector("[data-email-settings-form]");
+          if (!root || !form) return;
+          const to = root.querySelector("[data-email-test-to]");
+          const button = root.querySelector("[data-email-test-send]");
+          const status = root.querySelector("[data-email-test-status]");
+
+          const say = (message, ok) => {
+            status.hidden = false;
+            status.textContent = message;
+            status.classList.toggle("is-ok", ok === true);
+            status.classList.toggle("is-error", ok === false);
+          };
+
+          button.addEventListener("click", async () => {
+            const address = to.value.trim();
+            if (!address) { say("Enter an address to send the test to.", false); to.focus(); return; }
+            // Read the live field values so unsaved edits are what gets tested.
+            const payload = { to_address: address };
+            new FormData(form).forEach((value, key) => {
+              if (!key.startsWith("template_")) payload[key] = value;
+            });
+            button.disabled = true;
+            const label = button.textContent;
+            button.textContent = "Sending…";
+            say("Contacting the mail server…");
+            try {
+              const res = await fetch("/setup/email/test", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
+              const data = await res.json();
+              if (res.ok) {
+                say(`Test e-mail sent to ${data.to_address}. Check the inbox (and spam).`, true);
+                window.SAMSToast?.show("Test e-mail sent.", "success");
+              } else {
+                say(data.detail || "The test e-mail could not be sent.", false);
+                window.SAMSToast?.show("Test e-mail failed.", "error");
+              }
+            } catch (_e) {
+              say("Could not reach the server. Check your connection and try again.", false);
+            } finally {
+              button.disabled = false;
+              button.textContent = label;
+            }
+          });
+
+          to.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") { event.preventDefault(); button.click(); }
+          });
+        })();
+      </script>
+
       {% elif active_section.kind == "string_list" %}
       <form method="post" action="{{ active_section.form_action }}">
         {% if active_section.list_help %}

@@ -148,6 +148,22 @@
 {% set field_error = field_errors[field_name] %}
 {% endif %}
 {% set is_required = field_name in required_fields %}
+{#- A label/value pair side by side only reads well while the value is
+    short. Long values (institution names, addresses, e-mails, comments)
+    get squeezed into a narrow column and wrap into ribbons, so they
+    stack instead: label on its own line, value full-width beneath.
+    Length-driven rather than field-name-driven, so it holds for every
+    entity without a per-field list. -#}
+{% set value_text = row.value | string if row.value is not none else '' %}
+{% if kind == 'multiline' or (kind != 'boolean' and value_text | length > 24) %}
+{%   set row_classes = row_classes ~ ' is-long-value' %}
+{% endif %}
+{#- Empty rows are collapsed behind a per-section "N empty" toggle by
+    detail-empty-fields.js; edit mode always shows them (CSS override), so
+    nothing becomes uneditable. -#}
+{% if row.value is none %}
+{%   set row_classes = row_classes ~ ' is-empty-value' %}
+{% endif %}
 {% set action_url = row.action_url if row.action_url is defined else none %}
 {% set action_title = row.action_title if row.action_title is defined else 'Open related view' %}
 {% if row.divider_before %}
