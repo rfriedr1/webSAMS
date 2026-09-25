@@ -1,5 +1,9 @@
 # SAMS Web — Server Installation Guide
 
+> **Just want to install and run it on a PC?** Use [`quickstart.md`](quickstart.md) —
+> clone, create `.env`, double-click the start script. This guide is for a
+> *permanent* server: one that starts on its own at boot and serves the whole lab.
+
 How to install, run, update and back up SAMS Web on a **Windows server** in the lab
 network. A Linux variant is in [Appendix A](#appendix-a-linux-server-systemd);
 running it on your own PC for development is in [Appendix B](#appendix-b-workstation--development).
@@ -453,18 +457,7 @@ Updates: `git pull`, the two `pip install` lines, `sudo systemctl restart websam
 
 ## Appendix B: Workstation / development
 
-For running SAMS on your own PC while developing — **not** for servers.
-
-- Windows: `start_webapp_windows.bat`  ·  macOS: `./start_webapp_macos.sh`
-- Both create `.venv` if needed, install the project, and start with `--reload` on
-  `http://127.0.0.1:8502/`. Override the port with `PORT=…`.
-- They read the same `.env`; without `SAMS_SETUP_DATA_FILE` the live settings go to
-  `sams_web/setup_data.json`, which is gitignored.
-
-Manual equivalent:
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-python -m pip install -e .
-python -m uvicorn sams_web.main:app --reload --port 8502
-```
+Covered by [`quickstart.md`](quickstart.md). In short: `start_webapp_windows.bat` /
+`./start_webapp_macos.sh` create `.venv`, install from `requirements.lock.txt` (only
+when it changed), and run on `http://127.0.0.1:8502/`. `HOST=0.0.0.0` opens it to
+the network, `SAMS_DEV=1` turns on auto-reload, `PORT=…` changes the port.

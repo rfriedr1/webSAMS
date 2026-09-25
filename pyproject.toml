@@ -20,6 +20,13 @@ dependencies = [
   "openpyxl>=3.1.0"
 ]
 
+# Explicit package discovery: the repo also has a top-level `templates/`
+# folder (the customer Excel template), and setuptools refuses to guess
+# between two top-level directories — a fresh `pip install -e .` failed
+# with "Multiple top-level packages discovered in a flat-layout".
+[tool.setuptools.packages.find]
+include = ["sams_web*"]
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3.0",

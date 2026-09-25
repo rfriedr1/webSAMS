@@ -18,34 +18,25 @@ This repository now includes a Python web application that migrates the Delphi S
 
 ## Run
 
-> **Installing on a server?** Follow [`docs/server_installation.md`](docs/server_installation.md) (Windows service, firewall, updates, backups). Servers install exact versions from `requirements.lock.txt` and start with `start_server_windows.bat`. There is **no login yet** — keep SAMS Web on the lab network only.
+**Installing on a new PC?** Follow [`docs/quickstart.md`](docs/quickstart.md):
+install Python + Git, clone, copy `.env.example` to `.env`, double-click the start
+script. Five minutes, no administrator setup.
 
-For development:
+- Windows: `start_webapp_windows.bat` · macOS/Linux: `./start_webapp_macos.sh`
+- Opens on <http://127.0.0.1:8502/>; set `HOST=0.0.0.0` to share on the lab network.
+- A permanent server that starts on its own (Windows service, firewall, updates)
+  is described in [`docs/server_installation.md`](docs/server_installation.md).
 
-1. Create and activate a virtual environment.
-2. Install dependencies:
+There is **no login yet** — keep SAMS Web on the lab network only.
 
-```bash
-pip install -e .
-```
-
-3. Set environment variables (or copy `.env.example` values into your shell):
-
-```bash
-export SAMS_DATABASE_URL='mysql+pymysql://<USER>:<PASSWORD>@<HOST>/<DATABASE>'
-# optional: setup/settings storage file (defaults to `sams_web/setup_data.json`)
-# export SAMS_SETUP_DATA_FILE='/path/to/setup_data.json'
-```
-
-4. Start app:
+Manual equivalent of the start script:
 
 ```bash
-uvicorn sams_web.main:app --reload --port 8502
+python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.lock.txt
+python -m pip install --no-deps -e .
+python -m uvicorn sams_web.main:app --port 8502
 ```
-
-5. Open:
-- UI: http://127.0.0.1:8502/
-- API docs: http://127.0.0.1:8502/docs
 
 ## New Python structure
 
