@@ -10,7 +10,7 @@ from sams_web.magic_nav import (
     resolve_magic_identifier,
 )
 from sams_web.models import Project, Sample, Target
-from sams_web.routers.pages import sample_detail_page
+from sams_web.routers.pages_samples import sample_detail_page
 from sams_web.viewmodels import detail_sections as ds
 
 
@@ -34,24 +34,31 @@ def test_magic_identifier_resolution_and_feedback():
     assert "magic_error=Project+%23999+missing" in feedback_url
 
 
-def test_legacy_sample_target_redirect_uses_from_target_query_keys():
+def test_legacy_sample_target_query_redirects_to_nested_route():
+    """`/samples/501?prep=2&target=8` is the legacy Delphi-era shape; it must
+    land on the nested target route without touching the database."""
     response = sample_detail_page(
         request=None,  # type: ignore[arg-type]
         sample_nr=501,
         prep=2,
         target=8,
-        target_page=3,
-        target_page_size=25,
         service=None,  # type: ignore[arg-type]
     )
     assert isinstance(response, RedirectResponse)
-    location = response.headers["location"]
-    assert "/samples/501/preparations/2/targets/8" in location
-    assert "from_target_page=3" in location
-    assert "from_target_page_size=25" in location
+    assert response.headers["location"] == "/samples/501/preparations/2/targets/8"
+
+    prep_only = sample_detail_page(
+        request=None,  # type: ignore[arg-type]
+        sample_nr=501,
+        prep=2,
+        target=None,
+        service=None,  # type: ignore[arg-type]
+    )
+    assert isinstance(prep_only, RedirectResponse)
+    assert prep_only.headers["location"] == "/samples/501/preparations/2"
 
 
-def test_sample_section_build_includes_project_dates_and_excludes_old_info():
+def test_sample_sections_carry_project_dates_and_drop_old_info():
     sample = Sample(
         sample_nr=1,
         project_nr=9,
@@ -68,11 +75,11 @@ def test_sample_section_build_includes_project_dates_and_excludes_old_info():
     )
 
     sections = ds.build_sample_sections(sample, project=project)
-    submission = next(section for section in sections if section["title"] == "Submission")
-    submission_keys = {row["key"] for row in submission["rows"]}
-    assert "project_in_date" in submission_keys
-    assert "project_desired_date" in submission_keys
-    assert "project_out_date" in submission_keys
+    dates = next(section for section in sections if section["title"] == "Dates")
+    date_keys = {row["key"] for row in dates["rows"]}
+    assert "project_in_date" in date_keys
+    assert "project_desired_date" in date_keys
+    assert "project_out_date" in date_keys
 
     other = next(section for section in sections if section["title"] == "Other Analysis")
     other_keys = {row["key"] for row in other["rows"]}

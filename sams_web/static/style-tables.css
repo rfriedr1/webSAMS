@@ -7,8 +7,8 @@
   overflow-y: auto;
   max-height: min(62dvh, 36rem);
   border-radius: 12px;
-  border: 1px solid #d7e0e6;
-  background: #fff;
+  border: 1px solid var(--line-soft);
+  background: var(--surface-solid);
 }
 
 .table-wrap-horizontal {
@@ -64,10 +64,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
-  border: 1px solid #d7e1e8;
+  border: 1px solid var(--line-soft);
   border-radius: 999px;
   padding: 0.32rem 0.62rem;
-  background: #f8fbfd;
+  background: var(--surface-tint);
   text-decoration: none;
   color: #2e5161;
   font-size: var(--text-sm);
@@ -81,7 +81,7 @@
   min-width: 1.45rem;
   border-radius: 999px;
   padding: 0.02rem 0.32rem;
-  background: #e8f1f6;
+  background: var(--brand-tint);
   color: #345769;
   font-size: var(--text-xs);
   font-weight: 700;
@@ -96,11 +96,11 @@
 }
 
 table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured td {
-  background: #edf8ef;
+  background: var(--brand-tint);
 }
 
 table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:hover td {
-  background: #e2f3e6;
+  background: var(--success-bg);
 }
 
 .table-summary {
@@ -110,10 +110,10 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
   gap: 0.6rem;
   list-style: none;
   cursor: pointer;
-  border: 1px solid #d7e0e6;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
   padding: 0.56rem 0.66rem;
-  background: linear-gradient(180deg, #f6fafc, #eef4f8);
+  background: linear-gradient(180deg, var(--surface-tint), var(--brand-tint));
 }
 
 .table-summary::-webkit-details-marker {
@@ -122,7 +122,7 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 
 .table-summary::after {
   content: "▾";
-  color: #4d6978;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   transition: transform 160ms ease;
 }
@@ -141,7 +141,7 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 .table-summary-count {
   border-color: #b7cddb;
   color: #36586a;
-  background: #edf5f9;
+  background: var(--brand-tint);
 }
 
 .table-collapsible[open] .table-summary {
@@ -185,9 +185,9 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 }
 
 .table-tool-clear {
-  border-color: #96b8c7;
-  background: #fff;
-  color: #2b5b70;
+  border-color: var(--line-strong);
+  background: var(--surface-solid);
+  color: var(--brand-deep);
 }
 
 .table-tool-icon {
@@ -209,9 +209,9 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 }
 
 .table-tool-download {
-  border-color: #96b8c7;
-  background: #fff;
-  color: #2b5b70;
+  border-color: var(--line-strong);
+  background: var(--surface-solid);
+  color: var(--brand-deep);
 }
 
 .table-tool-download[disabled] {
@@ -224,7 +224,7 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 
 .table-tool-status {
   margin: 0 0 0.15rem;
-  color: #4f6a77;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   font-weight: 600;
 }
@@ -251,8 +251,8 @@ thead th {
      rows deep. Not wrapping means the column is always at least as wide
      as its own label; the wrapper scrolls if the total overflows. */
   white-space: nowrap;
-  background: linear-gradient(180deg, #eef5f8, #e7eef3);
-  border-bottom: 1px solid #d1dbe2;
+  background: linear-gradient(180deg, var(--brand-tint), var(--bg-bottom));
+  border-bottom: 1px solid var(--line);
 }
 
 thead th.table-sortable {
@@ -271,12 +271,12 @@ thead th.table-sortable::after {
 
 thead th.table-sortable.is-sort-asc::after {
   content: "▲";
-  color: #2e6277;
+  color: var(--brand-deep);
 }
 
 thead th.table-sortable.is-sort-desc::after {
   content: "▼";
-  color: #2e6277;
+  color: var(--brand-deep);
 }
 
 thead th.table-sortable:focus-visible {
@@ -320,22 +320,22 @@ td.table-col-compact-id {
 }
 
 tbody tr {
-  border-bottom: 1px solid #e8eef2;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-/* Stronger zebra contrast — the previous #f9fcfe was within 2 % of white
+/* Stronger zebra contrast — the previous var(--surface-tint) was within 2 % of white
    and effectively invisible. The eye now picks up the row crossing
    the table even on 10+ column projects/dashboard tables. */
 tbody tr:nth-child(2n) {
-  background: #f1f6fa;
+  background: var(--bg-top);
 }
 
 tbody tr:hover {
-  background: #e2eff5;
+  background: var(--brand-tint);
 }
 
 .table-wrap tbody td a {
-  color: #0f607f;
+  color: var(--brand-deep);
   font-weight: 700;
   text-decoration-line: underline;
   text-decoration-thickness: 0.08em;
@@ -359,17 +359,17 @@ tbody tr:hover {
 }
 
 .table-wrap tbody td a:visited {
-  color: #0f607f;
+  color: var(--brand-deep);
 }
 
 .table-wrap tbody td a:hover,
 .table-wrap tbody td a:focus-visible {
-  color: #0c4d66;
+  color: var(--brand-deep);
 }
 
 .table-link,
 .user-row-link {
-  color: #0f607f;
+  color: var(--brand-deep);
   font-weight: 700;
   text-decoration-line: underline;
   text-decoration-thickness: 0.08em;
@@ -378,18 +378,18 @@ tbody tr:hover {
 
 .table-link:visited,
 .user-row-link:visited {
-  color: #0f607f;
+  color: var(--brand-deep);
 }
 
 .table-link:hover,
 .table-link:focus-visible,
 .user-row-link:hover,
 .user-row-link:focus-visible {
-  color: #0c4d66;
+  color: var(--brand-deep);
 }
 
 a {
-  color: #146787;
+  color: var(--brand-deep);
 }
 
 a:hover {
@@ -418,7 +418,7 @@ a:hover {
 
 .user-detail-subtitle {
   margin: 0.2rem 0 0;
-  color: #4d6673;
+  color: var(--ink-soft);
 }
 
 .page-actions,
@@ -433,14 +433,14 @@ a:hover {
 .user-detail-actions a {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #c9d9e3;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.24rem 0.62rem;
-  background: #f7fbfd;
+  background: var(--surface-tint);
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: 700;
-  color: #20576e;
+  color: var(--brand-deep);
 }
 
 .page-actions-forms {
@@ -456,9 +456,9 @@ a:hover {
   align-items: flex-end;
   gap: 0.35rem;
   padding: 0.12rem 0.18rem;
-  border: 1px solid #d7e4eb;
+  border: 1px solid var(--line-soft);
   border-radius: 10px;
-  background: linear-gradient(180deg, #fcfeff, #f4f9fc);
+  background: linear-gradient(180deg, var(--surface-tint), var(--surface-tint));
 }
 
 .page-actions-target-form label {
@@ -466,7 +466,7 @@ a:hover {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
-  color: #3b5866;
+  color: var(--ink-soft);
   font-size: var(--text-xs);
   font-weight: 700;
 }
@@ -484,17 +484,17 @@ a:hover {
   min-height: 1.86rem;
   border-radius: 999px;
   padding: 0.18rem 0.6rem;
-  border-color: #9ab8c7;
-  background: #ffffff;
-  color: #2a5d73;
+  border-color: var(--line-strong);
+  background: var(--surface-solid);
+  color: var(--brand-deep);
   font-size: var(--text-sm);
   font-weight: 700;
 }
 
 .page-actions-forms button:hover,
 .page-actions-forms button:focus-visible {
-  background: #f4fafd;
-  border-color: #88afc0;
+  background: var(--surface-tint);
+  border-color: var(--line-strong);
 }
 
 /* Large-dataset affordance: when a table holds 200+ rows the status
@@ -504,16 +504,16 @@ a:hover {
    (e.g. 5,012) for readability. */
 .table-tool-status.is-big-dataset {
   font-weight: 800;
-  color: #1f3138;
+  color: var(--ink-strong);
   padding: 0.18rem 0.55rem;
   border-radius: 999px;
-  background: #eaf2f6;
-  border: 1px solid #c7d8e0;
+  background: var(--brand-tint);
+  border: 1px solid var(--line);
 }
 
 .table-big-hint {
   margin: 0.2rem 0 0.5rem;
-  color: #506a78;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   font-style: italic;
 }
@@ -523,7 +523,7 @@ a:hover {
   margin: 0.4rem 0 0.6rem;
   padding: 0.5rem 0.75rem;
   border-left: 3px solid var(--brand);
-  background: #f3f9fb;
+  background: var(--bg-top);
   color: var(--ink);
   font-size: var(--text-sm);
   line-height: 1.45;
@@ -562,26 +562,26 @@ a:hover {
 }
 
 .detail-edit-status.is-dirty {
-  color: #1f586d;
-  background: #e6f3f7;
+  color: var(--brand-deep);
+  background: var(--brand-tint);
   border-color: #b6d2dd;
 }
 
 .detail-edit-status.is-dirty::before {
   content: "●";
-  color: #2f7f9a;
+  color: var(--brand-accent);
   font-size: 0.62rem;
 }
 
 .detail-edit-status.is-saved {
-  color: #186f3a;
-  background: #dff3e8;
-  border-color: #a8d8b9;
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: var(--success-line);
 }
 
 .detail-edit-status.is-saved::before {
   content: "✓";
-  color: #186f3a;
+  color: var(--success);
   font-size: var(--text-xs);
   font-weight: 800;
 }
@@ -663,9 +663,9 @@ a:hover {
   align-items: center;
   gap: 0.18rem;
   padding: 0.18rem 0.6rem;
-  border: 1px solid #cfdee7;
+  border: 1px solid var(--line-soft);
   border-radius: 999px;
-  background: #f8fcfe;
+  background: var(--surface-tint);
   color: var(--brand) !important;
   font-size: var(--text-xs);
   font-weight: 700;
@@ -674,8 +674,8 @@ a:hover {
 
 .nav-back-arrow:hover,
 .nav-back-arrow:focus-visible {
-  background: #edf6fb;
-  border-color: #a7c2d0;
+  background: var(--brand-tint);
+  border-color: var(--line-strong);
 }
 
 /* Quick-nav pill: ‹ N / max ›. Inputs/buttons styled flat so the pill
@@ -685,9 +685,9 @@ a:hover {
   align-items: center;
   gap: 0.08rem;
   padding: 0.18rem 0.34rem;
-  border: 1px solid #cfdee7;
+  border: 1px solid var(--line-soft);
   border-radius: 999px;
-  background: #f8fcfe;
+  background: var(--surface-tint);
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--brand);
@@ -708,11 +708,11 @@ a:hover {
 
 .detail-quick-nav-arrow:hover,
 .detail-quick-nav-arrow:focus-visible {
-  background: #e2eef4;
+  background: var(--brand-tint);
 }
 
 .detail-quick-nav-arrow.is-disabled {
-  color: #b6c5cd;
+  color: var(--line-strong);
   pointer-events: none;
 }
 
@@ -746,8 +746,8 @@ a:hover {
 
 .detail-quick-nav-jump input[type="number"]:hover,
 .detail-quick-nav-jump input[type="number"]:focus-visible {
-  border-color: #a7c2d0;
-  background: #ffffff;
+  border-color: var(--line-strong);
+  background: var(--surface-solid);
   outline: none;
 }
 
@@ -774,16 +774,16 @@ a:hover {
   align-items: center;
   justify-content: center;
   min-height: 1.86rem;
-  border: 1px solid #c8d8e2;
+  border: 1px solid var(--line-soft);
   border-radius: 999px;
   padding: 0.2rem 0.62rem;
-  background: #f7fbfd;
+  background: var(--surface-tint);
   font-size: var(--text-sm);
   font-weight: 700;
 }
 
 .sample-quick-nav-link {
-  color: #20576e;
+  color: var(--brand-deep);
   text-decoration: none;
 }
 
@@ -791,19 +791,19 @@ a:hover {
 .sample-quick-nav-link:focus-visible {
   color: #18485b;
   border-color: #98b9c8;
-  background: #edf6fb;
+  background: var(--brand-tint);
 }
 
 .sample-quick-nav-current {
   color: #1f5a72;
-  border-color: #9bbccc;
-  background: #eaf4fa;
+  border-color: var(--line-strong);
+  background: var(--brand-tint);
 }
 
 .sample-quick-nav-disabled {
-  color: #7d929f;
-  border-color: #d5e1e8;
-  background: #f4f7f9;
+  color: var(--ink-soft);
+  border-color: var(--line-soft);
+  background: var(--surface-tint);
 }
 
 .sample-quick-nav-arrow {
@@ -818,10 +818,10 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border: 1px solid #9bbccc;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: 0.16rem 0.26rem;
-  background: #eaf4fa;
+  background: var(--brand-tint);
 }
 
 .sample-quick-nav-jump input {
@@ -833,7 +833,7 @@ a:hover {
   text-align: center;
   font-size: var(--text-sm);
   font-weight: 700;
-  background: #ffffff;
+  background: var(--surface-solid);
 }
 
 .sample-quick-nav-jump button {
@@ -855,7 +855,7 @@ a:hover {
 
 .sample-quick-nav-error {
   margin: 0.36rem 0 0;
-  color: #842f2f;
+  color: var(--danger-text);
   font-size: var(--text-sm);
 
 /* ---- list-page server-side search -------------------------------------
@@ -882,7 +882,7 @@ a:hover {
   border: 1px solid var(--brand);
   border-radius: 999px;
   background: linear-gradient(130deg, var(--brand), var(--brand-2));
-  color: #fff;
+  color: var(--surface-solid);
   font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;

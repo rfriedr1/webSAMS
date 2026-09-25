@@ -32,8 +32,8 @@ def test_create_sample_creates_blank_prep_and_target():
         session = _make_session()
         service = _make_service(session, tmp_dir)
 
-        user = service.create_user({"last_name": "Miller", "first_name": "Anne"})
-        project = service.add_new_project_by_user_nr(user_nr=user.user_nr, project_name="Project A")
+        user = service.create_submitter({"last_name": "Miller", "first_name": "Anne"})
+        project = service.add_new_project_by_submitter_nr(user_nr=user.user_nr, project_name="Project A")
         sample = service.add_new_sample_by_project_nr(project_nr=project.project_nr, sample_name="S-001")
 
         prep = session.scalar(

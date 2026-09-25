@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row %}
+{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row, render_detail_sections %}
 {% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
@@ -85,32 +85,18 @@
     </div>
   </section>
 
-  <div class="sample-section-grid">
-    {% for section in preparation_sections %}
-    <article class="sample-section-card">
-      <header class="sample-section-head">
-        <h3>{{ section.title }}</h3>
-        <p>{{ section.description }}</p>
-      </header>
-      <dl class="sample-field-list">
-        {% for row in section.rows %}
-        {{ render_detail_field_row(
-          row,
-          entity='preparation',
-          row_class='sample-field-row',
-          form_id=preparation_edit_form_id,
-          read_only_fields=preparation_read_only_fields,
-          editor_value_overrides=preparation_form_values,
-          select_options_by_field=preparation_select_options,
-          required_fields=preparation_required_fields,
-          field_errors=preparation_field_errors,
-          field_warnings=preparation_warnings_by_field
-        ) }}
-        {% endfor %}
-      </dl>
-    </article>
-    {% endfor %}
-  </div>
+  {{ render_detail_sections(
+    preparation_sections,
+    entity='preparation',
+    css_prefix='sample',
+    form_id=preparation_edit_form_id,
+    read_only_fields=preparation_read_only_fields,
+    editor_value_overrides=preparation_form_values,
+    select_options_by_field=preparation_select_options,
+    required_fields=preparation_required_fields,
+    field_errors=preparation_field_errors,
+    field_warnings=preparation_warnings_by_field
+  ) }}
 
   <section data-table-filter id="preparation-targets">
     <h3>Targets in Preparation {{ preparation.prep_nr }} ({{ targets_total }})</h3>
