@@ -11,14 +11,14 @@ administrator setup: you start it when you need it and close the window to stop.
 
 ## 1. Install Python and Git (once per PC)
 
-- **Python 3.13** from <https://www.python.org/downloads/> — in the installer tick
-  **Add python.exe to PATH**. (3.11 or 3.12 also work.)
+- **Python 3.14** from <https://www.python.org/downloads/> — in the installer tick
+  **Add python.exe to PATH**. (3.13 is also tested; 3.11 and 3.12 work.)
 - **Git** from <https://git-scm.com/download/> — defaults are fine.
 
 Check in a new terminal / PowerShell window:
 
 ```
-python --version      # Windows       → Python 3.13.x
+py --version          # Windows       → Python 3.14.x
 python3 --version     # macOS / Linux
 git --version
 ```
@@ -119,8 +119,9 @@ reinstalls. Press `Ctrl+F5` once in the browser if a page looks stale.
 
 | Symptom | Fix |
 |---|---|
-| `No Python 3.11 or newer found` | Install Python 3.13 (step 1) with **Add to PATH** ticked |
+| `No Python 3.11 or newer found` | Install Python 3.14 (step 1) with **Add to PATH** ticked |
 | `.venv was created with an old Python` | Delete the `.venv` folder and start again |
+| Upgraded Python (e.g. 3.13 → 3.14) and want to use it | Delete the `.venv` folder and start again — it keeps the Python it was made with |
 | `[setup] No .env file found` | Create `.env` (step 3); check it isn't `.env.txt` |
 | `SAMS_DATABASE_URL is required` | `.env` exists but the line is missing or commented out |
 | Pages show a database error | Wrong user/password/database in `.env`, or no network route to `192.168.123.30:3306` |

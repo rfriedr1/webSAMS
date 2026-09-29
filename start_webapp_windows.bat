@@ -32,14 +32,16 @@ if exist ".venv\Scripts\python.exe" (
 
 if not exist ".venv\Scripts\python.exe" (
   echo [setup] Creating the Python environment in .venv - first run only
-  rem Newest 3.11+ wins: the py launcher (python.org installs) first, then whatever "python" is.
+  rem Newest tested version wins (3.14 and 3.13 are tested), via the py launcher
+  rem that python.org installs. Then any newer 3.x the launcher knows, then "python".
   set "PYCMD="
-  for %%v in (3.13 3.12 3.11) do (
+  for %%v in (3.14 3.13 3.12 3.11) do (
     if not defined PYCMD ( py -%%v -c "pass" >nul 2>nul && set "PYCMD=py -%%v" )
   )
+  if not defined PYCMD ( py -3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>nul && set "PYCMD=py -3" )
   if not defined PYCMD ( python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>nul && set "PYCMD=python" )
   if not defined PYCMD (
-    echo [error] No Python 3.11 or newer found. Install Python 3.13 from https://www.python.org/downloads/
+    echo [error] No Python 3.11 or newer found. Install Python 3.14 from https://www.python.org/downloads/
     echo         and tick "Add python.exe to PATH", then run this again.
     pause
     exit /b 1

@@ -48,7 +48,7 @@ Paths assume the app lives in `C:\webSAMS`; adjust if you choose another folder.
 | Item | Notes |
 |---|---|
 | Windows Server 2019 / 2022 / 2025 | Windows 10/11 also works. Administrator rights for setup. |
-| **Python 3.13** (64-bit) from [python.org](https://www.python.org/downloads/windows/) | In the installer choose **Customize installation → Install Python for all users**. A per-user install under `C:\Users\…\AppData` is not readable by the service account. Tick *Add Python to environment variables*. The app was built and tested on 3.13; 3.11+ works but is not what the pinned packages were tested with. |
+| **Python 3.14** (64-bit) from [python.org](https://www.python.org/downloads/windows/) | In the installer choose **Customize installation → Install Python for all users**. A per-user install under `C:\Users\…\AppData` is not readable by the service account. Tick *Add Python to environment variables*. The app is tested on **3.14 and 3.13** — every pinned package ships a ready-made Windows build for both, so no compiler is needed. 3.11/3.12 also work. |
 | **Git for Windows** from [git-scm.com](https://git-scm.com/download/win) | To clone and update. The repository is private: the first `git clone` asks you to sign in to GitHub. |
 | **NSSM** (Non-Sucking Service Manager) from [nssm.cc](https://nssm.cc/download) | Runs SAMS Web as a Windows service. Copy `win64\nssm.exe` to e.g. `C:\Tools\nssm\` and add that folder to `PATH`. |
 | Network access to MySQL | TCP **3306** from this server to the database host. Test: `Test-NetConnection 192.168.123.30 -Port 3306` → `TcpTestSucceeded : True`. |
@@ -58,7 +58,7 @@ Paths assume the app lives in `C:\webSAMS`; adjust if you choose another folder.
 Check Python afterwards (new PowerShell window):
 
 ```powershell
-py -3.13 --version        # Python 3.13.x
+py -3 --version           # Python 3.14.x (or 3.13.x)
 git --version
 nssm version
 ```
@@ -159,11 +159,17 @@ Install **exactly** the package versions the app was tested with, from
 
 ```powershell
 cd C:\webSAMS
-py -3.13 -m venv .venv
+py -3 -m venv .venv
 .venv\Scripts\python.exe -m pip install --upgrade pip
 .venv\Scripts\python.exe -m pip install -r requirements.lock.txt
 .venv\Scripts\python.exe -m pip install --no-deps -e .
 ```
+
+`py -3` uses the newest Python installed. If the server has several and you want a
+specific one, name it: `py -3.14 -m venv .venv`.
+
+**Changing Python later** (e.g. 3.13 → 3.14): the `.venv` is tied to the Python that
+created it. Stop the service, delete `C:\webSAMS\.venv`, and repeat this section.
 
 Quick self-check (must print `app-import-ok` and no errors):
 

@@ -21,7 +21,7 @@ fi
 # Pick the newest Python 3.11+ on this machine. Plain `python3` is often the
 # OS's own 3.9 on macOS, which cannot install the pinned packages.
 pick_python() {
-  for c in python3.13 python3.12 python3.11 python3; do
+  for c in python3.14 python3.13 python3.12 python3.11 python3; do
     if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
       echo "$c"; return 0
     fi
@@ -37,8 +37,8 @@ fi
 
 if [[ ! -x ".venv/bin/python" ]]; then
   PY="$(pick_python)" || {
-    echo "[setup] No Python 3.11 or newer found. Install Python 3.13 from https://www.python.org/downloads/"
-    echo "        (or: brew install python@3.13) and run this script again."
+    echo "[setup] No Python 3.11 or newer found. Install Python 3.14 from https://www.python.org/downloads/"
+    echo "        (or: brew install python@3.14) and run this script again."
     exit 1
   }
   echo "[setup] Creating the Python environment in .venv with $("$PY" --version) (first run only)"
