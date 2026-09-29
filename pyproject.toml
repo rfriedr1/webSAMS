@@ -1,6 +1,6 @@
 [project]
 name = "sams-web"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python web migration of the SAMS Delphi LIMS"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,6 +24,9 @@ dependencies = [
 # folder (the customer Excel template), and setuptools refuses to guess
 # between two top-level directories — a fresh `pip install -e .` failed
 # with "Multiple top-level packages discovered in a flat-layout".
+[tool.setuptools.dynamic]
+version = { attr = "sams_web.__version__" }
+
 [tool.setuptools.packages.find]
 include = ["sams_web*"]
 
