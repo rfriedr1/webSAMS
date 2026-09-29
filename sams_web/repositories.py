@@ -545,12 +545,14 @@ class SamsRepository:
             ),
         }
 
+    # Material / fraction / type lists are alphabetical everywhere: the
+    # legacy `indexnr` is insertion order and means nothing to an operator.
     def get_materials(self) -> list[str]:
-        stmt = text("SELECT material FROM material_t ORDER BY indexnr")
+        stmt = text("SELECT material FROM material_t ORDER BY material")
         return [row[0] for row in self.session.execute(stmt).all()]
 
     def get_fractions(self) -> list[str]:
-        stmt = text("SELECT fraction FROM fraction_t ORDER BY indexnr")
+        stmt = text("SELECT fraction FROM fraction_t ORDER BY fraction")
         return [row[0] for row in self.session.execute(stmt).all()]
 
     def get_methods(self) -> list[str]:
@@ -562,11 +564,7 @@ class SamsRepository:
         return [row[0] for row in self.session.execute(stmt).all()]
 
     def get_sample_types(self) -> list[str]:
-        stmt = select(SampleType.type).order_by(
-            case((SampleType.indexnr.is_(None), 1), else_=0).asc(),
-            SampleType.indexnr.asc(),
-            SampleType.type.asc(),
-        )
+        stmt = select(SampleType.type).order_by(SampleType.type.asc())
         return [row[0] for row in self.session.execute(stmt).all()]
 
     def get_project_statuses(self) -> list[str]:
