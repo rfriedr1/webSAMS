@@ -47,6 +47,9 @@ jobs:
           $out
           if ($LASTEXITCODE -ne 1) { throw "expected exit 1, got $LASTEXITCODE" }
           if ($out -notmatch "No .env file found") { throw "missing .env message not shown" }
+          # Exit 1 was the expected result; clear it, or the Actions pwsh wrapper
+          # fails the step on the leftover $LASTEXITCODE.
+          exit 0
 
       - name: Write a .env (health check does not touch the database)
         shell: pwsh
