@@ -757,7 +757,7 @@
         ).length;
         if (!rows) return "";
         const g = state.groups[key] || { steps: [] };
-        // Quick picks: a quiet "Suggested: a · b" line, not buttons in
+        // Quick picks: a quiet "a · b" text line, not buttons in
         // boxes. The value already selected is left out.
         const chips = (field) =>
           (suggestions[key]?.[field] || [])
@@ -777,7 +777,7 @@
               <select data-group-select="${esc(key)}" data-group-field="${field}">
                 ${optionList(opts[field] || [], g[field] || "", "— undefined —")}
               </select>
-              ${chips(field) ? `<div class="import-suggests"><span>Suggested:</span>${chips(field)}</div>` : ""}
+              ${chips(field) ? `<div class="import-suggests">${chips(field)}</div>` : ""}
             </div>`
         ).join("");
         const steps = g.steps
