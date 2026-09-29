@@ -9,6 +9,7 @@ from typing import Any, Callable
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+from sams_web import __version__
 from sams_web.config import get_settings
 from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_COMMAND_LABELS,
@@ -274,7 +275,8 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 # reference it via `css_v` so a child template (e.g. lab_queue.html) can
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
-templates.env.globals["css_v"] = "20260801-27"
+templates.env.globals["app_version"] = __version__
+templates.env.globals["css_v"] = "20260929-1"
 
 
 def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

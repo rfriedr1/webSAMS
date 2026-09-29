@@ -6,7 +6,6 @@ import logging
 import re
 from contextlib import asynccontextmanager
 from functools import lru_cache
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -16,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Scope
 
+from sams_web import __version__
 from sams_web.config import get_settings
 from sqlalchemy.engine import make_url
 from sams_web.routers.api import router as api_router
@@ -221,15 +221,11 @@ def _startup_summary() -> str:
     this is: version, database and settings file. Never the credentials."""
     settings = get_settings()
     try:
-        app_version = version("sams-web")
-    except PackageNotFoundError:
-        app_version = "dev"
-    try:
         db_host = make_url(settings.database_url).host or "local"
     except Exception:  # noqa: BLE001
         db_host = "?"
     return (
-        f"webSAMS {app_version} ready - database {settings.database_name} on {db_host}"
+        f"webSAMS {__version__} ready - database {settings.database_name} on {db_host}"
         f" - settings {settings.setup_data_file}"
     )
 
@@ -243,7 +239,7 @@ async def _lifespan(_app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_title, debug=settings.debug, lifespan=_lifespan)
+    app = FastAPI(title=settings.app_title, version=__version__, debug=settings.debug, lifespan=_lifespan)
 
     # Compress HTML/CSS/JS/JSON. minimum_size=500 avoids paying the gzip
     # cost on tiny responses (small JSON API replies). Starlette skips
