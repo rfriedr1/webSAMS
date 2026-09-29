@@ -1,0 +1,102 @@
+# Runs start_webapp_windows.bat for real on Windows. Batch files cannot be
+# exercised on macOS/Linux, and a static read missed a cmd.exe expansion bug
+# that broke first-run installs ("-m" is not recognized). This catches that
+# class of bug before it reaches a lab PC.
+name: Windows launcher
+
+on:
+  pull_request:
+    paths:
+      - "start_webapp_windows.bat"
+      - "start_server_windows.bat"
+      - "requirements.lock.txt"
+      - "pyproject.toml"
+      - ".github/workflows/windows-launcher.yml"
+  workflow_dispatch:
+
+jobs:
+  launcher:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.14", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Batch files have CRLF line endings on checkout
+        shell: pwsh
+        run: |
+          foreach ($f in "start_webapp_windows.bat", "start_server_windows.bat") {
+            $bytes = [IO.File]::ReadAllBytes($f)
+            $lf = ($bytes | Where-Object { $_ -eq 10 }).Count
+            $crlf = ([regex]::Matches([Text.Encoding]::ASCII.GetString($bytes), "`r`n")).Count
+            if ($lf -ne $crlf) { throw "$f has $lf LF but only $crlf CRLF" }
+            "$f ok ($crlf CRLF lines)"
+          }
+
+      - name: Refuses to start without .env
+        shell: pwsh
+        run: |
+          $out = cmd /c "echo.| start_webapp_windows.bat" 2>&1 | Out-String
+          $out
+          if ($LASTEXITCODE -ne 1) { throw "expected exit 1, got $LASTEXITCODE" }
+          if ($out -notmatch "No .env file found") { throw "missing .env message not shown" }
+          # Exit 1 was the expected result; clear it, or the Actions pwsh wrapper
+          # fails the step on the leftover $LASTEXITCODE.
+          exit 0
+
+      - name: Write a .env (health check does not touch the database)
+        shell: pwsh
+        run: Set-Content .env "SAMS_DATABASE_URL=mysql+pymysql://ci:ci@127.0.0.1/ci"
+
+      - name: First run - creates .venv, installs the lock, serves
+        shell: pwsh
+        run: |
+          $p = Start-Process cmd -ArgumentList "/c", "start_webapp_windows.bat > first.log 2>&1" -PassThru -NoNewWindow
+          $ok = $false
+          foreach ($i in 1..300) {
+            try { $r = Invoke-RestMethod http://127.0.0.1:8502/api/health -TimeoutSec 2; if ($r.status -eq "ok") { $ok = $true; break } } catch {}
+            if ($p.HasExited) { break }
+            Start-Sleep 2
+          }
+          Get-Content first.log
+          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { throw "app never answered /api/health on first run" }
+          if (-not (Test-Path .venv\installed-from.txt)) { throw "install stamp was not written" }
+          & .venv\Scripts\python.exe --version
+          $log = Get-Content first.log -Raw
+          if ($log -notmatch "\[setup\] Using: ") { throw "launcher did not report which Python it used" }
+
+      - name: Second run - skips install, serves quickly
+        shell: pwsh
+        run: |
+          $p = Start-Process cmd -ArgumentList "/c", "start_webapp_windows.bat > second.log 2>&1" -PassThru -NoNewWindow
+          $ok = $false
+          foreach ($i in 1..60) {
+            try { $r = Invoke-RestMethod http://127.0.0.1:8502/api/health -TimeoutSec 2; if ($r.status -eq "ok") { $ok = $true; break } } catch {}
+            Start-Sleep 1
+          }
+          Get-Content second.log
+          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { throw "app never answered /api/health on second run" }
+          if ((Get-Content second.log -Raw) -match "Installing packages") { throw "second run reinstalled packages" }
+
+      - name: Server script starts from the same .venv
+        shell: pwsh
+        run: |
+          $env:SAMS_HOST = "127.0.0.1"
+          $p = Start-Process cmd -ArgumentList "/c", "start_server_windows.bat > server.log 2>&1" -PassThru -NoNewWindow
+          $ok = $false
+          foreach ($i in 1..60) {
+            try { $r = Invoke-RestMethod http://127.0.0.1:8502/api/health -TimeoutSec 2; if ($r.status -eq "ok") { $ok = $true; break } } catch {}
+            Start-Sleep 1
+          }
+          Get-Content server.log
+          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { throw "start_server_windows.bat never answered /api/health" }
