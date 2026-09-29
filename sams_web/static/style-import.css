@@ -345,7 +345,7 @@
 }
 
 /* Quick-pick suggestions: one quiet text line under the field, e.g.
-   "Suggested: collagen user prep. · pollen" — links, not pill buttons. */
+   "collagen user prep. · pollen" — links, not pill buttons. */
 .import-suggests {
   display: flex;
   flex-wrap: wrap;
