@@ -9,6 +9,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+printf '\033]0;webSAMS\007'   # terminal window/tab title
+echo
+echo "  ============================================================"
+echo "    webSAMS  -  CEZA C14 Laboratory Information System"
+echo "  ============================================================"
+echo
+
 if [[ ! -f ".env" ]]; then
   echo
   echo "[setup] No .env file found."
@@ -48,7 +55,9 @@ fi
 # Install the exact tested package versions. Skipped when nothing changed,
 # so a normal start takes seconds and works without internet.
 STAMP=".venv/.installed-from"
-WANT="$(cat requirements.lock.txt pyproject.toml | shasum | cut -c1-16)"
+# Fingerprint via the venv's own Python: `shasum` is missing on some minimal
+# Linux systems, and .venv/bin/python is guaranteed to exist at this point.
+WANT="$(.venv/bin/python -c 'import hashlib; print(hashlib.sha256(open("requirements.lock.txt","rb").read() + open("pyproject.toml","rb").read()).hexdigest()[:16])')"
 if [[ ! -f "$STAMP" || "$(cat "$STAMP")" != "$WANT" ]]; then
   echo "[setup] Installing packages (first run, or requirements changed)"
   .venv/bin/python -m pip install --quiet --upgrade pip
@@ -65,9 +74,9 @@ RELOAD=""
 [[ "${SAMS_DEV:-}" == "1" ]] && RELOAD="--reload"
 
 echo
-echo "[run] SAMS Web is starting on http://${HOST}:${PORT}/"
+echo "[run] webSAMS is starting on http://${HOST}:${PORT}/"
 [[ "$HOST" == "127.0.0.1" ]] && echo "[run] (only this computer can open it — set HOST=0.0.0.0 for the lab network)"
 echo "[run] Press Ctrl+C to stop"
 echo
 # shellcheck disable=SC2086  # $RELOAD is intentionally unquoted: empty or a single flag
-exec .venv/bin/python -m uvicorn sams_web.main:app --host "$HOST" --port "$PORT" $RELOAD
+exec .venv/bin/python -m uvicorn sams_web.main:app --host "$HOST" --port "$PORT" --log-config sams_web/log_config.json $RELOAD

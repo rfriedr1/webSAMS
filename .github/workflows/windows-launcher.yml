@@ -66,16 +66,25 @@ jobs:
             Start-Sleep 2
           }
           Get-Content first.log
+          $listen = (Get-NetTCPConnection -LocalPort 8502 -State Listen -ErrorAction SilentlyContinue).LocalAddress | Sort-Object -Unique
+          "listening on: $listen"
           Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $ok) { throw "app never answered /api/health on first run" }
+          if ($listen -notcontains "0.0.0.0") { throw "default should listen on 0.0.0.0 (lab network), got: $listen" }
+          if ((Get-Content first.log -Raw) -notmatch "From other PCs:\s+http://$env:COMPUTERNAME`:8502/") { throw "network address not printed" }
+          $log = Get-Content first.log -Raw
+          if ($log -notmatch "webSAMS  -  CEZA C14 Laboratory Information System") { throw "banner missing" }
+          if ($log -notmatch "\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  webSAMS  INFO +webSAMS [\d.]+ ready - database ") { throw "branded startup line missing" }
+          if ($log -match "\x1b\[") { throw "ANSI colour codes leaked into the console output" }
           if (-not (Test-Path .venv\installed-from.txt)) { throw "install stamp was not written" }
           & .venv\Scripts\python.exe --version
           $log = Get-Content first.log -Raw
           if ($log -notmatch "\[setup\] Using: ") { throw "launcher did not report which Python it used" }
 
-      - name: Second run - skips install, serves quickly
+      - name: Second run - skips install, HOST=127.0.0.1 keeps it private
         shell: pwsh
         run: |
+          $env:HOST = "127.0.0.1"
           $p = Start-Process cmd -ArgumentList "/c", "start_webapp_windows.bat > second.log 2>&1" -PassThru -NoNewWindow
           $ok = $false
           foreach ($i in 1..60) {
@@ -83,8 +92,11 @@ jobs:
             Start-Sleep 1
           }
           Get-Content second.log
+          $listen = (Get-NetTCPConnection -LocalPort 8502 -State Listen -ErrorAction SilentlyContinue).LocalAddress | Sort-Object -Unique
+          "listening on: $listen"
           Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $ok) { throw "app never answered /api/health on second run" }
+          if ($listen -contains "0.0.0.0") { throw "HOST=127.0.0.1 was ignored: $listen" }
           if ((Get-Content second.log -Raw) -match "Installing packages") { throw "second run reinstalled packages" }
 
       - name: Server script starts from the same .venv
@@ -100,3 +112,4 @@ jobs:
           Get-Content server.log
           Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $ok) { throw "start_server_windows.bat never answered /api/health" }
+          if ((Get-Content server.log -Raw) -notmatch "webSAMS  INFO +webSAMS [\d.]+ ready") { throw "server script output not branded" }

@@ -19,6 +19,12 @@ rem  Override with SAMS_HOST / SAMS_PORT (e.g. in the service environment).
 rem ==========================================================================
 setlocal
 cd /d "%~dp0"
+title webSAMS server
+echo.
+echo  ============================================================
+echo    webSAMS  -  CEZA C14 Laboratory Information System
+echo  ============================================================
+echo.
 
 if not exist ".venv\Scripts\python.exe" (
   echo [error] No .venv in %CD% - install first, see docs\server_installation.md section 5.
@@ -33,6 +39,7 @@ if "%SAMS_HOST%"=="" set "SAMS_HOST=0.0.0.0"
 if "%SAMS_PORT%"=="" set "SAMS_PORT=8502"
 
 rem One worker on purpose: the settings file is written by a single process.
-echo [run] SAMS Web listening on %SAMS_HOST%:%SAMS_PORT% - press Ctrl+C to stop
-".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %SAMS_HOST% --port %SAMS_PORT% --workers 1
+title webSAMS server - port %SAMS_PORT%
+echo [run] webSAMS listening on %SAMS_HOST%:%SAMS_PORT% - press Ctrl+C to stop
+".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %SAMS_HOST% --port %SAMS_PORT% --workers 1 --log-config sams_web\log_config.json
 exit /b %ERRORLEVEL%
