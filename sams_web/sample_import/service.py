@@ -39,6 +39,11 @@ from sams_web.sample_import.workbook import load_grids, pick_submission_grid
 #: Cap on candidate rows pulled from the DB for scoring.
 CANDIDATE_QUERY_LIMIT = 60
 
+#: Group-card material suggestions need a closer match than the review
+#: step's fuzzy fallback (0.45), which let in look-alikes such as
+#: "collagen" -> "carbonate".
+GROUP_SUGGESTION_MIN_RATIO = 0.6
+
 #: Priority values. `project_t.priority` has no lookup table; the legacy
 #: UI used a three-way radio group.
 PRIORITY_OPTIONS: tuple[tuple[int, str], ...] = (
@@ -212,18 +217,24 @@ def parse_submission(
     # The customer writes their vocabulary ("collagen"); the lab records
     # its own ("bone"). Suggest a lab type/material/fraction per distinct
     # submitter material so the operator confirms rather than types.
+    #
+    # Only *material* is suggested. The match is pure spelling similarity,
+    # which is meaningful between two material names ("collagen" ->
+    # "collagen user prep.") but not between a material and a sample type
+    # or fraction — those suggestions were noise ("collagen" -> "blank").
     material_options = lookup_options["material"]
-    type_options = lookup_options["type"]
-    fraction_options = lookup_options["fraction"]
     group_suggestions: dict[str, dict[str, Any]] = {}
     for sample in draft.samples:
         raw = str(sample.values.get("material") or "").strip()
         if not raw or raw in group_suggestions:
             continue
         group_suggestions[raw] = {
-            "material": [c for c, _ in suggest_from_choices(raw, material_options, limit=4)],
-            "type": [c for c, _ in suggest_from_choices(raw, type_options, limit=4)],
-            "fraction": [c for c, _ in suggest_from_choices(raw, fraction_options, limit=4)],
+            "material": [
+                c
+                for c, _ in suggest_from_choices(
+                    raw, material_options, limit=3, min_ratio=GROUP_SUGGESTION_MIN_RATIO
+                )
+            ],
         }
 
     # --- Project defaults the sheet does not carry --------------------
