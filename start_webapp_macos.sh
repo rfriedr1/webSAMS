@@ -48,7 +48,9 @@ fi
 # Install the exact tested package versions. Skipped when nothing changed,
 # so a normal start takes seconds and works without internet.
 STAMP=".venv/.installed-from"
-WANT="$(cat requirements.lock.txt pyproject.toml | shasum | cut -c1-16)"
+# Fingerprint via the venv's own Python: `shasum` is missing on some minimal
+# Linux systems, and .venv/bin/python is guaranteed to exist at this point.
+WANT="$(.venv/bin/python -c 'import hashlib; print(hashlib.sha256(open("requirements.lock.txt","rb").read() + open("pyproject.toml","rb").read()).hexdigest()[:16])')"
 if [[ ! -f "$STAMP" || "$(cat "$STAMP")" != "$WANT" ]]; then
   echo "[setup] Installing packages (first run, or requirements changed)"
   .venv/bin/python -m pip install --quiet --upgrade pip

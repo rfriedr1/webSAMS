@@ -23,7 +23,7 @@ install Python + Git, clone, copy `.env.example` to `.env`, double-click the sta
 script. Five minutes, no administrator setup.
 
 - Windows: `start_webapp_windows.bat` · macOS/Linux: `./start_webapp_macos.sh`
-- Opens on <http://127.0.0.1:8502/>; set `HOST=0.0.0.0` to share on the lab network.
+- Opens on <http://127.0.0.1:8502/>. On Windows it is also reachable from the lab network by default (`set HOST=127.0.0.1` to keep it private); on macOS/Linux set `HOST=0.0.0.0` to share it.
 - A permanent server that starts on its own (Windows service, firewall, updates)
   is described in [`docs/server_installation.md`](docs/server_installation.md).
 

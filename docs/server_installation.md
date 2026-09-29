@@ -211,10 +211,10 @@ which database is connected — confirm it is the one you intended.
 
 Stop with **Ctrl+C**.
 
-> Use `start_server_windows.bat`, **not** `start_webapp_windows.bat`, on a server.
-> The latter is a workstation launcher: it reinstalls packages on every start
-> (a boot that fails whenever PyPI is unreachable), runs with `--reload`, listens on
-> `127.0.0.1` only, and sets `SAMS_SETUP_DATA_FILE` itself — overriding `.env`.
+> For the service use `start_server_windows.bat`. `start_webapp_windows.bat` also
+> works on a server — it listens on the lab network too, and it is the easiest way to
+> create `.venv` the first time — but it may install packages when it starts and
+> waits for a key press after an error, neither of which a service should do.
 
 ---
 
@@ -465,5 +465,6 @@ Updates: `git pull`, the two `pip install` lines, `sudo systemctl restart websam
 
 Covered by [`quickstart.md`](quickstart.md). In short: `start_webapp_windows.bat` /
 `./start_webapp_macos.sh` create `.venv`, install from `requirements.lock.txt` (only
-when it changed), and run on `http://127.0.0.1:8502/`. `HOST=0.0.0.0` opens it to
-the network, `SAMS_DEV=1` turns on auto-reload, `PORT=…` changes the port.
+when it changed), and run on port 8502. The Windows launcher listens on the lab
+network by default (`HOST=127.0.0.1` keeps it private); the macOS one listens on
+this computer only (`HOST=0.0.0.0` opens it to the network), `SAMS_DEV=1` turns on auto-reload, `PORT=…` changes the port.

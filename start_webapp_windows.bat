@@ -2,7 +2,8 @@
 rem SAMS Web - install (first time) and run, on Windows.
 rem
 rem   Double-click, or from a prompt:   start_webapp_windows.bat
-rem   set HOST=0.0.0.0  before running  -> also reachable from other lab PCs
+rem   Other lab PCs can connect by default (listens on 0.0.0.0).
+rem   set HOST=127.0.0.1  before running -> only this PC can open it
 rem   set SAMS_DEV=1    before running  -> auto-reload on code changes (developers)
 rem
 rem Needs: Python 3.11+ (python.org, "Add to PATH" ticked) and a .env file
@@ -70,14 +71,26 @@ if not "%HAVE%"=="%WANT%" (
   >"%STAMP%" echo %WANT%
 )
 
-if "%HOST%"=="" set "HOST=127.0.0.1"
+rem 0.0.0.0 = reachable from the lab network. NO LOGIN EXISTS YET: anyone who
+rem can reach this PC on the port can change data. Never expose it to the internet.
+if "%HOST%"=="" set "HOST=0.0.0.0"
 if "%PORT%"=="" set "PORT=8502"
 set "RELOAD="
 if "%SAMS_DEV%"=="1" set "RELOAD=--reload"
 
 echo.
+rem "0.0.0.0" is a listening address, not something a browser can open, so print
+rem the two addresses people actually type.
+if "%HOST%"=="0.0.0.0" goto :print_network
 echo [run] SAMS Web is starting on http://%HOST%:%PORT%/
-if "%HOST%"=="127.0.0.1" echo [run] (only this computer can open it - set HOST=0.0.0.0 for the lab network)
+if "%HOST%"=="127.0.0.1" echo [run] (only this computer can open it)
+goto :printed
+:print_network
+echo [run] SAMS Web is starting.
+echo [run]   On this PC:        http://127.0.0.1:%PORT%/
+echo [run]   From other PCs:    http://%COMPUTERNAME%:%PORT%/
+echo [run] No login yet - everyone on the lab network can edit data.
+:printed
 echo [run] Press Ctrl+C to stop
 echo.
 ".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %HOST% --port %PORT% %RELOAD%

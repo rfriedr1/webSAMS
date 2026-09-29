@@ -65,13 +65,8 @@ If it stops with *No Python 3.11 or newer found*, step 1 was skipped. If it says
 the `.venv` folder *was created with an old Python*, delete that folder and start
 again.
 
-When you see
-
-```
-[run] SAMS Web is starting on http://127.0.0.1:8502/
-```
-
-open **<http://127.0.0.1:8502/>** in a browser. The header shows which database
+When you see `[run] SAMS Web is starting`, open **<http://127.0.0.1:8502/>** in a
+browser on that PC. (On Windows the window also prints the address other PCs use.) The header shows which database
 you are connected to — check it is the one you intended.
 
 **To stop:** press `Ctrl+C` in the window, or just close it.
@@ -79,20 +74,27 @@ you are connected to — check it is the one you intended.
 If instead you see `[setup] No .env file found`, step 3 was skipped or the file
 is misnamed.
 
-## 5. Optional: let other lab PCs use it
+## 5. Who can open it
 
-By default only the PC running SAMS can open it. To share it on the lab network,
-set `HOST` before starting:
+| | Default | Change it with |
+|---|---|---|
+| **Windows** (`start_webapp_windows.bat`) | **the whole lab network** | `set HOST=127.0.0.1` before starting → only this PC |
+| **macOS / Linux** (`start_webapp_macos.sh`) | only this computer | `HOST=0.0.0.0 ./start_webapp_macos.sh` → the lab network |
+
+Other PCs open `http://<this-pc's-name>:8502/` — the Windows launcher prints the
+exact address when it starts. The first time, Windows Firewall asks whether to
+allow Python: allow it for **private networks only**. On Windows Server there is
+no prompt; an administrator adds the rule once (see `server_installation.md` §8).
+
+Remember: **no login yet**, so everyone who can reach the port can edit data.
+Keep it on the lab network; never forward the port to the internet.
+
+To make a Windows PC private for one session:
 
 ```
-Windows (PowerShell):   $env:HOST="0.0.0.0"; .\start_webapp_windows.bat
-Windows (cmd):          set HOST=0.0.0.0 && start_webapp_windows.bat
-macOS / Linux:          HOST=0.0.0.0 ./start_webapp_macos.sh
+Windows (cmd):          set HOST=127.0.0.1 && start_webapp_windows.bat
+Windows (PowerShell):   $env:HOST="127.0.0.1"; .\start_webapp_windows.bat
 ```
-
-Others then open `http://<this-pc's-name-or-ip>:8502/`. Windows Firewall will ask
-once whether to allow Python on private networks — allow it for **private
-networks only**. Remember: no login yet, so everyone on the network can edit.
 
 ## 6. First things to set up in the app
 
@@ -127,7 +129,7 @@ reinstalls. Press `Ctrl+F5` once in the browser if a page looks stale.
 | Pages show a database error | Wrong user/password/database in `.env`, or no network route to `192.168.123.30:3306` |
 | `Address already in use` on 8502 | SAMS is already running in another window, or set `PORT=8503` |
 | Package install fails on first run | Needs internet once; corporate proxies may block PyPI — see `server_installation.md` §5 |
-| Other PCs can't connect | Started without `HOST=0.0.0.0`, or Windows Firewall blocked Python |
+| Other PCs can't connect | Windows Firewall blocked Python (allow it for private networks), or on macOS/Linux it was started without `HOST=0.0.0.0` |
 
 ## For developers
 
