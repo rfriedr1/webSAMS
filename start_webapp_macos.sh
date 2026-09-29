@@ -9,6 +9,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+printf '\033]0;webSAMS\007'   # terminal window/tab title
+echo
+echo "  ============================================================"
+echo "    webSAMS  -  CEZA C14 Laboratory Information System"
+echo "  ============================================================"
+echo
+
 if [[ ! -f ".env" ]]; then
   echo
   echo "[setup] No .env file found."
@@ -67,9 +74,9 @@ RELOAD=""
 [[ "${SAMS_DEV:-}" == "1" ]] && RELOAD="--reload"
 
 echo
-echo "[run] SAMS Web is starting on http://${HOST}:${PORT}/"
+echo "[run] webSAMS is starting on http://${HOST}:${PORT}/"
 [[ "$HOST" == "127.0.0.1" ]] && echo "[run] (only this computer can open it — set HOST=0.0.0.0 for the lab network)"
 echo "[run] Press Ctrl+C to stop"
 echo
 # shellcheck disable=SC2086  # $RELOAD is intentionally unquoted: empty or a single flag
-exec .venv/bin/python -m uvicorn sams_web.main:app --host "$HOST" --port "$PORT" $RELOAD
+exec .venv/bin/python -m uvicorn sams_web.main:app --host "$HOST" --port "$PORT" --log-config sams_web/log_config.json $RELOAD

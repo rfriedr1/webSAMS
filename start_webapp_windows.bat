@@ -11,6 +11,12 @@ rem (copy .env.example). See docs\quickstart.md. For a permanent server that
 rem runs as a Windows service, see docs\server_installation.md instead.
 setlocal
 cd /d "%~dp0"
+title webSAMS
+echo.
+echo  ============================================================
+echo    webSAMS  -  CEZA C14 Laboratory Information System
+echo  ============================================================
+echo.
 
 if not exist ".env" (
   echo.
@@ -82,18 +88,19 @@ echo.
 rem "0.0.0.0" is a listening address, not something a browser can open, so print
 rem the two addresses people actually type.
 if "%HOST%"=="0.0.0.0" goto :print_network
-echo [run] SAMS Web is starting on http://%HOST%:%PORT%/
+echo [run] webSAMS is starting on http://%HOST%:%PORT%/
 if "%HOST%"=="127.0.0.1" echo [run] (only this computer can open it)
 goto :printed
+title webSAMS - port %PORT%
 :print_network
-echo [run] SAMS Web is starting.
+echo [run] webSAMS is starting.
 echo [run]   On this PC:        http://127.0.0.1:%PORT%/
 echo [run]   From other PCs:    http://%COMPUTERNAME%:%PORT%/
 echo [run] No login yet - everyone on the lab network can edit data.
 :printed
 echo [run] Press Ctrl+C to stop
 echo.
-".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %HOST% --port %PORT% %RELOAD%
+".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %HOST% --port %PORT% --log-config sams_web\log_config.json %RELOAD%
 if errorlevel 1 pause
 endlocal
 exit /b 0

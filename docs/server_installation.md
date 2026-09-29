@@ -442,7 +442,7 @@ After=network-online.target
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/webSAMS
-ExecStart=/opt/webSAMS/.venv/bin/python -m uvicorn sams_web.main:app --host 0.0.0.0 --port 8502 --workers 1
+ExecStart=/opt/webSAMS/.venv/bin/python -m uvicorn sams_web.main:app --host 0.0.0.0 --port 8502 --workers 1 --log-config sams_web/log_config.json
 Restart=always
 RestartSec=5
 

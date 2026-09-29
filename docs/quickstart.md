@@ -65,7 +65,7 @@ If it stops with *No Python 3.11 or newer found*, step 1 was skipped. If it says
 the `.venv` folder *was created with an old Python*, delete that folder and start
 again.
 
-When you see `[run] SAMS Web is starting`, open **<http://127.0.0.1:8502/>** in a
+When you see `[run] webSAMS is starting`, open **<http://127.0.0.1:8502/>** in a
 browser on that PC. (On Windows the window also prints the address other PCs use.) The header shows which database
 you are connected to — check it is the one you intended.
 

@@ -35,7 +35,7 @@ Manual equivalent of the start script:
 python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 python -m pip install -r requirements.lock.txt
 python -m pip install --no-deps -e .
-python -m uvicorn sams_web.main:app --port 8502
+python -m uvicorn sams_web.main:app --port 8502 --log-config sams_web/log_config.json
 ```
 
 ## New Python structure

@@ -72,6 +72,10 @@ jobs:
           if (-not $ok) { throw "app never answered /api/health on first run" }
           if ($listen -notcontains "0.0.0.0") { throw "default should listen on 0.0.0.0 (lab network), got: $listen" }
           if ((Get-Content first.log -Raw) -notmatch "From other PCs:\s+http://$env:COMPUTERNAME`:8502/") { throw "network address not printed" }
+          $log = Get-Content first.log -Raw
+          if ($log -notmatch "webSAMS  -  CEZA C14 Laboratory Information System") { throw "banner missing" }
+          if ($log -notmatch "\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  webSAMS  INFO +webSAMS [\d.]+ ready - database ") { throw "branded startup line missing" }
+          if ($log -match "\x1b\[") { throw "ANSI colour codes leaked into the console output" }
           if (-not (Test-Path .venv\installed-from.txt)) { throw "install stamp was not written" }
           & .venv\Scripts\python.exe --version
           $log = Get-Content first.log -Raw
@@ -108,3 +112,4 @@ jobs:
           Get-Content server.log
           Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $ok) { throw "start_server_windows.bat never answered /api/health" }
+          if ((Get-Content server.log -Raw) -notmatch "webSAMS  INFO +webSAMS [\d.]+ ready") { throw "server script output not branded" }
