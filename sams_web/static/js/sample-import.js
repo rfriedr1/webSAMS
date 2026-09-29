@@ -193,14 +193,23 @@
     // "collagen" into "collagen user prep." would be a guess about lab
     // procedure, not a spelling correction.
     state.groups = {};
+    // Step 1 starts at the "none" method: a sample either gets a real
+    // pretreatment chosen here or has none, so "none" is the honest default.
+    const noneMethod =
+      (payload.method_options || []).find((m) => String(m).trim().toLowerCase() === "none") || "";
     groupKeys().forEach((key) => {
       const resolved = payload.lookup_resolutions?.material?.[key]?.resolved || "";
       state.groups[key] = {
         material: resolved,
         type: "",
         fraction: "",
-        steps: ["", "", "", "", ""],
+        steps: [noneMethod, "", "", "", ""],
       };
+      if (noneMethod) {
+        payload.draft.samples.forEach((s) => {
+          if (groupKeyFor(s) === key && !s.values.step1_method) s.values.step1_method = noneMethod;
+        });
+      }
       // Keep the rows in step with the group card: whatever the card
       // shows is what the rows carry, so the "no lab material set"
       // warning can never contradict the visible dropdown.
@@ -748,13 +757,17 @@
         ).length;
         if (!rows) return "";
         const g = state.groups[key] || { steps: [] };
+        // Quick picks: a quiet "Suggested: a · b" line, not buttons in
+        // boxes. The value already selected is left out.
         const chips = (field) =>
           (suggestions[key]?.[field] || [])
+            .filter((v) => v !== g[field])
             .slice(0, 3)
             .map(
               (v) =>
                 `<button type="button" class="import-suggest" data-group-suggest="${esc(key)}"
-                         data-group-field="${field}" data-group-value="${esc(v)}">${esc(v)}</button>`
+                         data-group-field="${field}" data-group-value="${esc(v)}"
+                         title="Set ${esc(field)} to ${esc(v)}">${esc(v)}</button>`
             )
             .join("");
         const selects = LOOKUP_FIELDS.map(
@@ -764,7 +777,7 @@
               <select data-group-select="${esc(key)}" data-group-field="${field}">
                 ${optionList(opts[field] || [], g[field] || "", "— undefined —")}
               </select>
-              ${chips(field) ? `<div class="import-suggests">${chips(field)}</div>` : ""}
+              ${chips(field) ? `<div class="import-suggests"><span>Suggested:</span>${chips(field)}</div>` : ""}
             </div>`
         ).join("");
         const steps = g.steps
