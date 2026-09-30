@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
@@ -230,8 +232,30 @@ def _startup_summary() -> str:
     )
 
 
+def _is_client_hangup_noise(context: dict[str, Any]) -> bool:
+    """True for the harmless "client already hung up" report on Windows.
+
+    When a browser drops a kept-alive connection, asyncio's Proactor event
+    loop still tries to shut the socket down in `_call_connection_lost`,
+    gets `ConnectionResetError` (WinError 10054) and prints a full traceback
+    for it. No request is affected; the traceback only makes the console
+    look broken. Anything else is left for the default handler.
+    """
+    if not isinstance(context.get("exception"), ConnectionResetError):
+        return False
+    source = f"{context.get('message', '')} {context.get('handle', '')}"
+    return "_call_connection_lost" in source
+
+
+def _quiet_loop_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
+    if _is_client_hangup_noise(context):
+        return
+    loop.default_exception_handler(context)
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
+    asyncio.get_running_loop().set_exception_handler(_quiet_loop_exception_handler)
     logger.info(_startup_summary())
     yield
     logger.info("webSAMS stopped")
