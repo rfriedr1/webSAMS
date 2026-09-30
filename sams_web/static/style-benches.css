@@ -10,6 +10,9 @@
   display: grid;
   gap: 0.32rem;
   align-items: stretch;
+  /* Let the field shrink to its grid column: a number input's intrinsic
+     width is wider than the narrow Prep # / Target # columns. */
+  min-width: 0;
 }
 
 .prep-bench-lookup-form .prep-bench-lookup-field > span,
@@ -19,18 +22,36 @@
   font-weight: 700;
 }
 
-/* Sample # keeps a text input (barcode-safe) but gets the same up/down
-   affordance as the number-input spinners on Prep # / Target #. */
+/* One stepper for every lookup field. Sample # is a text input
+   (barcode-safe); Prep # / Target # are number inputs whose native spinner
+   and datalist arrow are hidden below so all three look the same. */
 .prep-bench-stepper {
   position: relative;
   display: flex;
   align-items: stretch;
+  min-width: 0;
 }
 
 .prep-bench-stepper > input {
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   padding-right: 1.9rem;
+}
+
+.prep-bench-stepper > input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.prep-bench-stepper > input[type="number"]::-webkit-outer-spin-button,
+.prep-bench-stepper > input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.prep-bench-stepper > input::-webkit-calendar-picker-indicator {
+  display: none !important;
 }
 
 .prep-bench-stepper-buttons {

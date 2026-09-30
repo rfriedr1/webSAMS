@@ -1,0 +1,26 @@
+{#- Shared bench-entry macros, imported by _preparation_bench.html and
+    _graphitization_bench.html. -#}
+
+{#- The up/down pair that sits inside a `.prep-bench-stepper`. Every lookup
+    field (Sample #, Prep #, Target #) renders it, so the three look alike
+    instead of mixing these with the browser's native number spinner.
+    `data_attr` names the hook the owning script listens on; Prep # / Target #
+    use `data-bench-number-step` (bench-number-stepper.js). -#}
+{% macro stepper_buttons(data_attr, noun) %}
+<span class="prep-bench-stepper-buttons">
+  <button
+    type="button"
+    class="prep-bench-stepper-button"
+    {{ data_attr }}="1"
+    tabindex="-1"
+    aria-label="Next {{ noun }}"
+  >&#9650;</button>
+  <button
+    type="button"
+    class="prep-bench-stepper-button"
+    {{ data_attr }}="-1"
+    tabindex="-1"
+    aria-label="Previous {{ noun }}"
+  >&#9660;</button>
+</span>
+{% endmacro %}
