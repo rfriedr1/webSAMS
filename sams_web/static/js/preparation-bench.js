@@ -158,6 +158,38 @@
           };
           scanInput.addEventListener("input", clearPrepIfSampleChanged);
           scanInput.addEventListener("change", clearPrepIfSampleChanged);
+
+          // Up/down steppers for Sample #, matching the native spinner on
+          // Prep #: step the number, drop the now-stale prep, and load the
+          // new sample straight away.
+          bench.querySelectorAll("[data-prep-bench-sample-step]").forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) {
+              return;
+            }
+            button.addEventListener("click", () => {
+              const delta = Number.parseInt(button.dataset.prepBenchSampleStep || "0", 10);
+              if (!Number.isFinite(delta) || delta === 0) {
+                return;
+              }
+              const raw = scanInput.value.trim();
+              // Empty field: start from whichever sample is on the bench.
+              const base = Number.parseInt(
+                raw !== "" ? raw : bench.dataset.prepBenchCurrentSample || "",
+                10,
+              );
+              if (!Number.isFinite(base)) {
+                scanInput.focus();
+                return;
+              }
+              const next = Math.max(1, base + delta);
+              if (String(next) === raw) {
+                return;
+              }
+              scanInput.value = String(next);
+              clearPrepIfSampleChanged();
+              lookupForm.requestSubmit();
+            });
+          });
         }
 
         if (prepInput instanceof HTMLInputElement) {

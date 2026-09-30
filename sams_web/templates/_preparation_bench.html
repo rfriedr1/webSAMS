@@ -2,7 +2,7 @@
     queue tables; the matching Python side is sams_web/preparation_bench.py.
     Jinja `include` shares the caller's context, so every variable the
     router puts in the lab_queue context is available here. -#}
-<section class="panel" id="prep-bench-entry" data-prep-bench>
+<section class="panel" id="prep-bench-entry" data-prep-bench data-prep-bench-current-sample="{{ bench_entry.sample.sample_nr if bench_entry else '' }}">
   <details class="table-collapsible" open>
     <summary class="table-summary">
       <span class="table-summary-title">Preparation Bench Entry</span>
@@ -13,18 +13,41 @@
 
       <form method="get" action="/lab/preparation" class="prep-bench-lookup-form" data-prep-bench-lookup-form>
         <input type="hidden" name="show_on_hold" value="{{ 'true' if show_on_hold else 'false' }}" />
-        <label class="prep-bench-lookup-field">
-          <span>Sample #</span>
-          <input
-            type="text"
-            name="bench_sample_nr"
-            value="{{ bench_sample_nr_query or '' }}"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="Scan barcode or enter sample number"
-            data-prep-bench-scan-input
-          />
-        </label>
+        {# Same pattern as the graphitization bench: `type="text"` so a
+           barcode scan is never silently discarded, explicit steppers for
+           the up/down affordance Prep # gets natively, and a <div> rather
+           than a <label> so a stepper click does not also activate the input. #}
+        <div class="prep-bench-lookup-field">
+          <label for="prep-bench-sample-nr">Sample #</label>
+          <div class="prep-bench-stepper">
+            <input
+              id="prep-bench-sample-nr"
+              type="text"
+              name="bench_sample_nr"
+              value="{{ bench_sample_nr_query or '' }}"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Scan barcode or enter sample number"
+              data-prep-bench-scan-input
+            />
+            <span class="prep-bench-stepper-buttons">
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-prep-bench-sample-step="1"
+                tabindex="-1"
+                aria-label="Next sample number"
+              >&#9650;</button>
+              <button
+                type="button"
+                class="prep-bench-stepper-button"
+                data-prep-bench-sample-step="-1"
+                tabindex="-1"
+                aria-label="Previous sample number"
+              >&#9660;</button>
+            </span>
+          </div>
+        </div>
 
         <label class="prep-bench-lookup-field prep-bench-prep-picker">
           <span>
