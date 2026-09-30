@@ -21,7 +21,7 @@ already" — the operator can edit any field in between.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from sams_web.sample_import.vocabulary import IMPORTABLE_SAMPLE_FIELDS
@@ -472,12 +472,31 @@ def _build_sample_payload(
     return sample_payload
 
 
+#: `method_t` entry meaning "this sample gets no pretreatment".
+NO_PREPARATION_METHOD = "none"
+
+
+def needs_no_preparation(step_methods: list[str | None]) -> bool:
+    """True when prep step 1 is "none" and no later step names a real method.
+
+    Such a sample has nothing to do at the preparation bench, so the import
+    closes its preparation straight away (`prep_end` = today) and it lands
+    in *Waiting for Graph* instead of *Planned*. A "none" in step 1 followed
+    by a real method in steps 2-5 still counts as preparation.
+    """
+    normalized = [str(m or "").strip().lower() for m in step_methods]
+    if not normalized or normalized[0] != NO_PREPARATION_METHOD:
+        return False
+    return all(m in ("", NO_PREPARATION_METHOD) for m in normalized[1:])
+
+
 def _create_samples(
     repo: Any,
     session: Any,
     rows: list[tuple[int, dict[str, Any]]],
     *,
     project_nr: int,
+    today: date,
     registry: Any,
     sanitizer: Any,
 ) -> tuple[list[int], list[str]]:
@@ -519,13 +538,16 @@ def _create_samples(
         sample_labels.append(str(sample_payload.get("user_label") or ""))
 
         prep = repo.create_blank_prep(sample_nr=sample_nr, prep_nr=1)
-        steps_written = False
+        step_methods: list[str | None] = []
         for step_field in PREP_STEP_FIELDS:
             method = _lookup_or_default(values.get(step_field), allowed_methods, default=None)
+            step_methods.append(method)
             if method:
                 setattr(prep, step_field, method)
-                steps_written = True
-        if steps_written:
+        if needs_no_preparation(step_methods):
+            # Midnight, like the bench's own auto-stamp (`_autostamp_prep_dates`).
+            prep.prep_end = datetime.combine(today, datetime.min.time())
+        if any(step_methods):
             session.flush()
         repo.create_blank_target(sample_nr=sample_nr, prep_nr=1, target_nr=1)
         sample_nrs.append(sample_nr)
@@ -576,7 +598,13 @@ def commit_import(
         sanitizer=TextSanitizer,
     )
     sample_nrs, sample_labels = _create_samples(
-        repo, session, plan.rows, project_nr=project.project_nr, registry=registry, sanitizer=TextSanitizer
+        repo,
+        session,
+        plan.rows,
+        project_nr=project.project_nr,
+        today=today,
+        registry=registry,
+        sanitizer=TextSanitizer,
     )
     session.commit()
 
@@ -602,6 +630,8 @@ __all__ = [
     "DEFAULT_PROJECT_STATUS",
     "DEFAULT_TURNAROUND_DAYS",
     "ImportCommitError",
+    "NO_PREPARATION_METHOD",
+    "needs_no_preparation",
     "ImportResult",
     "commit_import",
 ]

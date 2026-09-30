@@ -23,6 +23,8 @@
 
   const $ = (sel) => root.querySelector(sel);
   const LOOKUP_FIELDS = ["type", "material", "fraction"];
+  /** Lab type every group starts with (matched case-insensitively). */
+  const DEFAULT_LAB_TYPE = "arch";
 
   const state = {
     payload: null,
@@ -197,19 +199,25 @@
     // pretreatment chosen here or has none, so "none" is the honest default.
     const noneMethod =
       (payload.method_options || []).find((m) => String(m).trim().toLowerCase() === "none") || "";
+    // Type starts at "arch": most submitted samples are archaeological, so
+    // the operator only changes the exceptions (standards, blanks, ...).
+    const defaultType =
+      (payload.lookup_options?.type || []).find(
+        (t) => String(t).trim().toLowerCase() === DEFAULT_LAB_TYPE
+      ) || "";
     groupKeys().forEach((key) => {
       const resolved = payload.lookup_resolutions?.material?.[key]?.resolved || "";
       state.groups[key] = {
         material: resolved,
-        type: "",
+        type: defaultType,
         fraction: "",
         steps: [noneMethod, "", "", "", ""],
       };
-      if (noneMethod) {
-        payload.draft.samples.forEach((s) => {
-          if (groupKeyFor(s) === key && !s.values.step1_method) s.values.step1_method = noneMethod;
-        });
-      }
+      payload.draft.samples.forEach((s) => {
+        if (groupKeyFor(s) !== key) return;
+        if (noneMethod && !s.values.step1_method) s.values.step1_method = noneMethod;
+        if (defaultType && !s.values.lab_type) s.values.lab_type = defaultType;
+      });
       // Keep the rows in step with the group card: whatever the card
       // shows is what the rows carry, so the "no lab material set"
       // warning can never contradict the visible dropdown.
@@ -1142,6 +1150,19 @@
     );
     if (noSteps.length) {
       notices.push(`${noSteps.length} row(s) have no preparation steps assigned.`);
+    }
+    // Mirrors `needs_no_preparation()` in commit.py: step 1 = "none" and
+    // no real method in steps 2-5.
+    const isNone = (v) => String(v || "").trim().toLowerCase() === "none";
+    const noPrep = includedSamples().filter(
+      (s) =>
+        isNone(s.values[STEP_COLUMNS[0]]) &&
+        STEP_COLUMNS.slice(1).every((c) => !s.values[c] || isNone(s.values[c]))
+    );
+    if (noPrep.length) {
+      notices.push(
+        `${noPrep.length} row(s) need no preparation (step 1 is “none”) — their Prep End is set to today on import.`
+      );
     }
     return notices;
   }

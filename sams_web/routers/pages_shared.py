@@ -276,7 +276,7 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20260929-3"
+templates.env.globals["css_v"] = "20260930-2"
 
 
 def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
