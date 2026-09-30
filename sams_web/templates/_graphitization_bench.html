@@ -2,6 +2,7 @@
     queue tables; the matching Python side is sams_web/graphitization_bench.py.
     Jinja `include` shares the caller's context, so every variable the
     router puts in the lab_queue context is available here. -#}
+{% from "_bench_macros.html" import stepper_buttons %}
 <section class="panel" id="graph-bench-entry" data-graph-bench data-graph-bench-current-sample="{{ graph_bench_entry.sample.sample_nr if graph_bench_entry else '' }}" {% if request.query_params.get('graph_batch_saved') == 'true' %}data-graph-batch-saved="true"{% endif %}>
   <details class="table-collapsible" open>
     <summary class="table-summary">
@@ -30,42 +31,31 @@
               placeholder="Scan barcode or enter sample number"
               data-graph-bench-sample-input
             />
-            <span class="prep-bench-stepper-buttons">
-              <button
-                type="button"
-                class="prep-bench-stepper-button"
-                data-graph-bench-sample-step="1"
-                tabindex="-1"
-                aria-label="Next sample number"
-              >&#9650;</button>
-              <button
-                type="button"
-                class="prep-bench-stepper-button"
-                data-graph-bench-sample-step="-1"
-                tabindex="-1"
-                aria-label="Previous sample number"
-              >&#9660;</button>
-            </span>
+            {{ stepper_buttons("data-graph-bench-sample-step", "sample number") }}
           </div>
         </div>
-        <label class="prep-bench-lookup-field">
-          <span>Prep #</span>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            name="graph_prep_nr"
-            value="{{ graph_prep_nr_query or '' }}"
-            inputmode="numeric"
-            autocomplete="off"
-            data-graph-bench-prep-input
-            {% if graph_bench_entry and graph_bench_entry.preparations %}
-            list="graph-bench-prep-options"
-            {% endif %}
-          />
-        </label>
-        <label class="prep-bench-lookup-field">
-          <span>
+        <div class="prep-bench-lookup-field">
+          <label for="graph-bench-prep-nr">Prep #</label>
+          <div class="prep-bench-stepper">
+            <input
+              id="graph-bench-prep-nr"
+              type="number"
+              min="1"
+              step="1"
+              name="graph_prep_nr"
+              value="{{ graph_prep_nr_query or '' }}"
+              inputmode="numeric"
+              autocomplete="off"
+              data-graph-bench-prep-input
+              {% if graph_bench_entry and graph_bench_entry.preparations %}
+              list="graph-bench-prep-options"
+              {% endif %}
+            />
+            {{ stepper_buttons("data-bench-number-step", "preparation") }}
+          </div>
+        </div>
+        <div class="prep-bench-lookup-field">
+          <label for="graph-bench-target-nr">
             Target #
             <span class="prep-bench-lookup-meta">
               {% if graph_bench_entry and graph_bench_entry.targets %}
@@ -74,21 +64,25 @@
               (count n/a)
               {% endif %}
             </span>
-          </span>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            name="graph_target_nr"
-            value="{{ graph_target_nr_query or '' }}"
-            inputmode="numeric"
-            autocomplete="off"
-            data-graph-bench-target-input
-            {% if graph_bench_entry and graph_bench_entry.targets %}
-            list="graph-bench-target-options"
-            {% endif %}
-          />
-        </label>
+          </label>
+          <div class="prep-bench-stepper">
+            <input
+              id="graph-bench-target-nr"
+              type="number"
+              min="1"
+              step="1"
+              name="graph_target_nr"
+              value="{{ graph_target_nr_query or '' }}"
+              inputmode="numeric"
+              autocomplete="off"
+              data-graph-bench-target-input
+              {% if graph_bench_entry and graph_bench_entry.targets %}
+              list="graph-bench-target-options"
+              {% endif %}
+            />
+            {{ stepper_buttons("data-bench-number-step", "target") }}
+          </div>
+        </div>
         {% if graph_bench_entry and graph_bench_entry.preparations %}
         <datalist id="graph-bench-prep-options">
           {% for prep_option in graph_bench_entry.preparations %}

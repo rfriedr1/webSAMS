@@ -2,6 +2,7 @@
     queue tables; the matching Python side is sams_web/preparation_bench.py.
     Jinja `include` shares the caller's context, so every variable the
     router puts in the lab_queue context is available here. -#}
+{% from "_bench_macros.html" import stepper_buttons %}
 <section class="panel" id="prep-bench-entry" data-prep-bench data-prep-bench-current-sample="{{ bench_entry.sample.sample_nr if bench_entry else '' }}">
   <details class="table-collapsible" open>
     <summary class="table-summary">
@@ -30,27 +31,12 @@
               placeholder="Scan barcode or enter sample number"
               data-prep-bench-scan-input
             />
-            <span class="prep-bench-stepper-buttons">
-              <button
-                type="button"
-                class="prep-bench-stepper-button"
-                data-prep-bench-sample-step="1"
-                tabindex="-1"
-                aria-label="Next sample number"
-              >&#9650;</button>
-              <button
-                type="button"
-                class="prep-bench-stepper-button"
-                data-prep-bench-sample-step="-1"
-                tabindex="-1"
-                aria-label="Previous sample number"
-              >&#9660;</button>
-            </span>
+            {{ stepper_buttons("data-prep-bench-sample-step", "sample number") }}
           </div>
         </div>
 
-        <label class="prep-bench-lookup-field prep-bench-prep-picker">
-          <span>
+        <div class="prep-bench-lookup-field prep-bench-prep-picker">
+          <label for="prep-bench-prep-nr">
             Prep #
             <span class="prep-bench-lookup-meta">
               {% if bench_entry and bench_entry.preparations %}
@@ -59,22 +45,26 @@
               (count n/a)
               {% endif %}
             </span>
-          </span>
+          </label>
           {% set prep_lookup_value = bench_prep_nr_query or (bench_entry.preparation.prep_nr if bench_entry else '') %}
-          <input
-            type="number"
-            min="1"
-            step="1"
-            name="bench_prep_nr"
-            value="{{ prep_lookup_value }}"
-            inputmode="numeric"
-            autocomplete="off"
-            {% if bench_entry and bench_entry.preparations %}
-            list="prep-bench-prep-options"
-            {% endif %}
-            data-prep-bench-prep-input
-          />
-        </label>
+          <div class="prep-bench-stepper">
+            <input
+              id="prep-bench-prep-nr"
+              type="number"
+              min="1"
+              step="1"
+              name="bench_prep_nr"
+              value="{{ prep_lookup_value }}"
+              inputmode="numeric"
+              autocomplete="off"
+              {% if bench_entry and bench_entry.preparations %}
+              list="prep-bench-prep-options"
+              {% endif %}
+              data-prep-bench-prep-input
+            />
+            {{ stepper_buttons("data-bench-number-step", "preparation") }}
+          </div>
+        </div>
         {% if bench_entry and bench_entry.preparations %}
         <datalist id="prep-bench-prep-options">
           {% for prep_option in bench_entry.preparations %}
