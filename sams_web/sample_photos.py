@@ -31,10 +31,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import getpass
 import logging
 import mimetypes
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import threading
 import time
@@ -196,6 +197,116 @@ class SamplePhotoSettingsStore:
         return cleaned
 
 
+# --- Diagnostics ------------------------------------------------------------
+
+
+def _on_windows() -> bool:
+    return os.name == "nt"
+
+
+def _is_service_account() -> bool:
+    """LocalSystem (and other machine accounts) report `SERVER$`."""
+    return _on_windows() and os.environ.get("USERNAME", "").endswith("$")
+
+
+def _is_elevated() -> bool:
+    """Started with "Run as administrator". Windows keeps such a program in
+    a separate logon session that does not see the drive letters (or the
+    saved share logins) of the user's normal session."""
+    if not _on_windows():
+        return False
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:  # noqa: BLE001 - only used in a message
+        return False
+
+
+def _drive_exists(drive: str) -> bool:
+    return os.path.exists(drive + "\\")
+
+
+def running_as() -> str:
+    """The account this process runs as — the one whose rights decide
+    whether the photo folder can be read. A Windows service left at its
+    default runs as LocalSystem, which reaches the network as the computer
+    account (`SERVER$`) and has no mapped drives."""
+    if _on_windows():
+        user = os.environ.get("USERNAME", "")
+        domain = os.environ.get("USERDOMAIN", "")
+        account = f"{domain}\\{user}" if domain and user else user or "unknown"
+        if _is_service_account():
+            account += ", LocalSystem / computer account"
+        elif _is_elevated():
+            account += ", started as administrator"
+        return account
+    try:
+        return getpass.getuser()
+    except Exception:  # noqa: BLE001 - only used in a message
+        return "unknown"
+
+
+def _missing_drive(root: Path | None) -> str | None:
+    """`"R:"` when `root` is on a drive letter this process cannot see."""
+    if root is None or not _on_windows():
+        return None
+    drive = PureWindowsPath(str(root)).drive
+    if len(drive) == 2 and drive[1] == ":" and not _drive_exists(drive):
+        return drive.upper()
+    return None
+
+
+def _session_hint() -> str:
+    """Why a share that works in Explorer may not work for webSAMS."""
+    if _is_service_account():
+        return (
+            "webSAMS runs as a Windows service, which never sees mapped drives and "
+            "logs in to other computers as the computer account"
+        )
+    if _is_elevated():
+        return (
+            "webSAMS was started as administrator; Windows hides the drive letters "
+            "and saved share logins of your normal session from such programs - "
+            "start it without 'Run as administrator'"
+        )
+    return ""
+
+
+#: Windows error codes that mean "the share or path is not there" and
+#: "you may not read it". The rest are reported as Windows phrased them.
+_WIN_NOT_FOUND = {2, 3, 53, 67, 1203}
+_WIN_ACCESS_DENIED = {5, 86, 1326, 1219, 1244, 1272}
+
+
+def describe_folder_error(exc: OSError, root: Path | None = None) -> str:
+    """One sentence an operator can act on, ending with the raw OS text."""
+    raw = exc.strerror or str(exc)
+    winerror = getattr(exc, "winerror", None)
+    hint = _session_hint()
+    missing_drive = _missing_drive(root)
+    if missing_drive:
+        reason = (
+            f"Drive {missing_drive} does not exist for webSAMS ({running_as()}) - "
+            f"{hint or 'a mapped drive letter only exists for the user who mapped it'}"
+        )
+    elif isinstance(exc, PermissionError) or winerror in _WIN_ACCESS_DENIED:
+        reason = f"Access denied for the account webSAMS runs as ({running_as()})"
+        if hint:
+            reason += f" - {hint}"
+    elif isinstance(exc, (FileNotFoundError, NotADirectoryError)) or winerror in _WIN_NOT_FOUND:
+        reason = (
+            f"Folder not found for the account webSAMS runs as ({running_as()}) - "
+            f"{hint or 'check the path'}"
+        )
+    else:
+        reason = f"Could not open the folder as {running_as()}"
+        if hint:
+            reason += f" - {hint}"
+    code = f"WinError {winerror}: " if winerror else ""
+    return f"{reason} [{code}{raw}]"
+
+
 # --- Index ------------------------------------------------------------------
 
 
@@ -207,6 +318,8 @@ class _Index:
     built_at: float
     built_wall: datetime
     error: str | None = None
+    #: Sub-folders that could not be listed, as "name: reason".
+    unreadable: tuple[str, ...] = ()
 
     @property
     def photo_count(self) -> int:
@@ -221,16 +334,32 @@ class _Scan:
     done: threading.Event = field(default_factory=threading.Event)
 
 
-def scan_photo_folder(root: Path) -> dict[int, tuple[str, ...]]:
+def scan_photo_folder(
+    root: Path, unreadable: list[str] | None = None
+) -> dict[int, tuple[str, ...]]:
     """Walk `root` (sub-folders included) and group photo files by the
     sample number(s) their name starts with; a group photo is listed under
-    each of its samples. Raises `OSError` when the folder cannot be read."""
-    if not root.is_dir():
-        raise FileNotFoundError(f"Folder not found: {root}")
+    each of its samples.
+
+    Raises `OSError` — with the operating system's own reason — when `root`
+    itself cannot be listed. Sub-folders that cannot be listed are skipped
+    and, if `unreadable` is given, appended to it as "name: reason".
+    """
+    # Open the folder rather than asking `Path.is_dir()`: that answers False
+    # for "access denied" as well, which once turned a permission problem
+    # on the server into a misleading "Folder not found". And os.walk would
+    # silently yield nothing for a top folder it cannot list.
+    with os.scandir(root) as entries:
+        next(entries, None)
+
+    def note_unreadable(exc: OSError) -> None:
+        if unreadable is not None:
+            name = Path(exc.filename).name if exc.filename else "?"
+            unreadable.append(f"{name}: {exc.strerror or exc}")
+
     found: dict[int, list[str]] = {}
-    # os.walk swallows errors below the top level by default, which is
-    # what we want: one unreadable sub-folder must not hide every photo.
-    for dirpath, dirnames, filenames in os.walk(root):
+    # One unreadable sub-folder must not hide every other photo.
+    for dirpath, dirnames, filenames in os.walk(root, onerror=note_unreadable):
         dirnames[:] = [name for name in dirnames if not name.startswith(".")]
         for filename in filenames:
             sample_nrs = sample_nrs_from_filename(filename)
@@ -308,11 +437,12 @@ class SamplePhotoLibrary:
     def _run_scan(self, scan: _Scan) -> None:
         error: str | None = None
         files: dict[int, tuple[str, ...]] = {}
+        unreadable: list[str] = []
         try:
-            files = scan_photo_folder(scan.root)
+            files = scan_photo_folder(scan.root, unreadable)
         except OSError as exc:
-            error = exc.strerror or str(exc)
-            logger.warning("Sample photo folder %s could not be read: %s", scan.root, exc)
+            error = describe_folder_error(exc, scan.root)
+            logger.warning("Sample photo folder %s could not be read: %s", scan.root, error)
         except Exception:  # noqa: BLE001 - a scan thread must never die silently
             error = "Unexpected error while reading the folder."
             logger.exception("Sample photo scan of %s failed", scan.root)
@@ -322,7 +452,13 @@ class SamplePhotoLibrary:
             built_at=time.monotonic(),
             built_wall=datetime.now(),
             error=error,
+            unreadable=tuple(unreadable),
         )
+        if unreadable:
+            logger.warning(
+                "Sample photo scan of %s skipped %d sub-folder(s): %s",
+                scan.root, len(unreadable), "; ".join(unreadable[:5]),
+            )
         with self._lock:
             # A scan of a folder that has since been replaced in Setup must
             # not overwrite the index of the new one.
@@ -404,7 +540,7 @@ class SamplePhotos:
         if index.error is not None:
             return PhotoListing(
                 STATE_UNAVAILABLE,
-                message=f"The photo folder could not be read ({index.error}).",
+                message=f"The photo folder could not be read: {index.error}.",
             )
         photos: list[SamplePhoto] = []
         for relative_path in index.files.get(sample_nr, ()):
@@ -457,14 +593,21 @@ class SamplePhotos:
         if index.error is not None:
             return {
                 "state": STATE_UNAVAILABLE,
-                "message": f"The photo folder could not be read ({index.error}).",
+                "message": f"The photo folder could not be read: {index.error}.",
             }
+        message = (
+            f"{index.photo_count} photo file(s) for {len(index.files)} sample(s), "
+            f"scanned {index.built_wall.strftime('%H:%M:%S')} as {running_as()}."
+        )
+        if index.unreadable:
+            shown = "; ".join(index.unreadable[:3])
+            more = f" and {len(index.unreadable) - 3} more" if len(index.unreadable) > 3 else ""
+            message += f" {len(index.unreadable)} sub-folder(s) could not be read ({shown}{more})."
+        if index.photo_count == 0:
+            message += " No file name starts with a sample number - is this the right folder?"
         return {
             "state": STATE_OK,
-            "message": (
-                f"{index.photo_count} photo file(s) for {len(index.files)} sample(s), "
-                f"scanned {index.built_wall.strftime('%H:%M:%S')}."
-            ),
+            "message": message,
             "photo_count": index.photo_count,
             "sample_count": len(index.files),
         }

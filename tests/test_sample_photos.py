@@ -15,6 +15,8 @@ from sams_web.sample_photos import (
     SamplePhotoLibrary,
     SamplePhotoSettingsStore,
     SamplePhotos,
+    describe_folder_error,
+    running_as,
     sample_nr_from_filename,
     sample_nrs_from_filename,
     scan_photo_folder,
@@ -164,7 +166,7 @@ def test_a_slow_folder_answers_scanning_instead_of_blocking(tmp_path, monkeypatc
 
     release = threading.Event()
 
-    def slow_scan(_root):
+    def slow_scan(_root, _unreadable=None):
         release.wait(5)
         return {7: ("7.jpg",)}
 
@@ -234,3 +236,94 @@ def test_routes_list_serve_and_download_photos(client):
 
     assert client.get("/samples/7/photos/8.jpg").status_code == 404
     assert client.get("/samples/7/photos/..%2F..%2Fsetup_data.json").status_code == 404
+
+
+def test_an_unreadable_folder_says_access_denied_and_names_the_account(tmp_path):
+    folder = tmp_path / "photos"
+    _touch(folder, "7.jpg")
+    folder.chmod(0)
+    try:
+        listing = _photos(tmp_path, folder).list_for_sample(7)
+    finally:
+        folder.chmod(0o755)
+    assert listing.state == STATE_UNAVAILABLE
+    # Not "Folder not found": that is what Path.is_dir() used to make of it.
+    assert "Access denied" in listing.message
+    assert running_as() in listing.message
+
+
+def test_a_missing_folder_says_not_found(tmp_path):
+    listing = _photos(tmp_path, tmp_path / "gone").list_for_sample(7)
+    assert "Folder not found" in listing.message
+
+
+@pytest.mark.parametrize(
+    ("winerror", "expected"),
+    [(53, "Folder not found"), (67, "Folder not found"), (1326, "Access denied"), (5, "Access denied")],
+)
+def test_windows_share_errors_are_named(winerror, expected):
+    exc = OSError(0, "Windows says no")
+    exc.winerror = winerror  # only set by Python itself on Windows
+    message = describe_folder_error(exc)
+    assert message.startswith(expected)
+    assert f"[WinError {winerror}: Windows says no]" in message
+
+
+def test_an_unreadable_sub_folder_is_skipped_and_reported(tmp_path):
+    folder = tmp_path / "photos"
+    _touch(folder, "1-100/7.jpg", "101-200/150.jpg")
+    (folder / "101-200").chmod(0)
+    try:
+        photos = _photos(tmp_path, folder)
+        assert [photo.name for photo in photos.list_for_sample(7).photos] == ["7.jpg"]
+        status = photos.status()
+    finally:
+        (folder / "101-200").chmod(0o755)
+    assert status["state"] == STATE_OK
+    assert "1 sub-folder(s) could not be read (101-200:" in status["message"]
+
+
+class _FakeWindows:
+    """Just enough of a Windows process for the diagnostics."""
+
+    def __init__(self, monkeypatch, *, user, elevated=False, drives=("C:",)):
+        import sams_web.sample_photos as module
+
+        monkeypatch.setattr(module, "_on_windows", lambda: True)
+        monkeypatch.setattr(module, "_is_elevated", lambda: elevated)
+        monkeypatch.setattr(module, "_drive_exists", lambda drive: drive.upper() in drives)
+        monkeypatch.setenv("USERNAME", user)
+        monkeypatch.setenv("USERDOMAIN", "LAB")
+
+
+def _not_found(winerror=3):
+    exc = OSError(0, "The system cannot find the path specified")
+    exc.winerror = winerror
+    return exc
+
+
+def test_a_service_is_told_it_cannot_see_mapped_drives(monkeypatch):
+    _FakeWindows(monkeypatch, user="WEBSAMS-SRV$")
+    message = describe_folder_error(_not_found(), Path("R:/SAMS Images"))
+    assert message.startswith("Drive R: does not exist for webSAMS (LAB\\WEBSAMS-SRV$, LocalSystem")
+    assert "Windows service" in message
+
+
+def test_an_elevated_start_is_named_as_the_reason(monkeypatch):
+    _FakeWindows(monkeypatch, user="rfriedrich", elevated=True)
+    message = describe_folder_error(_not_found(), Path("R:/SAMS Images"))
+    assert "started as administrator" in message
+    assert "without 'Run as administrator'" in message
+
+    denied = OSError(0, "The user name or password is incorrect")
+    denied.winerror = 1326
+    message = describe_folder_error(denied, Path("//192.168.123.30/KTA/SAMS Images"))
+    assert message.startswith("Access denied")
+    assert "without 'Run as administrator'" in message
+
+
+def test_an_existing_drive_with_a_wrong_folder_is_a_plain_not_found(monkeypatch):
+    _FakeWindows(monkeypatch, user="rfriedrich", drives=("C:", "R:"))
+    message = describe_folder_error(_not_found(), Path("R:/SAMS Imgs"))
+    assert message.startswith("Folder not found for the account webSAMS runs as (LAB\\rfriedrich)")
+    assert "check the path" in message
