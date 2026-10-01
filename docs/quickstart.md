@@ -104,6 +104,9 @@ Open **Setup** in the top bar:
    use *Send a test e-mail* to your own address. Until this works, the import's
    confirmation e-mail stays disabled.
 2. **Lab Warning Thresholds** and **Graphitization Systems** — check they match the lab.
+3. **Sample Photos** — the folder with the sample photos, as this computer sees it
+   (e.g. `R:\SAMS Images` when the drive is connected, or `\\<server>\<share>\SAMS Images`).
+   Photos whose file name starts with the sample number then appear on the sample page.
 
 Settings are saved to `sams_web/setup_data.json` inside the folder. It is not in
 git, so it survives updates; back it up if you customise a lot.

@@ -10,6 +10,7 @@ SETUP_SECTION_GRAPHITIZATION_SYSTEMS = "graphitization_systems"
 SETUP_SECTION_LAB_WARNING_THRESHOLDS = "lab_warning_thresholds"
 SETUP_SECTION_IMPORT_HEADINGS = "import_column_headings"
 SETUP_SECTION_EMAIL = "email_settings"
+SETUP_SECTION_SAMPLE_PHOTOS = "sample_photos"
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,14 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         editable=True,
         status="active",
         form_action="/setup/email_settings",
+    ),
+    SetupSection(
+        key=SETUP_SECTION_SAMPLE_PHOTOS,
+        title="Sample Photos",
+        description="The shared folder holding the photos taken of each sample on receipt. Files whose name starts with the sample number are shown on that sample's page.",
+        editable=True,
+        status="active",
+        form_action="/setup/sample_photos",
     ),
 )
 

@@ -33,6 +33,7 @@
 - `sams_web/detail_update.py`: generic single-entity form-update primitive (`apply_detail_update` + `DetailUpdateConfig` per entity). All write paths flow through here; per-entity configs live next to the viewmodels.
 - `sams_web/detail_page.py`: generic detail-page context builder (`build_detail_page_context` + `DetailPageConfig`). Read side of detail pages.
 - `sams_web/preparation_bench.py` / `graphitization_bench.py`: bench workflow modules (`PreparationBench`, `GraphitizationBench`) — page_view() + save() + (graph) assign_graph_batch().
+- `sams_web/sample_photos.py`: sample photos from the shared folder — settings store, background folder index, and the `SamplePhotos` facade the routes use (see "Sample Photos" below). No database access.
 - `sams_web/magic_nav.py`: sealed `NavTarget` family + parser + match-based dispatchers for the magic-nav input.
 - `sams_web/search.py`: `SearchContext` registry + `run_search()` + `fk_based_link()` rule for cell-level row links.
 - `sams_web/routers/pages.py` and the per-area `pages_*.py`: server-rendered web routes (thin dispatchers).
@@ -151,6 +152,7 @@
 	- **Classification** — Type · Material · Fraction · Weight
 	- **Measurement Results** — C14 Age · C14 Age Sigma
 	- **Comments** — Submitter Comment · Lab Comment (both editable, two-column)
+	- **Photos** — thumbnail strip, loaded after the page (see "Sample Photos")
 
 	### Preparation
 	- **Batch & Timeline** — Batch · Prep Start · Prep End
@@ -228,6 +230,20 @@
 - A commit creates, in one transaction: submitter (reused or new) → optional invoice recipient → project (new or existing) → one sample per row, each with preparation #1 carrying its prep steps, and target #1.
 - **Setup → E-mail has a *Send a test e-mail* panel** (`POST /setup/email/test`). It posts the fields as currently typed — unsaved edits included — so settings can be verified before saving; a field sent empty is honoured as empty (blanking the username really does test an unauthenticated relay). The **password is the one exception**: it is never rendered back into the page, and blank means "reuse the stored one" both here and on save. Test sends never copy the configured Bcc.
 - **Confirmation e-mail is never sent automatically.** After a commit the wizard renders the message (recipient, subject, body with `MAMS-<nr>` numbers paired to the customer's labels) and the operator edits, skips, or clicks Send. SMTP settings and per-language templates live in Setup → *E-mail*; `EmailSettingsStore.template_for_language()` picks by the submitter's `language`, falling back to English. Mail failures never roll back the import — the records are already committed.
+
+## Sample Photos
+- Each sample is photographed on receipt; the files live in one shared folder (sub-folders allowed) and are linked to a sample **only by file name: the name starts with the sample number** (`48211.jpg`, `48211b.jpg`, `48211_back.png`). There is no DB link — `sample_t.photo` is an unrelated legacy text field; don't read or write it for this.
+- The lab's folder is `\\192.168.123.30\KTA\SAMS Images` (seeded in `setup_data.example.json`; on a Mac with the share mounted: `/Volumes/KTA/SAMS Images`). Photos sit in range sub-folders (`1-10000`, `10001-15000`, … `90001-95000`, plus `new` / `other`): ~44 000 JPEGs, median ~1.3 MB, a full scan takes ~1 s. **Never derive the sub-folder from the sample number** — several hundred files sit in the wrong range folder; the scan finds them because it matches on the file name alone.
+- **The number must end at a non-digit.** The legacy Delphi glob `<nr>*.jpg` also returned `482110.jpg` for sample 48211; `sample_nr_from_filename` takes the whole leading digit run instead. Leading zeros are tolerated.
+- **Group photos** (one picture of several samples) are listed on every sample they name, after that sample's own photos and with a "Group photo" badge. `sample_nrs_from_filename` only accepts further numbers chained directly onto the first with `-`, `_` or `+`, within `GROUP_MAX_SPAN` (100) of it: `25328-25337.jpg` is a range; `16191_16192.jpg` / `16881+16882b.jpg` / `12419-12420-12423.jpg` are lists and must be written out in full. **A short number after a dash abbreviates a range** (lab convention, confirmed 2026-10-01): it replaces the last digits, `11584-7` = 11584–11587, `14518-20` = 14518–14520 — unless the result is not above the start (`11813-2` stays on 11813). An underscore never abbreviates: `36231_2` is photo 2 of 36231. On the real folder this gives 62 group photos, all checked by hand.
+- The folder is set in Setup → *Sample Photos* (`setup_data.json` section `sample_photos`, `{"folder": "<absolute path>"}`); blank switches the feature off. It is the path as seen by the **server process** — on a Windows service that means a UNC path, not a mapped drive letter.
+- **No request may wait on the share.** `SamplePhotoLibrary` walks the folder in a background thread into an in-memory index (`sample_nr -> relative paths`), waits at most `wait_seconds` for it and otherwise answers `scanning`; a scan out for more than `stalled_after_seconds` is reported as `unavailable`. The index is reused for `ttl_seconds` (120 s) and a stale one keeps being served while the rescan runs. A dead mount can hang a filesystem call for minutes — never add a synchronous `os.listdir`/`glob` of the photo folder to a page route.
+- The sample page therefore renders the **Photos** group empty and `sample-photos.js` fills it from `GET /api/samples/{nr}/photos`, whose `state` is `ok | scanning | not_configured | unavailable` (always HTTP 200). The refresh icon calls it with `?refresh=true` to force a rescan right after new photos were dropped in.
+- Files are served by `GET /samples/{nr}/photos/{relative_path}` (`?download=1` for an attachment). The path from the URL is **never joined to the folder blindly**: `SamplePhotos.resolve` only accepts a path the scan found *for that sample*. Keep it that way — it is what rules out `..` traversal and reading other files.
+- The file response sets `Content-Encoding: identity` so `GZipMiddleware` passes images through, and the URL carries `?v=<mtime>` so a replaced photo gets a new URL.
+- Browser-viewable formats (`VIEWABLE_EXTENSIONS`: jpg, jpeg, png, gif, webp, bmp) get a thumbnail and open in the viewer; `DOWNLOAD_ONLY_EXTENSIONS` (tif, tiff, heic, heif) are listed as download-only tiles. Thumbnails are the original files scaled by the browser — there is deliberately no Pillow dependency.
+- The viewer is one `<dialog>` built by `sample-photos.js`: wheel / pinch / `+` `-` zoom around the cursor, drag to pan, double-click toggles fit ↔ actual size, `0` fit, `1` actual size, `←` `→` previous/next, `Esc` close. Its key handler captures on `document` and stops propagation so the record shortcuts (`e`, `[`, `]`, …) cannot fire underneath.
+- `style-photos.css` and `js/sample-photos.js` load only on the sample page (`extra_styles` / `extra_scripts`), like the bench assets.
 
 ## Current Workflow Notes
 - Main navigation labels:

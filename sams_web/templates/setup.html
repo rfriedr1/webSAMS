@@ -368,6 +368,85 @@
         })();
       </script>
 
+      {% elif active_section.kind == "sample_photos" %}
+      <form method="post" action="{{ active_section.form_action }}">
+        <p class="setup-note">
+          Every image file in this folder (sub-folders included) whose name <strong>starts with a
+          sample number</strong> is shown on that sample's page &mdash; <code>48211.jpg</code>,
+          <code>48211b.jpg</code> and <code>48211_back.png</code> all belong to sample 48211.
+          JPEG, PNG, GIF, WebP and BMP are displayed; TIFF and HEIC are offered as downloads.
+        </p>
+        <p class="setup-note">
+          A photo of several samples appears on each of them: <code>25328-25337.jpg</code> or the
+          short form <code>11584-7.jpg</code> (11584&ndash;11587) for a range,
+          <code>16191_16192.jpg</code> or <code>16881+16882.jpg</code> for individual samples.
+          A number after an underscore counts photos of one sample (<code>36231_2.jpg</code>).
+        </p>
+        <label class="setup-list-editor-label" for="sample-photos-folder">Photo folder</label>
+        <input
+          id="sample-photos-folder"
+          class="setup-path-input"
+          type="text"
+          name="folder"
+          value="{{ active_section.folder }}"
+          placeholder="\\server\share\SAMS Images"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <p class="setup-note">
+          The path as seen by the computer that <em>runs</em> webSAMS, not by your browser. On a
+          Windows server use the network path (<code>\\server\share\&hellip;</code>) rather than
+          a drive letter: mapped drives do not exist for a service. Leave empty to switch photos off.
+        </p>
+        <div class="setup-actions">
+          <button type="submit">Save {{ active_section.title }}</button>
+        </div>
+      </form>
+
+      <section class="setup-test-mail" data-photo-folder-status>
+        <h4 class="setup-subhead">Folder check</h4>
+        <p class="setup-note">Reads the <em>saved</em> folder and reports what was found.</p>
+        <div class="setup-test-mail-row">
+          <button type="button" class="setup-test-mail-button" data-photo-folder-rescan>Rescan folder</button>
+        </div>
+        <p class="setup-test-mail-status" data-photo-folder-message role="status">Checking the folder…</p>
+      </section>
+
+      <script>
+        // Scoped to this section, like the e-mail test above.
+        (() => {
+          const root = document.querySelector("[data-photo-folder-status]");
+          if (!root) return;
+          const button = root.querySelector("[data-photo-folder-rescan]");
+          const message = root.querySelector("[data-photo-folder-message]");
+          let attempts = 0;
+
+          const check = async (refresh) => {
+            button.disabled = true;
+            try {
+              const res = await fetch(`/api/sample-photos/status${refresh ? "?refresh=true" : ""}`);
+              const data = await res.json();
+              message.textContent = data.message || "";
+              message.classList.toggle("is-ok", data.state === "ok");
+              message.classList.toggle("is-error", data.state === "unavailable");
+              // A large share takes a while to list; keep asking until it answers.
+              if (data.state === "scanning" && attempts < 40) {
+                attempts += 1;
+                window.setTimeout(() => check(false), 2000);
+                return;
+              }
+            } catch (_e) {
+              message.textContent = "Could not reach the server.";
+              message.classList.add("is-error");
+            }
+            button.disabled = false;
+          };
+
+          button.addEventListener("click", () => { attempts = 0; check(true); });
+          check(false);
+        })();
+      </script>
+
       {% elif active_section.kind == "string_list" %}
       <form method="post" action="{{ active_section.form_action }}">
         {% if active_section.list_help %}

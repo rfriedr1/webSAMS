@@ -147,6 +147,13 @@
   line-height: 1.35;
 }
 
+/* A folder path needs the whole row; the default input width truncates
+   a UNC path after the share name. */
+.setup-path-input {
+  width: 100%;
+  font-variant-ligatures: none;
+}
+
 .setup-preview-chips {
   display: flex;
   flex-wrap: wrap;
