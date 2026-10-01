@@ -424,8 +424,14 @@ unaffected.
   share (section 7). If the file server is not in a domain, create a local account
   on this server with the **same user name and password** as an account on the
   file server that can read the share — Windows then logs in with it.
-- *WinError 53 / 67* → the server cannot reach `\\192.168.123.30\KTA` at all
-  (name, firewall, SMB disabled): `Test-NetConnection 192.168.123.30 -Port 445`.
+- *… cannot be reached (WinError 53)* → the server cannot reach `\\192.168.123.30`
+  at all (switched off, firewall, SMB disabled): `Test-NetConnection 192.168.123.30 -Port 445`.
+  *The shared folder … was not found (WinError 67)* → the share name is wrong.
+- *… accepts no more connections (WinError 71)* → the file server's client limit is
+  reached; a desktop Windows (10/11) accepts at most 20 connections. List them on the
+  file server with `Get-SmbSession` and close idle ones (`Close-SmbSession`). A webSAMS
+  started *as administrator* needs a connection of its own — start it normally and it
+  reuses the one your `R:` already holds.
 
 To test what the service will see, log on to the server *as the service account*
 and run `Get-ChildItem "\\192.168.123.30\KTA\SAMS Images" | Select-Object -First 3`.

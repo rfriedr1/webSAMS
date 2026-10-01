@@ -104,6 +104,80 @@
   font-weight: 600;
 }
 
+/* Why the photos cannot be shown (share unreachable, access refused, …). */
+.sample-photos-problem {
+  padding: var(--space-3);
+  border: 1px solid var(--warn-line);
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.sample-photos-problem p {
+  margin: 0;
+}
+
+.sample-photos-problem-title {
+  font-size: var(--text-base);
+}
+
+.sample-photos-problem .sample-photos-problem-advice {
+  margin-top: var(--space-1);
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.sample-photos-problem-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.15rem var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+}
+
+.sample-photos-problem-facts dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sample-photos-problem-facts dd {
+  margin: 0;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.sample-photos-problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* Quiet, like the Setup test buttons: the box is a notice, not a form. */
+.sample-photos-retry {
+  min-height: 2rem;
+  padding: 0.25rem 0.9rem;
+  border: 1px solid var(--warn-line);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--warn-text);
+  font-size: var(--text-sm);
+}
+
+.sample-photos-retry:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--warn-text);
+}
+
+.sample-photos-retry:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .sample-photos-note + .sample-photo-grid {
   margin-top: var(--space-2);
 }
@@ -383,5 +457,13 @@
 
   .photo-viewer-counter {
     display: none;
+  }
+
+  .sample-photos-problem-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sample-photos-problem-facts dd + dt {
+    margin-top: var(--space-1);
   }
 }

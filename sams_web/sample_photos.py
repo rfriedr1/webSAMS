@@ -29,8 +29,9 @@ Nothing here touches the database.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+import errno
 import getpass
 import logging
 import mimetypes
@@ -262,49 +263,139 @@ def _session_hint() -> str:
     if _is_service_account():
         return (
             "webSAMS runs as a Windows service, which never sees mapped drives and "
-            "logs in to other computers as the computer account"
+            "logs in to other computers as the computer account."
         )
     if _is_elevated():
         return (
-            "webSAMS was started as administrator; Windows hides the drive letters "
-            "and saved share logins of your normal session from such programs - "
-            "start it without 'Run as administrator'"
+            "webSAMS was started as administrator: Windows hides the drive letters and "
+            "share connections of your normal session from such programs, so it needs a "
+            "connection of its own. Start it without 'Run as administrator'."
         )
     return ""
 
 
-#: Windows error codes that mean "the share or path is not there" and
-#: "you may not read it". The rest are reported as Windows phrased them.
-_WIN_NOT_FOUND = {2, 3, 53, 67, 1203}
-_WIN_ACCESS_DENIED = {5, 86, 1326, 1219, 1244, 1272}
+def _server_of(root: Path | None) -> str:
+    """`192.168.123.30` for `\\\\192.168.123.30\\KTA\\...`, else a generic name."""
+    if root is not None:
+        drive = PureWindowsPath(str(root)).drive
+        if drive.startswith("\\\\"):
+            return drive.lstrip("\\").split("\\", 1)[0]
+    return "the file server"
+
+
+def _capitalized(sentence: str) -> str:
+    return sentence[:1].upper() + sentence[1:]
+
+
+@dataclass(frozen=True)
+class FolderProblem:
+    """Why the photo folder cannot be read, in three layers: what happened
+    (`title`), what to do (`advice`), and the facts an administrator needs
+    (`folder`, `account`, `os_error`). The sample page shows all three."""
+
+    title: str
+    advice: str
+    folder: str
+    account: str
+    os_error: str = ""
+
+    def as_text(self) -> str:
+        detail = f"folder {self.folder}, webSAMS runs as {self.account}"
+        if self.os_error:
+            detail += f", {self.os_error}"
+        return " ".join(part for part in (f"{self.title}.", self.advice) if part) + f" ({detail})"
+
+    def as_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+#: Windows error codes by what they mean for the operator. They are checked
+#: before the exception class: Python reports "network path not found"
+#: (53, 67) as FileNotFoundError, which would otherwise read "no such folder".
+_WIN_SERVER_FULL = {71}  # ERROR_REQ_NOT_ACCEP: the server's client limit is reached
+_WIN_UNREACHABLE = {53, 59, 64, 121, 1203, 1222, 1231, 1232}
+_WIN_SHARE_MISSING = {67}
+_WIN_OTHER_USER = {1219}
+_WIN_ACCESS_REFUSED = {5, 86, 1244, 1272, 1326}
+_WIN_NOT_FOUND = {2, 3}
+_POSIX_UNREACHABLE = {
+    errno.EHOSTDOWN, errno.EHOSTUNREACH, errno.ENETDOWN, errno.ENETUNREACH,
+    errno.ETIMEDOUT, errno.ENOTCONN, errno.ESTALE,
+}
+
+
+def diagnose_folder_error(exc: OSError, root: Path | None = None) -> FolderProblem:
+    """Turn an OS error on the photo folder into something an operator can act on."""
+    winerror = getattr(exc, "winerror", None)
+    server = _server_of(root)
+    hint = _session_hint()
+    raw = exc.strerror or str(exc)
+    missing_drive = _missing_drive(root)
+
+    if missing_drive:
+        title = f"Drive {missing_drive} is not available to webSAMS"
+        advice = hint or (
+            "A mapped drive letter only exists for the Windows user who mapped it. "
+            "Connect the drive for this account, or enter the network path in "
+            "Setup → Sample Photos."
+        )
+    elif winerror in _WIN_SERVER_FULL:
+        title = _capitalized(f"{server} accepts no more connections")
+        advice = (
+            "Too many computers are connected to it at once (a desktop Windows allows 20). "
+            "Try again in a few minutes; if it keeps happening, close idle connections on "
+            "the file server."
+        )
+        if _is_elevated() and not _is_service_account():
+            advice += " " + hint
+    elif winerror in _WIN_UNREACHABLE or exc.errno in _POSIX_UNREACHABLE:
+        title = _capitalized(f"{server} cannot be reached")
+        advice = "Check that it is switched on and connected to the network, then try again."
+    elif winerror in _WIN_SHARE_MISSING:
+        title = f"The shared folder on {server} was not found"
+        advice = "Check the share name in Setup → Sample Photos."
+    elif winerror in _WIN_OTHER_USER:
+        title = f"Windows is already connected to {server} as a different user"
+        advice = (
+            "Only one user name per server is allowed. Disconnect the other connection "
+            "(net use) or use the same user for both."
+        )
+    elif winerror in _WIN_ACCESS_REFUSED or isinstance(exc, PermissionError):
+        title = "Access to the photo folder was refused"
+        advice = hint or (
+            "The account webSAMS runs as may not read this folder. Give it read access, "
+            "or run webSAMS as an account that has it."
+        )
+    elif winerror in _WIN_NOT_FOUND or isinstance(exc, (FileNotFoundError, NotADirectoryError)):
+        title = "The photo folder does not exist"
+        advice = hint or "Check the path in Setup → Sample Photos."
+    else:
+        title = "The photo folder could not be read"
+        advice = hint
+    return FolderProblem(
+        title=title,
+        advice=advice,
+        folder=str(root) if root is not None else "?",
+        account=running_as(),
+        os_error=f"WinError {winerror}: {raw}" if winerror else raw,
+    )
 
 
 def describe_folder_error(exc: OSError, root: Path | None = None) -> str:
-    """One sentence an operator can act on, ending with the raw OS text."""
-    raw = exc.strerror or str(exc)
-    winerror = getattr(exc, "winerror", None)
-    hint = _session_hint()
-    missing_drive = _missing_drive(root)
-    if missing_drive:
-        reason = (
-            f"Drive {missing_drive} does not exist for webSAMS ({running_as()}) - "
-            f"{hint or 'a mapped drive letter only exists for the user who mapped it'}"
-        )
-    elif isinstance(exc, PermissionError) or winerror in _WIN_ACCESS_DENIED:
-        reason = f"Access denied for the account webSAMS runs as ({running_as()})"
-        if hint:
-            reason += f" - {hint}"
-    elif isinstance(exc, (FileNotFoundError, NotADirectoryError)) or winerror in _WIN_NOT_FOUND:
-        reason = (
-            f"Folder not found for the account webSAMS runs as ({running_as()}) - "
-            f"{hint or 'check the path'}"
-        )
-    else:
-        reason = f"Could not open the folder as {running_as()}"
-        if hint:
-            reason += f" - {hint}"
-    code = f"WinError {winerror}: " if winerror else ""
-    return f"{reason} [{code}{raw}]"
+    """`diagnose_folder_error` as one line, for logs and the Setup check."""
+    return diagnose_folder_error(exc, root).as_text()
+
+
+def _stalled_problem(root: Path) -> FolderProblem:
+    return FolderProblem(
+        title=_capitalized(f"{_server_of(root)} is not answering"),
+        advice=(
+            "webSAMS has been waiting more than a minute for the photo folder. Check that "
+            "the file server and the network are up, then try again."
+        ),
+        folder=str(root),
+        account=running_as(),
+    )
 
 
 # --- Index ------------------------------------------------------------------
@@ -317,7 +408,7 @@ class _Index:
     files: dict[int, tuple[str, ...]]
     built_at: float
     built_wall: datetime
-    error: str | None = None
+    problem: FolderProblem | None = None
     #: Sub-folders that could not be listed, as "name: reason".
     unreadable: tuple[str, ...] = ()
 
@@ -435,23 +526,28 @@ class SamplePhotoLibrary:
             )
 
     def _run_scan(self, scan: _Scan) -> None:
-        error: str | None = None
+        problem: FolderProblem | None = None
         files: dict[int, tuple[str, ...]] = {}
         unreadable: list[str] = []
         try:
             files = scan_photo_folder(scan.root, unreadable)
         except OSError as exc:
-            error = describe_folder_error(exc, scan.root)
-            logger.warning("Sample photo folder %s could not be read: %s", scan.root, error)
+            problem = diagnose_folder_error(exc, scan.root)
+            logger.warning("Sample photo folder %s could not be read: %s", scan.root, problem.as_text())
         except Exception:  # noqa: BLE001 - a scan thread must never die silently
-            error = "Unexpected error while reading the folder."
+            problem = FolderProblem(
+                title="The photo folder could not be read",
+                advice="An unexpected error occurred; see the webSAMS log.",
+                folder=str(scan.root),
+                account=running_as(),
+            )
             logger.exception("Sample photo scan of %s failed", scan.root)
         index = _Index(
             root=scan.root,
             files=files,
             built_at=time.monotonic(),
             built_wall=datetime.now(),
-            error=error,
+            problem=problem,
             unreadable=tuple(unreadable),
         )
         if unreadable:
@@ -514,13 +610,26 @@ class PhotoListing:
     state: str
     photos: tuple[SamplePhoto, ...] = ()
     message: str | None = None
+    #: Set when `state` is unavailable: why, and what to do about it.
+    problem: FolderProblem | None = None
+
+    @classmethod
+    def unavailable(cls, problem: FolderProblem) -> "PhotoListing":
+        return cls(STATE_UNAVAILABLE, message=problem.as_text(), problem=problem)
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "state": self.state,
             "message": self.message,
+            "problem": self.problem.as_dict() if self.problem else None,
             "photos": [photo.as_dict() for photo in self.photos],
         }
+
+
+def _is_plain_missing(exc: OSError) -> bool:
+    """A file that is simply gone — not a share that stopped answering,
+    which Windows *also* reports as FileNotFoundError (53, 67)."""
+    return isinstance(exc, FileNotFoundError) and getattr(exc, "winerror", None) in (None, 2, 3)
 
 
 class SamplePhotos:
@@ -537,17 +646,20 @@ class SamplePhotos:
         index, scanning = self._library.index_for(root, refresh=refresh)
         if index is None:
             return self._pending_listing(root)
-        if index.error is not None:
-            return PhotoListing(
-                STATE_UNAVAILABLE,
-                message=f"The photo folder could not be read: {index.error}.",
-            )
+        if index.problem is not None:
+            return PhotoListing.unavailable(index.problem)
         photos: list[SamplePhoto] = []
+        missing = 0
         for relative_path in index.files.get(sample_nr, ()):
             try:
                 stat = (root / relative_path).stat()
-            except OSError:
+            except OSError as exc:
+                if not _is_plain_missing(exc):
+                    # The share went away after the last good scan: say so,
+                    # rather than presenting the sample as having no photos.
+                    return PhotoListing.unavailable(diagnose_folder_error(exc, root))
                 # Deleted or renamed since the scan; the next scan drops it.
+                missing += 1
                 continue
             photos.append(
                 SamplePhoto(
@@ -558,6 +670,14 @@ class SamplePhotos:
                     viewable=Path(relative_path).suffix.lower() in VIEWABLE_EXTENSIONS,
                 )
             )
+        if missing and not photos:
+            # Every listed photo is gone: a vanished mount looks exactly like
+            # that on some systems, so check the folder itself once.
+            try:
+                with os.scandir(root) as entries:
+                    next(entries, None)
+            except OSError as exc:
+                return PhotoListing.unavailable(diagnose_folder_error(exc, root))
         message = None
         if scanning and refresh:
             message = "The folder is still being rescanned - this list may be out of date."
@@ -590,11 +710,8 @@ class SamplePhotos:
         if index is None or scanning:
             listing = self._pending_listing(root)
             return {"state": listing.state, "message": listing.message}
-        if index.error is not None:
-            return {
-                "state": STATE_UNAVAILABLE,
-                "message": f"The photo folder could not be read: {index.error}.",
-            }
+        if index.problem is not None:
+            return {"state": STATE_UNAVAILABLE, "message": index.problem.as_text()}
         message = (
             f"{index.photo_count} photo file(s) for {len(index.files)} sample(s), "
             f"scanned {index.built_wall.strftime('%H:%M:%S')} as {running_as()}."
@@ -614,13 +731,7 @@ class SamplePhotos:
 
     def _pending_listing(self, root: Path) -> PhotoListing:
         if self._library.scan_is_stalled(root):
-            return PhotoListing(
-                STATE_UNAVAILABLE,
-                message=(
-                    "The photo folder is not answering. "
-                    "Check that the network drive is connected on the server."
-                ),
-            )
+            return PhotoListing.unavailable(_stalled_problem(root))
         return PhotoListing(STATE_SCANNING, message="Reading the photo folder...")
 
 
