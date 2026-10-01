@@ -408,10 +408,27 @@ The stored password is only reused for the saved server, port, security mode and
 username — change any of those and you must type the password again.
 
 **Sample pages say the photo folder could not be read / is not answering**
-Open **Setup → Sample Photos → Folder check**. The path must be one the *service*
-can open: a network path, readable by the service account (sections 7 and 9). A
-drive letter that works in Explorer does not count. Photos stay optional — the
-rest of the sample page is unaffected.
+Open **Setup → Sample Photos → Folder check**. It names the account webSAMS runs
+as and Windows' own reason. The path must be one *that account* can open: a
+network path, readable by it (sections 7 and 9). A drive letter that works in
+Explorer does not count. Photos stay optional — the rest of the sample page is
+unaffected.
+- *Drive R: does not exist for webSAMS (…, LocalSystem / computer account)* →
+  mapped drives don't exist for a service; use the network path.
+- *… started as administrator* → webSAMS was started with **Run as administrator**.
+  Windows keeps such programs in a separate session that sees neither the drive
+  letters nor the saved share logins of your normal session — even though `R:`
+  works in Explorer. Start it normally.
+- *Access denied … LocalSystem* or *WinError 1326 / 86* → the file server does not
+  accept the computer account. Run the service as an account that may read the
+  share (section 7). If the file server is not in a domain, create a local account
+  on this server with the **same user name and password** as an account on the
+  file server that can read the share — Windows then logs in with it.
+- *WinError 53 / 67* → the server cannot reach `\\192.168.123.30\KTA` at all
+  (name, firewall, SMB disabled): `Test-NetConnection 192.168.123.30 -Port 445`.
+
+To test what the service will see, log on to the server *as the service account*
+and run `Get-ChildItem "\\192.168.123.30\KTA\SAMS Images" | Select-Object -First 3`.
 
 **A photo that was just taken does not appear**
 The folder listing is cached for two minutes. Click the refresh icon next to
