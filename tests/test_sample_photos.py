@@ -16,6 +16,7 @@ from sams_web.sample_photos import (
     SamplePhotoSettingsStore,
     SamplePhotos,
     describe_folder_error,
+    diagnose_folder_error,
     running_as,
     sample_nr_from_filename,
     sample_nrs_from_filename,
@@ -238,7 +239,7 @@ def test_routes_list_serve_and_download_photos(client):
     assert client.get("/samples/7/photos/..%2F..%2Fsetup_data.json").status_code == 404
 
 
-def test_an_unreadable_folder_says_access_denied_and_names_the_account(tmp_path):
+def test_an_unreadable_folder_says_access_was_refused_and_names_the_account(tmp_path):
     folder = tmp_path / "photos"
     _touch(folder, "7.jpg")
     folder.chmod(0)
@@ -247,40 +248,72 @@ def test_an_unreadable_folder_says_access_denied_and_names_the_account(tmp_path)
     finally:
         folder.chmod(0o755)
     assert listing.state == STATE_UNAVAILABLE
-    # Not "Folder not found": that is what Path.is_dir() used to make of it.
-    assert "Access denied" in listing.message
-    assert running_as() in listing.message
+    # Not "does not exist": that is what Path.is_dir() used to make of it.
+    assert listing.problem.title == "Access to the photo folder was refused"
+    assert listing.problem.account == running_as()
+    assert listing.problem.folder == str(folder)
+    assert listing.as_dict()["problem"]["title"] == listing.problem.title
 
 
-def test_a_missing_folder_says_not_found(tmp_path):
+def test_a_missing_folder_says_it_does_not_exist(tmp_path):
     listing = _photos(tmp_path, tmp_path / "gone").list_for_sample(7)
-    assert "Folder not found" in listing.message
+    assert listing.problem.title == "The photo folder does not exist"
+    assert "Setup" in listing.problem.advice
+
+
+def test_a_share_that_drops_after_the_scan_is_reported_not_shown_as_empty(tmp_path):
+    folder = tmp_path / "photos"
+    _touch(folder, "7.jpg", "7b.jpg")
+    photos = _photos(tmp_path, folder)
+    assert len(photos.list_for_sample(7).photos) == 2
+
+    folder.rename(tmp_path / "unmounted")  # what a vanished mount looks like
+    listing = photos.list_for_sample(7)  # index still fresh
+    assert listing.state == STATE_UNAVAILABLE
+    assert listing.problem.title == "The photo folder does not exist"
+
+
+def test_a_photo_deleted_since_the_scan_is_just_skipped(tmp_path):
+    folder = tmp_path / "photos"
+    _touch(folder, "7.jpg", "7b.jpg")
+    photos = _photos(tmp_path, folder)
+    photos.list_for_sample(7)
+    (folder / "7b.jpg").unlink()
+    listing = photos.list_for_sample(7)
+    assert listing.state == STATE_OK
+    assert [photo.name for photo in listing.photos] == ["7.jpg"]
+
+
+UNC = Path("//192.168.123.30/KTA/SAMS Images")
+
+
+def _win_error(winerror, text="Windows says no", cls=OSError):
+    exc = cls(0, text)
+    exc.winerror = winerror  # only set by Python itself on Windows
+    return exc
 
 
 @pytest.mark.parametrize(
-    ("winerror", "expected"),
-    [(53, "Folder not found"), (67, "Folder not found"), (1326, "Access denied"), (5, "Access denied")],
+    ("winerror", "cls", "title"),
+    [
+        (71, OSError, "192.168.123.30 accepts no more connections"),
+        # Python raises FileNotFoundError for these two on Windows.
+        (53, FileNotFoundError, "192.168.123.30 cannot be reached"),
+        (64, OSError, "192.168.123.30 cannot be reached"),
+        (67, FileNotFoundError, "The shared folder on 192.168.123.30 was not found"),
+        (1219, OSError, "Windows is already connected to 192.168.123.30 as a different user"),
+        (1326, OSError, "Access to the photo folder was refused"),
+        (5, PermissionError, "Access to the photo folder was refused"),
+        (3, FileNotFoundError, "The photo folder does not exist"),
+        (999, OSError, "The photo folder could not be read"),
+    ],
 )
-def test_windows_share_errors_are_named(winerror, expected):
-    exc = OSError(0, "Windows says no")
-    exc.winerror = winerror  # only set by Python itself on Windows
-    message = describe_folder_error(exc)
-    assert message.startswith(expected)
-    assert f"[WinError {winerror}: Windows says no]" in message
-
-
-def test_an_unreadable_sub_folder_is_skipped_and_reported(tmp_path):
-    folder = tmp_path / "photos"
-    _touch(folder, "1-100/7.jpg", "101-200/150.jpg")
-    (folder / "101-200").chmod(0)
-    try:
-        photos = _photos(tmp_path, folder)
-        assert [photo.name for photo in photos.list_for_sample(7).photos] == ["7.jpg"]
-        status = photos.status()
-    finally:
-        (folder / "101-200").chmod(0o755)
-    assert status["state"] == STATE_OK
-    assert "1 sub-folder(s) could not be read (101-200:" in status["message"]
+def test_windows_share_errors_are_explained(winerror, cls, title):
+    problem = diagnose_folder_error(_win_error(winerror, cls=cls), UNC)
+    assert problem.title == title
+    assert problem.os_error == f"WinError {winerror}: Windows says no"
+    assert problem.folder == str(UNC)
+    assert describe_folder_error(_win_error(winerror, cls=cls), UNC).startswith(title + ".")
 
 
 class _FakeWindows:
@@ -296,34 +329,61 @@ class _FakeWindows:
         monkeypatch.setenv("USERDOMAIN", "LAB")
 
 
-def _not_found(winerror=3):
-    exc = OSError(0, "The system cannot find the path specified")
-    exc.winerror = winerror
-    return exc
-
-
 def test_a_service_is_told_it_cannot_see_mapped_drives(monkeypatch):
     _FakeWindows(monkeypatch, user="WEBSAMS-SRV$")
-    message = describe_folder_error(_not_found(), Path("R:/SAMS Images"))
-    assert message.startswith("Drive R: does not exist for webSAMS (LAB\\WEBSAMS-SRV$, LocalSystem")
-    assert "Windows service" in message
+    problem = diagnose_folder_error(_win_error(3, cls=FileNotFoundError), Path("R:/SAMS Images"))
+    assert problem.title == "Drive R: is not available to webSAMS"
+    assert "Windows service" in problem.advice
+    assert problem.account == "LAB\\WEBSAMS-SRV$, LocalSystem / computer account"
 
 
 def test_an_elevated_start_is_named_as_the_reason(monkeypatch):
     _FakeWindows(monkeypatch, user="rfriedrich", elevated=True)
-    message = describe_folder_error(_not_found(), Path("R:/SAMS Images"))
-    assert "started as administrator" in message
-    assert "without 'Run as administrator'" in message
+    problem = diagnose_folder_error(_win_error(3, cls=FileNotFoundError), Path("R:/SAMS Images"))
+    assert problem.title == "Drive R: is not available to webSAMS"
+    assert "without 'Run as administrator'" in problem.advice
 
-    denied = OSError(0, "The user name or password is incorrect")
-    denied.winerror = 1326
-    message = describe_folder_error(denied, Path("//192.168.123.30/KTA/SAMS Images"))
-    assert message.startswith("Access denied")
-    assert "without 'Run as administrator'" in message
+    refused = diagnose_folder_error(_win_error(1326), UNC)
+    assert refused.title == "Access to the photo folder was refused"
+    assert "without 'Run as administrator'" in refused.advice
+
+    # The case met on the lab server: elevated, and the file server full.
+    full = diagnose_folder_error(_win_error(71), UNC)
+    assert full.title == "192.168.123.30 accepts no more connections"
+    assert "without 'Run as administrator'" in full.advice
+    assert full.account == "LAB\\rfriedrich, started as administrator"
 
 
 def test_an_existing_drive_with_a_wrong_folder_is_a_plain_not_found(monkeypatch):
     _FakeWindows(monkeypatch, user="rfriedrich", drives=("C:", "R:"))
-    message = describe_folder_error(_not_found(), Path("R:/SAMS Imgs"))
-    assert message.startswith("Folder not found for the account webSAMS runs as (LAB\\rfriedrich)")
-    assert "check the path" in message
+    problem = diagnose_folder_error(_win_error(3, cls=FileNotFoundError), Path("R:/SAMS Imgs"))
+    assert problem.title == "The photo folder does not exist"
+    assert problem.account == "LAB\\rfriedrich"
+
+
+def test_a_stalled_scan_is_reported_as_not_answering(tmp_path, monkeypatch):
+    import threading
+
+    import sams_web.sample_photos as module
+
+    monkeypatch.setattr(module, "scan_photo_folder", lambda *_: threading.Event().wait(5))
+    folder = tmp_path / "photos"
+    folder.mkdir()
+    photos = _photos(tmp_path, folder, wait_seconds=0.01, stalled_after_seconds=0)
+    listing = photos.list_for_sample(7)
+    assert listing.state == STATE_UNAVAILABLE
+    assert listing.problem.title == "The file server is not answering"
+
+
+def test_an_unreadable_sub_folder_is_skipped_and_reported(tmp_path):
+    folder = tmp_path / "photos"
+    _touch(folder, "1-100/7.jpg", "101-200/150.jpg")
+    (folder / "101-200").chmod(0)
+    try:
+        photos = _photos(tmp_path, folder)
+        assert [photo.name for photo in photos.list_for_sample(7).photos] == ["7.jpg"]
+        status = photos.status()
+    finally:
+        (folder / "101-200").chmod(0o755)
+    assert status["state"] == STATE_OK
+    assert "1 sub-folder(s) could not be read (101-200:" in status["message"]

@@ -389,6 +389,41 @@
       return list;
     };
 
+    // Why the photos cannot be shown: what happened, what to do, and the
+    // facts an administrator needs (folder, account, the system's message).
+    const renderProblem = (problem) => {
+      const box = el("div", "sample-photos-problem");
+      box.setAttribute("role", "status");
+      const title = el("p", "sample-photos-problem-title");
+      title.append(el("strong", "", "Photos unavailable: "), `${problem.title}.`);
+      box.appendChild(title);
+      if (problem.advice) box.appendChild(el("p", "sample-photos-problem-advice", problem.advice));
+      const facts = [
+        ["Folder", problem.folder],
+        ["webSAMS runs as", problem.account],
+        ["System message", problem.os_error],
+      ].filter(([, value]) => value);
+      if (facts.length) {
+        const list = el("dl", "sample-photos-problem-facts");
+        facts.forEach(([label, value]) => list.append(el("dt", "", label), el("dd", "", value)));
+        box.appendChild(list);
+      }
+      const actions = el("div", "sample-photos-problem-actions");
+      const retry = el("button", "sample-photos-retry", "Try again");
+      retry.type = "button";
+      retry.addEventListener("click", () => {
+        retry.disabled = true;
+        polls = 0;
+        load(true);
+      });
+      const check = el("a", "table-link", "Folder check");
+      check.href = "/setup?section=sample_photos";
+      check.title = "Setup → Sample Photos";
+      actions.append(retry, check);
+      box.appendChild(actions);
+      return box;
+    };
+
     const render = (data) => {
       const photos = data.photos || [];
       setCount(data.state === "ok" ? photos.length : 0);
@@ -407,7 +442,10 @@
         return;
       }
       if (data.state !== "ok") {
-        body.replaceChildren(note(data.message || "The photo folder is not available.", "warning"));
+        body.replaceChildren(renderProblem(data.problem || {
+          title: data.message || "The photo folder is not available",
+          advice: "",
+        }));
         return;
       }
       const nodes = [];
@@ -434,7 +472,13 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         data = await response.json();
       } catch (_error) {
-        data = { state: "unavailable", message: "The photo list could not be loaded." };
+        data = {
+          state: "unavailable",
+          problem: {
+            title: "The photo list could not be loaded",
+            advice: "webSAMS did not answer. Check the connection to the webSAMS server and try again.",
+          },
+        };
       }
       render(data);
       // The first listing of a big share outlasts one request; ask again.
