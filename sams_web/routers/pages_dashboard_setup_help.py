@@ -23,6 +23,7 @@ from sams_web.setup_sections import (
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
     SETUP_SECTION_IMPORT_HEADINGS,
     SETUP_SECTION_LAB_WARNING_THRESHOLDS,
+    SETUP_SECTION_SAMPLE_PHOTOS,
     SETUP_SECTION_STANDARD_THRESHOLDS,
 )
 from sams_web.thresholds import STANDARD_LABELS, THRESHOLD_FIELDS
@@ -283,6 +284,8 @@ async def setup_section_submit(
         for key in form.keys():
             if key.startswith("template_"):
                 payload[key] = form.get(key, "")
+    elif section_key == SETUP_SECTION_SAMPLE_PHOTOS:
+        payload["folder"] = str(form.get("folder") or "")
 
     try:
         service.update_setup_section(section_key=section_key, payload=payload)
@@ -301,6 +304,9 @@ async def setup_section_submit(
             threshold_fields = active_section["threshold_fields"]
         elif active_section["kind"] == "string_list":
             list_text = str(payload.get("raw_text") or active_section.get("list_text") or "")
+        elif active_section["kind"] == "sample_photos":
+            # Keep what was typed, so a rejected path can be corrected.
+            active_section["folder"] = payload.get("folder", "")
 
         return templates.TemplateResponse(
             "setup.html",

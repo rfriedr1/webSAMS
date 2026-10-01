@@ -27,9 +27,11 @@ from sams_web.setup_sections import (
     SETUP_SECTION_IMPORT_HEADINGS,
     SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_MAP,
+    SETUP_SECTION_SAMPLE_PHOTOS,
     SETUP_SECTION_STANDARD_THRESHOLDS,
     SETUP_SECTIONS,
 )
+from sams_web.sample_photos import SamplePhotoSettingsStore
 from sams_web.import_settings import (
     EMAIL_PLACEHOLDERS,
     EMAIL_SERVER_FIELDS,
@@ -663,6 +665,14 @@ class SamsService:
                 ],
                 "email_configured": store.is_configured(),
             }
+        if section.key == SETUP_SECTION_SAMPLE_PHOTOS:
+            store = SamplePhotoSettingsStore(self.setup_store)
+            return {
+                **base_payload,
+                "kind": "sample_photos",
+                "storage_section": store.section_key,
+                "folder": store.load()["folder"],
+            }
 
         return {
             **base_payload,
@@ -754,6 +764,14 @@ class SamsService:
                 "kind": "email_settings",
                 "storage_file": str(self.setup_store.path),
                 "storage_section": store.section_key,
+            }
+        if section.key == SETUP_SECTION_SAMPLE_PHOTOS:
+            store = SamplePhotoSettingsStore(self.setup_store)
+            return {
+                "kind": "sample_photos",
+                "storage_file": str(self.setup_store.path),
+                "storage_section": store.section_key,
+                **store.update(payload),
             }
         raise ValueError("No update handler configured for this setup section.")
 

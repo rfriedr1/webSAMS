@@ -36,6 +36,9 @@
     "preparation_yield_percent_min": 0.5,
     "target_total_c_ug_min": 500.0
   },
+  "sample_photos": {
+    "folder": "\\\\192.168.123.30\\KTA\\SAMS Images"
+  },
   "standard_inventory_thresholds": {
     "blanks": {
       "green_above": 8,

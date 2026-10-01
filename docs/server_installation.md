@@ -265,6 +265,12 @@ nssm set webSAMS ObjectName ".\svc-websams" "<the password>"
 nssm restart webSAMS
 ```
 
+To show sample photos the service account must also be able to **read the photo
+share**. A local account like the one above cannot authenticate against a file
+server in a domain; use a domain account (`nssm set webSAMS ObjectName
+"DOMAIN\svc-websams" "<the password>"`) or grant the server's computer account
+read access on the share.
+
 If the service then refuses to start with *error 1069 (logon failure)*, grant the
 account **Log on as a service** under *Local Security Policy → Local Policies →
 User Rights Assignment*.
@@ -309,6 +315,13 @@ Open **Setup** in SAMS Web and work through:
 3. **Graphitization Systems** — the list of system pills on the graphitization bench.
 4. **Standard Thresholds** — dashboard colour limits for standards.
 5. **Import Column Headings** — only if customers use headings SAMS doesn't recognise yet.
+6. **Sample Photos** — the shared folder holding the sample photos. Enter it as a
+   **network path** (`\\<server>\<share>\SAMS Images`), not as a drive letter: mapped
+   drives such as `R:` belong to a logged-in user and do not exist for a service.
+   After saving, **Folder check** on the same page must report the number of photos
+   found. The account the service runs as needs *read* access to that share
+   (section 7) — **LocalSystem** reaches the network as the computer account, which
+   usually has none.
 
 After the first **Save**, `C:\ProgramData\webSAMS\setup_data.json` exists; include it
 in backups (section 11).
@@ -393,6 +406,16 @@ profile is *Public* (the rule above applies to *Domain* and *Private*).
 Use **Setup → E-mail → Send a test e-mail**; it reports the mail server's reason.
 The stored password is only reused for the saved server, port, security mode and
 username — change any of those and you must type the password again.
+
+**Sample pages say the photo folder could not be read / is not answering**
+Open **Setup → Sample Photos → Folder check**. The path must be one the *service*
+can open: a network path, readable by the service account (sections 7 and 9). A
+drive letter that works in Explorer does not count. Photos stay optional — the
+rest of the sample page is unaffected.
+
+**A photo that was just taken does not appear**
+The folder listing is cached for two minutes. Click the refresh icon next to
+*Photos* on the sample page. The file name must start with the sample number.
 
 **The page looks outdated after an update**
 Ctrl+F5 once in that browser.

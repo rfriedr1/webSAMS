@@ -19,6 +19,10 @@ A fixed vocabulary describing where a **Project** sits in its lifecycle. Stored 
 A submitted physical material to be dated, *or* a reference material (see **Standard**). Stored in `sample_t`. For submitter samples: belongs to one **Project** and carries reported sample-level C14 results, manually aggregated by an operator from a chosen subset of the sample's measured **Targets**.
 _Avoid_: Specimen, Material.
 
+**Sample photo**:
+A picture taken of a **Sample** when it is received, stored as an image file in the lab's shared photo folder. Belongs to a sample purely by file name — the name starts with the sample number (`48211.jpg`, `48211b.jpg`). A sample may have several. A *group photo* shows several samples at once and names them all (`25328-25337.jpg`, `16191_16192.jpg`); it belongs to each of them. A short number after a dash abbreviates a range (`11584-7.jpg` = 11584–11587); a number after an underscore counts photos of one sample (`36231_2.jpg`). Not recorded in the database.
+_Avoid_: Image, Picture, Foto.
+
 **Standard**:
 A reference material (oxalic acid, IAEA-C, blanks, etc.) used to calibrate AMS measurements. Stored as a row in `sample_t` whose `type` matches a `sampletype_t` row flagged as a standard (certified `f14c`, `d13c_nom`, or `blank` values populated). Standards travel through **Prep batches**, **Graph batches**, and **Magazines** alongside submitter samples but have no meaningful **Submitter** or **Project**.
 _Avoid_: Reference, Calibrator, Standard sample (verbose).
@@ -108,4 +112,5 @@ The measurement order of a **Target** within a **Magazine**, as stored in `measp
 - `stop = 1` on **Preparation** always means **workflow termination** — the prep was aborted and no targets will follow. UI labels this as "Discarded".
 - `stop = 1` on **Target** primarily means workflow termination, but may also mean "measured, result flagged invalid" — distinguish by whether measurement results (`fm`, `c14_age`, etc.) are populated. UI labels this as "Discarded" in both cases. Stopped targets are not auto-excluded from sample-level aggregation; the operator selects contributing targets manually (see [ADR-0002](docs/adr/0002-sample-aggregation-math.md)).
 - `sample_t.preparation` (free-text 255-char field) is a legacy summary of preparation work, mainly redundant with the structured `preparation_t` rows. The **Preparation** records are the source of truth; treat the string field as legacy read-only metadata and do not write to it from new code paths.
+- `sample_t.photo` is a legacy free-text column and has nothing to do with **Sample photos**, which are files found by name in the photo folder. The column holds a note on a handful of setup records and is otherwise empty.
 - `target_t.editallowed` and `sample_t.editable` look like booleans but are **tri-state**: `0` = not evaluated yet, `1` = evaluated and still editable by BATS, `2` = evaluated and frozen. Both are written by BATS, never by webSAMS. UI must read all three states correctly — treating the field as a boolean will silently break the "not yet evaluated" case.

@@ -28,5 +28,6 @@
     installers.installFieldErrorSummary?.();
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();
+    installers.installSamplePhotos?.();
   });
 })();

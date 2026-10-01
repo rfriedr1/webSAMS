@@ -2,6 +2,14 @@
 {% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row, render_detail_sections %}
 {% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
 
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-photos.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/sample-photos.js?v={{ css_v }}" defer></script>
+{% endblock %}
+
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ sample_edit_initial_mode or 'view' }}">
   <div class="panel-head">
@@ -103,6 +111,26 @@
         kind='multiline', rows=4,
         form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
       ) }}
+    </div>
+  </section>
+
+  {# Filled in by sample-photos.js after the page has rendered: the photos
+     live on a network share, which may be slow or offline, and must never
+     hold up the record itself. #}
+  <section
+    class="card-group sample-photos"
+    data-sample-photos
+    data-sample-nr="{{ sample.sample_nr }}"
+    data-photos-url="/api/samples/{{ sample.sample_nr }}/photos"
+  >
+    <div class="sample-photos-head">
+      <h4 class="card-group-title">Photos <span class="sample-photos-count" data-photos-count hidden></span></h4>
+      <button type="button" class="photo-icon-button" data-photos-refresh title="Rescan the photo folder" aria-label="Rescan the photo folder">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
+      </button>
+    </div>
+    <div class="sample-photos-body" data-photos-body aria-live="polite">
+      <p class="sample-photos-note">Loading photos…</p>
     </div>
   </section>
 

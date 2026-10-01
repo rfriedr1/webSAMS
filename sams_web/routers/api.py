@@ -7,7 +7,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.inspection import inspect
 
-from sams_web.dependencies import get_service
+from sams_web.dependencies import get_sample_photos, get_service
+from sams_web.sample_photos import SamplePhotos
 from sams_web.schemas import (
     DashboardCounts,
     ProjectCreate,
@@ -39,6 +40,29 @@ def _serialize_details(payload: dict[str, Any]) -> dict[str, Any]:
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.get("/samples/{sample_nr}/photos")
+def list_sample_photos(
+    sample_nr: int,
+    refresh: bool = False,
+    photos: SamplePhotos = Depends(get_sample_photos),
+) -> dict[str, Any]:
+    """Photos of one sample, found by file name in the configured folder.
+
+    Always 200: `state` says whether the folder is configured, still being
+    scanned or unreachable, so the page can explain instead of failing.
+    `refresh=true` forces a rescan of the folder.
+    """
+    return photos.list_for_sample(sample_nr, refresh=refresh).as_dict()
+
+
+@router.get("/sample-photos/status")
+def sample_photo_folder_status(
+    refresh: bool = False,
+    photos: SamplePhotos = Depends(get_sample_photos),
+) -> dict[str, Any]:
+    return photos.status(refresh=refresh)
 
 
 @router.get("/dashboard/counts", response_model=DashboardCounts)

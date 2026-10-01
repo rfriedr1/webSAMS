@@ -5,12 +5,13 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
-from sams_web.dependencies import get_service
+from sams_web.dependencies import get_sample_photos, get_service
 from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
 from sams_web.routers.detail_contexts import build_sample_creation_notice
 from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
+from sams_web.sample_photos import SamplePhotos, photo_media_type
 from sams_web.services import SamsService
 from sams_web.viewmodels.detail_sections_sample_lab import SAMPLE_DETAIL_PAGE
 
@@ -161,6 +162,37 @@ def sample_detail_page(
         samesite="lax",
     )
     return response
+
+
+@router.get("/samples/{sample_nr}/photos/{photo_path:path}")
+def sample_photo_file(
+    sample_nr: int,
+    photo_path: str,
+    download: bool = Query(default=False),
+    photos: SamplePhotos = Depends(get_sample_photos),
+):
+    """Serve one photo of a sample — inline for the viewer, or as an
+    attachment with `?download=1`. `photo_path` is only ever compared with
+    the paths the folder scan found for this sample (see `resolve`)."""
+    path = photos.resolve(sample_nr, photo_path)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    return FileResponse(
+        path,
+        media_type=photo_media_type(path),
+        filename=path.name,
+        content_disposition_type="attachment" if download else "inline",
+        headers={
+            # The URL carries the file's mtime (`?v=`), so a replaced photo
+            # gets a new URL and this copy may be kept for a day.
+            "Cache-Control": "private, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+            # Tells GZipMiddleware to pass the file through. Images are
+            # already compressed; gzipping megabytes of JPEG at level 9
+            # costs CPU for nothing and drops the Content-Length.
+            "Content-Encoding": "identity",
+        },
+    )
 
 
 @router.post("/samples/{sample_nr}/add-preparation")
