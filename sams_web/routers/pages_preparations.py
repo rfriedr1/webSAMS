@@ -67,8 +67,7 @@ def preparation_detail_page(
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
-    response = templates.TemplateResponse(
-        "preparation_detail.html",
+    response = templates.TemplateResponse(request, "preparation_detail.html",
         build_detail_page_context(
             request,
             PREPARATION_DETAIL_PAGE,
@@ -121,8 +120,7 @@ async def save_preparation_detail_page(
         )
         return response
 
-    response = templates.TemplateResponse(
-        "preparation_detail.html",
+    response = templates.TemplateResponse(request, "preparation_detail.html",
         build_detail_page_context(
             request,
             PREPARATION_DETAIL_PAGE,

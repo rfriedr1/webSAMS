@@ -51,6 +51,7 @@ _JS_BUNDLE_FILES: tuple[str, ...] = (
     # Order matches the previous <script src> sequence in base.html;
     # each module attaches an installer to window.SAMSAppInstallers and
     # app.js fires them at DOMContentLoaded.
+    "js/util.js",
     "js/toast.js",
     "js/page-progress.js",
     "js/detail-shortcuts.js",
@@ -322,7 +323,7 @@ def create_app() -> FastAPI:
         if path.startswith("/api/") or "application/json" in accept and "text/html" not in accept:
             return JSONResponse({"detail": "Not Found"}, status_code=404)
         context = {"request": request, **_build_not_found_context(request)}
-        return templates.TemplateResponse("not_found.html", context, status_code=404)
+        return templates.TemplateResponse(request, "not_found.html", context, status_code=404)
 
     return app
 

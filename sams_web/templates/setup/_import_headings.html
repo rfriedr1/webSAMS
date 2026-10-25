@@ -1,0 +1,104 @@
+{#- Setup editor for sections of kind "import_headings" (see setup_handlers.py). Included by setup.html. -#}
+<form method="post" action="{{ active_section.form_action }}">
+  <p class="setup-note">
+    The importer already recognises the headings listed under each field. Add any extra
+    wording your customers use — one per line. New spellings are <em>added</em> to the
+    built-in list, so the standard template keeps working.
+  </p>
+  <div class="setup-heading-list">
+    {% for row in active_section.heading_rows %}
+    <div class="setup-heading-row">
+      <div class="setup-heading-meta">
+        <strong>{{ row.label }}</strong>
+        <span class="setup-note">Recognised: {{ row.builtin | join(", ") }}</span>
+      </div>
+      <label class="sr-only" for="heading-{{ row.key }}">Extra headings for {{ row.label }}</label>
+      <textarea
+        id="heading-{{ row.key }}"
+        name="heading_{{ row.key }}"
+        rows="3"
+        class="setup-heading-input"
+        placeholder="One extra heading per line"
+        spellcheck="false"
+      >{{ row.custom_text }}</textarea>
+    </div>
+    {% endfor %}
+  </div>
+  <h4 class="setup-subhead">Additional columns</h4>
+  <p class="setup-note">
+    Add a column the standard form doesn't have. Pick which sample field the value should
+    be stored in, give it a label for the review screen, and list the headings customers
+    use for it. New rows appear in the import automatically — no code change needed.
+  </p>
+
+  <div class="setup-custom-list" data-custom-rows>
+    {% for row in active_section.custom_rows %}
+    <div class="setup-custom-row">
+      <div class="import-field">
+        <label>Stored in</label>
+        <select name="custom_target">
+          <option value="">— remove this column —</option>
+          {% for col in active_section.target_columns %}
+          <option value="{{ col.name }}" {% if col.name == row.target %}selected{% endif %}>
+            {{ col.label }} ({{ col.name }}{% if col.is_lookup %}, from list{% endif %})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="import-field">
+        <label>Label</label>
+        <input type="text" name="custom_label" value="{{ row.label }}" />
+      </div>
+      <div class="import-field">
+        <label>Headings (one per line)</label>
+        <textarea name="custom_headings" rows="3" spellcheck="false">{{ row.headings_text }}</textarea>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Blank row template cloned by the Add button; `disabled` keeps
+     an unused template out of the form submission. #}
+  <template data-custom-template>
+    <div class="setup-custom-row">
+      <div class="import-field">
+        <label>Stored in</label>
+        <select name="custom_target">
+          <option value="">— choose a sample field —</option>
+          {% for col in active_section.target_columns %}
+          <option value="{{ col.name }}">{{ col.label }} ({{ col.name }}{% if col.is_lookup %}, from list{% endif %})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="import-field">
+        <label>Label</label>
+        <input type="text" name="custom_label" />
+      </div>
+      <div class="import-field">
+        <label>Headings (one per line)</label>
+        <textarea name="custom_headings" rows="3" spellcheck="false"></textarea>
+      </div>
+    </div>
+  </template>
+
+  <button type="button" class="setup-add-row" data-add-custom-row>+ Add a column</button>
+
+  <div class="setup-actions">
+    <button type="submit">Save {{ active_section.title }}</button>
+  </div>
+</form>
+
+<script>
+  // Clone the blank row template when the operator adds a column.
+  // Kept inline because it is three lines and scoped to this page.
+  (() => {
+    const button = document.querySelector("[data-add-custom-row]");
+    const host = document.querySelector("[data-custom-rows]");
+    const tpl = document.querySelector("[data-custom-template]");
+    if (!button || !host || !tpl) return;
+    button.addEventListener("click", () => {
+      host.appendChild(tpl.content.cloneNode(true));
+      host.lastElementChild?.querySelector("select")?.focus();
+    });
+  })();
+</script>

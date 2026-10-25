@@ -440,7 +440,7 @@
 
 .prep-bench-action-secondary,
 .prep-bench-link-button {
-  border: 1px solid #98bac8;
+  border: 1px solid var(--line-strong);
   color: var(--brand-deep);
   background: var(--bg-top);
 }
@@ -522,7 +522,7 @@
   padding: 0.26rem 0.72rem;
   border: 1px solid var(--line-strong);
   background: var(--bg-top);
-  color: #1f556b;
+  color: var(--brand);
   font-size: var(--text-sm);
   font-weight: 800;
   line-height: 1.1;
@@ -544,7 +544,7 @@
 .graph-batch-system-pill.is-active:hover,
 .graph-batch-system-pill.is-active:focus-visible {
   border-color: #2b6d82;
-  background: linear-gradient(180deg, #448ba2, #2e748a);
+  background: linear-gradient(180deg, #448ba2, var(--brand-accent));
 }
 
 .graph-bench-batch-save-actions {

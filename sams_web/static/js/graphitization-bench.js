@@ -24,56 +24,6 @@
     return `${yy}${mm}${dd}`;
   };
 
-  const installBenchDirtyMarkers = (form) => {
-    if (!(form instanceof HTMLFormElement)) {
-      return { refresh: () => {} };
-    }
-    const controls = Array.from(form.querySelectorAll("input, select, textarea")).filter((control) => {
-      if (!(control instanceof HTMLElement)) {
-        return false;
-      }
-      if (control instanceof HTMLInputElement && control.type === "hidden") {
-        return false;
-      }
-      if ("disabled" in control && control.disabled) {
-        return false;
-      }
-      return true;
-    });
-
-    const readCurrent = (control) => {
-      if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-        return control.checked ? "1" : "0";
-      }
-      return "value" in control ? String(control.value ?? "") : "";
-    };
-
-    const wrapperFor = (control) => control.closest(".prep-bench-field, .prep-bench-checkbox-row");
-
-    controls.forEach((control) => {
-      control.dataset.benchInitialValue = readCurrent(control);
-    });
-
-    const refresh = () => {
-      controls.forEach((control) => {
-        const wrapper = wrapperFor(control);
-        if (!(wrapper instanceof HTMLElement)) {
-          return;
-        }
-        const dirty = (control.dataset.benchInitialValue || "") !== readCurrent(control);
-        wrapper.classList.toggle("is-dirty", dirty);
-      });
-    };
-
-    controls.forEach((control) => {
-      const handler = () => refresh();
-      control.addEventListener("input", handler);
-      control.addEventListener("change", handler);
-    });
-
-    return { refresh };
-  };
-
   installers.installGraphitizationBench = () => {
     const benches = document.querySelectorAll("[data-graph-bench]");
     benches.forEach((bench) => {
@@ -81,169 +31,21 @@
         return;
       }
 
-      const lookupForm = bench.querySelector("[data-graph-bench-lookup-form]");
-      const sampleLookupInput = bench.querySelector("[data-graph-bench-sample-input]");
-      const prepLookupInput = bench.querySelector("[data-graph-bench-prep-input]");
-      const targetLookupInput = bench.querySelector("[data-graph-bench-target-input]");
-      const lookupInputs = [sampleLookupInput, prepLookupInput, targetLookupInput];
-      if (lookupForm) {
-        const initialSampleLookupValue =
-          sampleLookupInput instanceof HTMLInputElement ? sampleLookupInput.value : "";
-        const lastValidLookupValues = {
-          prep: prepLookupInput instanceof HTMLInputElement ? prepLookupInput.value : "",
-          target: targetLookupInput instanceof HTMLInputElement ? targetLookupInput.value : "",
-        };
-
-        const getDatalistAllowedValues = (input) => {
-          if (!(input instanceof HTMLInputElement)) {
-            return null;
-          }
-          const listId = input.getAttribute("list");
-          if (!listId) {
-            return null;
-          }
-          const datalist = bench.querySelector(`#${CSS.escape(listId)}`);
-          if (!(datalist instanceof HTMLDataListElement)) {
-            return null;
-          }
-          const values = new Set();
-          datalist.querySelectorAll("option").forEach((option) => {
-            const value = (option.getAttribute("value") || "").trim();
-            if (value !== "") {
-              values.add(value);
-            }
-          });
-          return values;
-        };
-
-        const validateLookupField = (input, key) => {
-          if (!(input instanceof HTMLInputElement)) {
-            return true;
-          }
-          const raw = input.value.trim();
-          if (raw === "") {
-            input.setCustomValidity("");
-            return true;
-          }
-          const allowed = getDatalistAllowedValues(input);
-          if (!allowed || allowed.size === 0) {
-            // No option list available: allow, server will resolve/validate.
-            input.setCustomValidity("");
-            lastValidLookupValues[key] = input.value;
-            return true;
-          }
-          if (allowed.has(raw)) {
-            input.setCustomValidity("");
-            lastValidLookupValues[key] = input.value;
-            return true;
-          }
-          input.setCustomValidity(`${key === "prep" ? "Prep #" : "Target #"} must match an existing value.`);
-          input.reportValidity();
-          input.value = lastValidLookupValues[key] || "";
-          input.setCustomValidity("");
-          return false;
-        };
-
-        if (sampleLookupInput instanceof HTMLInputElement) {
-          const clearDependentLookupFieldsIfSampleChanged = () => {
-            if (sampleLookupInput.value === initialSampleLookupValue) {
-              return;
-            }
-            if (prepLookupInput instanceof HTMLInputElement) {
-              prepLookupInput.value = "";
-            }
-            if (targetLookupInput instanceof HTMLInputElement) {
-              targetLookupInput.value = "";
-            }
-            lastValidLookupValues.prep = "";
-            lastValidLookupValues.target = "";
-          };
-          sampleLookupInput.addEventListener("input", clearDependentLookupFieldsIfSampleChanged);
-          sampleLookupInput.addEventListener("change", clearDependentLookupFieldsIfSampleChanged);
-
-          // Up/down steppers for Sample #, matching the native spinners on
-          // Prep # / Target #: step the number, drop the now-stale prep and
-          // target, and load the new sample straight away.
-          bench.querySelectorAll("[data-graph-bench-sample-step]").forEach((button) => {
-            if (!(button instanceof HTMLButtonElement)) {
-              return;
-            }
-            button.addEventListener("click", () => {
-              const delta = Number.parseInt(button.dataset.graphBenchSampleStep || "0", 10);
-              if (!Number.isFinite(delta) || delta === 0) {
-                return;
-              }
-              const raw = sampleLookupInput.value.trim();
-              // Empty field: start from whichever sample is on the bench.
-              const base = Number.parseInt(
-                raw !== "" ? raw : bench.dataset.graphBenchCurrentSample || "",
-                10,
-              );
-              if (!Number.isFinite(base)) {
-                sampleLookupInput.focus();
-                return;
-              }
-              const next = Math.max(1, base + delta);
-              if (String(next) === raw) {
-                return;
-              }
-              sampleLookupInput.value = String(next);
-              clearDependentLookupFieldsIfSampleChanged();
-              lookupForm.requestSubmit();
-            });
-          });
-        }
-
-        if (prepLookupInput instanceof HTMLInputElement) {
-          prepLookupInput.addEventListener("change", () => {
-            if (!validateLookupField(prepLookupInput, "prep")) {
-              return;
-            }
-            lookupForm.requestSubmit();
-          });
-        }
-        if (targetLookupInput instanceof HTMLInputElement) {
-          targetLookupInput.addEventListener("change", () => {
-            if (!validateLookupField(targetLookupInput, "target")) {
-              return;
-            }
-            lookupForm.requestSubmit();
-          });
-        }
-
-        lookupInputs.forEach((control) => {
-          if (!(control instanceof HTMLInputElement)) {
-            return;
-          }
-          control.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter") {
-              return;
-            }
-            event.preventDefault();
-            if (control === prepLookupInput && !validateLookupField(prepLookupInput, "prep")) {
-              return;
-            }
-            if (control === targetLookupInput && !validateLookupField(targetLookupInput, "target")) {
-              return;
-            }
-            lookupForm.requestSubmit();
-          });
-        });
-
-        lookupForm.addEventListener("submit", (event) => {
-          if (prepLookupInput instanceof HTMLInputElement && !validateLookupField(prepLookupInput, "prep")) {
-            event.preventDefault();
-            return;
-          }
-          if (targetLookupInput instanceof HTMLInputElement && !validateLookupField(targetLookupInput, "target")) {
-            event.preventDefault();
-          }
-        });
-      }
+      window.SAMSBench.installLookupForm({
+        bench,
+        form: bench.querySelector("[data-graph-bench-lookup-form]"),
+        sampleInput: bench.querySelector("[data-graph-bench-sample-input]"),
+        sampleStepAttr: "data-graph-bench-sample-step",
+        currentSample: () => bench.dataset.graphBenchCurrentSample || "",
+        dependents: [
+          { input: bench.querySelector("[data-graph-bench-prep-input]"), label: "Prep #" },
+          { input: bench.querySelector("[data-graph-bench-target-input]"), label: "Target #" },
+        ],
+      });
 
       const targetForm = bench.querySelector("[data-graph-bench-target-form]");
       if (targetForm instanceof HTMLFormElement) {
-        const dirtyMarkers = installBenchDirtyMarkers(targetForm);
+        const dirtyMarkers = window.SAMSBench.installDirtyMarkers(targetForm);
         const prepStorage = targetForm.querySelector("[data-graph-bench-prep-storage]");
         const prepArchived = targetForm.querySelector("[data-graph-bench-prep-archived]");
         const noLeftoverCheckbox = targetForm.querySelector("[data-graph-bench-no-leftover]");
@@ -405,7 +207,7 @@
       const targetsJsonField = batchForm.querySelector("[data-graph-batch-targets-json]");
       const clientError = batchForm.querySelector("[data-graph-batch-client-error]");
       const batchTargetsCard = batchForm.querySelector("[data-graph-batch-targets-card]");
-      const batchDirtyMarkers = installBenchDirtyMarkers(batchForm);
+      const batchDirtyMarkers = window.SAMSBench.installDirtyMarkers(batchForm);
 
       let stagedTargets = [];
       let batchNameDirty = false;
@@ -463,13 +265,23 @@
         stagedTargets.forEach((item, index) => {
           const row = document.createElement("tr");
           row.dataset.graphBatchRow = "1";
-          row.innerHTML = `
-            <td>${item.sample_nr}</td>
-            <td>${item.prep_nr}</td>
-            <td>${item.target_nr}</td>
-            <td>${item.user_label || ""}</td>
-            <td><button type="button" class="graph-batch-remove-btn" data-remove-index="${index}" aria-label="Remove target">✕</button></td>
-          `;
+          // textContent, never innerHTML: user_label is the customer's own
+          // sample name (imported from their Excel sheet) and comes back
+          // through sessionStorage, so it must not be parsed as markup.
+          [item.sample_nr, item.prep_nr, item.target_nr, item.user_label || ""].forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = String(value);
+            row.appendChild(cell);
+          });
+          const actionCell = document.createElement("td");
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "graph-batch-remove-btn";
+          removeButton.dataset.removeIndex = String(index);
+          removeButton.setAttribute("aria-label", "Remove target");
+          removeButton.textContent = "\u2715";
+          actionCell.appendChild(removeButton);
+          row.appendChild(actionCell);
           tbody.appendChild(row);
         });
         if (emptyRow instanceof HTMLElement) {

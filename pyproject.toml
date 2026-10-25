@@ -8,8 +8,10 @@ dependencies = [
   "fastapi>=0.115.0",
   # Starlette 1.0 changed TemplateResponse(name, ctx) to
   # TemplateResponse(request, name, ctx) — a hard breaking change for our
-  # ~27 call sites. Pin below 1.0 until the call sites are migrated.
-  "starlette>=0.46,<1.0",
+  # All TemplateResponse calls use the Starlette 1.0 signature
+  # (request first); verified against Starlette 1.10 / FastAPI 0.162.
+  # Servers still install the exact versions in requirements.lock.txt.
+  "starlette>=0.46,<2.0",
   "uvicorn[standard]>=0.31.0",
   "sqlalchemy>=2.0.35",
   "pymysql>=1.1.1",

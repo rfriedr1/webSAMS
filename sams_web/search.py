@@ -13,7 +13,7 @@ links to the matching detail page" convention used by every existing context
 today; it's exposed as a public helper so future contexts (e.g. Magazine
 search, when that arrives) can reuse it or supply their own.
 
-`run_search(session, context_name, phrase, limit)` is the single entry point
+`run_search(repo, context_name, phrase, limit)` is the single entry point
 the service layer calls.
 """
 
@@ -21,10 +21,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+if TYPE_CHECKING:  # pragma: no cover
+    from sams_web.repositories import SamsRepository
 
 
 LinkRule = Callable[[str, Mapping[str, Any]], "str | None"]
@@ -187,30 +187,21 @@ SEARCH_CONTEXTS: dict[str, SearchContext] = {
 
 
 def run_search(
-    session: Session,
+    repo: "SamsRepository",
     context_name: str,
     phrase: str,
     limit: int = 200,
 ) -> list[dict[str, Any]]:
-    """Run the global-search SQL for the named context.
+    """Run the global search for the named context.
 
-    Raises `ValueError` if `context_name` is not a registered context.
+    Raises `ValueError` if `context_name` is not a registered context. The
+    query itself lives in `SamsRepository.search_table`, with all other
+    database access.
     """
     context = SEARCH_CONTEXTS.get(context_name)
     if context is None:
         raise ValueError(f"Unsupported search context: {context_name}")
-
-    concat_fields = ",".join(context.fields)
-    stmt = text(
-        f"""
-        SELECT *
-        FROM {context.table}
-        WHERE CONCAT_WS(';',{concat_fields}) LIKE :phrase
-        LIMIT :limit
-        """
-    )
-    rows = session.execute(stmt, {"phrase": f"%{phrase}%", "limit": limit}).mappings().all()
-    return [dict(row) for row in rows]
+    return repo.search_table(context.table, tuple(context.fields), phrase, limit)
 
 
 __all__ = [

@@ -139,7 +139,7 @@ h6 {
 .bg-shape-b {
   width: 420px;
   height: 420px;
-  background: radial-gradient(circle at 50% 50%, #f4cf9b, transparent 72%);
+  background: radial-gradient(circle at 50% 50%, var(--warn-line), transparent 72%);
   bottom: -140px;
   left: -140px;
 }
@@ -379,7 +379,7 @@ h6 {
 }
 
 .magic-identifier-form.has-error {
-  border-color: #d8aaaa;
+  border-color: var(--danger-line);
   background: var(--danger-bg);
 }
 
@@ -538,7 +538,7 @@ h6 {
 
 .breadcrumb-link {
   text-decoration: none;
-  color: #24586f;
+  color: var(--brand);
   background: var(--surface-tint);
 }
 

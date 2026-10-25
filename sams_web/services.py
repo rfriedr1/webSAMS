@@ -22,27 +22,18 @@ from sams_web.viewmodels.detail_sections_user_project import (
     SUBMITTER_DETAIL,
 )
 from sams_web.setup_sections import (
-    SETUP_SECTION_EMAIL,
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
-    SETUP_SECTION_IMPORT_HEADINGS,
-    SETUP_SECTION_LAB_WARNING_THRESHOLDS,
     SETUP_SECTION_MAP,
-    SETUP_SECTION_SAMPLE_PHOTOS,
-    SETUP_SECTION_STANDARD_THRESHOLDS,
     SETUP_SECTIONS,
 )
-from sams_web.sample_photos import SamplePhotoSettingsStore
-from sams_web.import_settings import (
-    EMAIL_PLACEHOLDERS,
-    EMAIL_SERVER_FIELDS,
-    EmailSettingsStore,
-    ImportHeadingStore,
-    available_targets,
+from sams_web.setup_handlers import (
+    GRAPHITIZATION_SYSTEM_VALUE_PATTERN as _SYSTEM_PATTERN,
+    PLACEHOLDER_HANDLER,
+    handler_for,
 )
 from sams_web.setup_store import SetupStore
-from sams_web.thresholds import THRESHOLD_FIELDS, ThresholdRule, ThresholdStore
+from sams_web.thresholds import ThresholdRule, ThresholdStore
 from sams_web.lab_warning_thresholds import (
-    LAB_WARNING_THRESHOLD_FIELDS,
     LabWarningThresholdStore,
 )
 
@@ -75,7 +66,6 @@ class TextSanitizer:
         )
 
 
-GRAPHITIZATION_SYSTEM_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
 DEFAULT_GRAPHITIZATION_SYSTEMS = [
     "mag",
     "age.1",
@@ -278,7 +268,7 @@ class SamsService:
             value = item.strip()
             if not value:
                 continue
-            if not GRAPHITIZATION_SYSTEM_VALUE_PATTERN.fullmatch(value):
+            if not _SYSTEM_PATTERN.fullmatch(value):
                 continue
             if value in seen:
                 continue
@@ -455,7 +445,7 @@ class SamsService:
 
     def search(self, context: str, phrase: str, limit: int = 200) -> list[dict[str, Any]]:
         from sams_web.search import run_search
-        return run_search(self.session, context_name=context, phrase=phrase, limit=limit)
+        return run_search(self.repo, context_name=context, phrase=phrase, limit=limit)
 
     def create_submitter(self, payload: dict[str, Any]):
         user = self.repo.create_submitter(payload)
@@ -571,12 +561,14 @@ class SamsService:
         ]
 
     def get_setup_section(self, section_key: str | None = None) -> dict[str, Any]:
+        """Page context for one Setup section: its metadata plus whatever its
+        handler (`setup_handlers.py`) needs for the editor."""
         effective_key = section_key or SETUP_SECTIONS[0].key
         section = SETUP_SECTION_MAP.get(effective_key)
         if section is None:
             raise ValueError(f"Unknown setup section: {effective_key}")
-
-        base_payload = {
+        handler = handler_for(section.key)
+        context = {
             "key": section.key,
             "title": section.title,
             "description": section.description,
@@ -584,196 +576,28 @@ class SamsService:
             "status": section.status,
             "form_action": section.form_action,
             "storage_file": str(self.setup_store.path),
-        }
-        if section.key == SETUP_SECTION_STANDARD_THRESHOLDS:
-            return {
-                **base_payload,
-                "kind": "threshold_matrix",
-                "storage_section": self.threshold_store.section_key,
-                "thresholds": self.get_standard_thresholds(),
-                "threshold_fields": THRESHOLD_FIELDS,
-            }
-        if section.key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
-            systems = self.get_graphitization_systems()
-            return {
-                **base_payload,
-                "kind": "string_list",
-                "storage_section": section.key,
-                "list_items": systems,
-                "list_text": "\n".join(systems),
-                "list_label": "Systems",
-                "list_placeholder": "One system per line (e.g. mag)",
-                "list_help": "Used as the suffix in graph batch names: graph_YYMMDD_system",
-            }
-        if section.key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
-            values = self.get_lab_warning_thresholds()
-            return {
-                **base_payload,
-                "kind": "numeric_thresholds",
-                "storage_section": self.lab_warning_threshold_store.section_key,
-                "numeric_threshold_rows": [
-                    {
-                        "key": field.key,
-                        "label": field.label,
-                        "description": field.description,
-                        "unit": field.unit,
-                        "step": field.step,
-                        "value": field.format(values.get(field.key, field.default)),
-                    }
-                    for field in LAB_WARNING_THRESHOLD_FIELDS
-                ],
-            }
-
-        if section.key == SETUP_SECTION_IMPORT_HEADINGS:
-            store = ImportHeadingStore(self.setup_store)
-            custom_rows = store.custom_rows_for_editor()
-            return {
-                **base_payload,
-                "kind": "import_headings",
-                "storage_section": store.section_key,
-                "heading_rows": store.rows_for_editor(),
-                "custom_rows": custom_rows,
-                "target_columns": available_targets(
-                    {r["target"] for r in custom_rows}
-                ),
-            }
-        if section.key == SETUP_SECTION_EMAIL:
-            store = EmailSettingsStore(self.setup_store)
-            settings = store.load()
-            return {
-                **base_payload,
-                "kind": "email_settings",
-                "storage_section": store.section_key,
-                "email_fields": [
-                    {
-                        "key": f.key,
-                        "label": f.label,
-                        "description": f.description,
-                        "kind": f.kind,
-                        "options": list(f.options),
-                        "value": settings.get(f.key, f.default),
-                    }
-                    for f in EMAIL_SERVER_FIELDS
-                ],
-                "email_templates": [
-                    {"code": code, **tpl}
-                    for code, tpl in sorted((settings.get("templates") or {}).items())
-                ],
-                "email_placeholders": [
-                    {"token": token, "description": desc}
-                    for token, desc in EMAIL_PLACEHOLDERS
-                ],
-                "email_configured": store.is_configured(),
-            }
-        if section.key == SETUP_SECTION_SAMPLE_PHOTOS:
-            store = SamplePhotoSettingsStore(self.setup_store)
-            return {
-                **base_payload,
-                "kind": "sample_photos",
-                "storage_section": store.section_key,
-                "folder": store.load()["folder"],
-            }
-
-        return {
-            **base_payload,
-            "kind": "placeholder",
+            "kind": handler.kind,
             "storage_section": section.key,
-            "data": self.setup_store.get_section(section.key, default={}),
         }
+        context.update(handler.context(self))
+        if handler is PLACEHOLDER_HANDLER:
+            context["data"] = self.setup_store.get_section(section.key, default={})
+        return context
 
     def update_setup_section(
         self,
         section_key: str,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
+        """Validate and save one section; returns the refreshed context.
+        Raises `ValueError` with a message for the operator."""
         section = SETUP_SECTION_MAP.get(section_key)
         if section is None:
             raise ValueError(f"Unknown setup section: {section_key}")
         if not section.editable:
             raise ValueError("This setup section is not editable yet.")
-        if section.key == SETUP_SECTION_STANDARD_THRESHOLDS:
-            return {
-                "kind": "threshold_matrix",
-                "thresholds": self.update_standard_thresholds(payload),
-                "threshold_fields": THRESHOLD_FIELDS,
-                "storage_file": str(self.setup_store.path),
-                "storage_section": self.threshold_store.section_key,
-            }
-        if section.key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
-            items_raw = payload.get("items")
-            if not isinstance(items_raw, list):
-                raise ValueError("Graphitization systems payload must contain a list of items.")
-            cleaned: list[str] = []
-            seen: set[str] = set()
-            for index, item in enumerate(items_raw, start=1):
-                if not isinstance(item, str):
-                    raise ValueError(f"System entry {index} must be text.")
-                value = item.strip()
-                if value == "":
-                    continue
-                if not GRAPHITIZATION_SYSTEM_VALUE_PATTERN.fullmatch(value):
-                    raise ValueError(
-                        f"Invalid system '{value}'. Use only letters, numbers, dot, dash, and underscore."
-                    )
-                if value in seen:
-                    raise ValueError(f"Duplicate system '{value}' is not allowed.")
-                cleaned.append(value)
-                seen.add(value)
-            if not cleaned:
-                raise ValueError("At least one graphitization system is required.")
-            self.setup_store.set_section(section.key, cleaned)
-            return {
-                "kind": "string_list",
-                "storage_file": str(self.setup_store.path),
-                "storage_section": section.key,
-                "list_items": cleaned,
-                "list_text": "\n".join(cleaned),
-            }
-        if section.key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
-            updated = self.update_lab_warning_thresholds(payload)
-            return {
-                "kind": "numeric_thresholds",
-                "storage_file": str(self.setup_store.path),
-                "storage_section": self.lab_warning_threshold_store.section_key,
-                "numeric_threshold_rows": [
-                    {
-                        "key": field.key,
-                        "label": field.label,
-                        "description": field.description,
-                        "unit": field.unit,
-                        "step": field.step,
-                        "value": field.format(updated.get(field.key, field.default)),
-                    }
-                    for field in LAB_WARNING_THRESHOLD_FIELDS
-                ],
-            }
-        if section.key == SETUP_SECTION_IMPORT_HEADINGS:
-            store = ImportHeadingStore(self.setup_store)
-            store.update(payload)
-            return {
-                "kind": "import_headings",
-                "storage_file": str(self.setup_store.path),
-                "storage_section": store.section_key,
-                "heading_rows": store.rows_for_editor(),
-                "custom_rows": store.custom_rows_for_editor(),
-            }
-        if section.key == SETUP_SECTION_EMAIL:
-            store = EmailSettingsStore(self.setup_store)
-            store.update(payload)
-            return {
-                "kind": "email_settings",
-                "storage_file": str(self.setup_store.path),
-                "storage_section": store.section_key,
-            }
-        if section.key == SETUP_SECTION_SAMPLE_PHOTOS:
-            store = SamplePhotoSettingsStore(self.setup_store)
-            return {
-                "kind": "sample_photos",
-                "storage_file": str(self.setup_store.path),
-                "storage_section": store.section_key,
-                **store.update(payload),
-            }
-        raise ValueError("No update handler configured for this setup section.")
+        handler_for(section.key).save(self, payload)
+        return self.get_setup_section(section.key)
 
     @staticmethod
     def _standard_statuses(

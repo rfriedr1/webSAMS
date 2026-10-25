@@ -593,6 +593,26 @@ class SamsRepository:
         )
         return [row[0] for row in self.session.execute(stmt).all() if row[0] is not None]
 
+    def search_table(
+        self, table: str, fields: tuple[str, ...], phrase: str, limit: int
+    ) -> list[dict[str, Any]]:
+        """Rows of `table` whose `fields`, joined, contain `phrase`.
+
+        `table` and `fields` come only from the static `SEARCH_CONTEXTS`
+        registry in search.py, never from the request, so interpolating
+        them is safe; the user's phrase is always a bound parameter.
+        """
+        stmt = text(
+            f"""
+            SELECT *
+            FROM {table}
+            WHERE CONCAT_WS(';',{",".join(fields)}) LIKE :phrase
+            LIMIT :limit
+            """
+        )
+        rows = self.session.execute(stmt, {"phrase": f"%{phrase}%", "limit": limit}).mappings().all()
+        return [dict(row) for row in rows]
+
     def get_research_values(self) -> list[str]:
         stmt = text(
             """

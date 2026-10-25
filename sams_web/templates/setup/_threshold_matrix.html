@@ -1,0 +1,38 @@
+{#- Setup editor for sections of kind "threshold_matrix" (see setup_handlers.py). Included by setup.html. -#}
+<form method="post" action="{{ active_section.form_action }}">
+  <p class="setup-note">
+    Card and mini-bar colors use this logic: red if count is below red threshold, yellow if within yellow range,
+    green if above green threshold, otherwise neutral.
+  </p>
+
+  <section data-table-filter data-table-search-placeholder="Filter standards by name or value">
+    <div class="table-wrap">
+      <table class="setup-table">
+        <thead>
+          <tr>
+            <th>Standard</th>
+            {% for field, title in active_section.threshold_fields %}
+            <th>{{ title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in active_section.threshold_rows %}
+          <tr>
+            <td>{{ row.label }}</td>
+            {% for field, _ in active_section.threshold_fields %}
+            <td>
+              <input type="number" min="0" step="1" name="{{ row.key }}_{{ field }}" value="{{ row[field] }}" required />
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="setup-actions">
+    <button type="submit">Save {{ active_section.title }}</button>
+  </div>
+</form>

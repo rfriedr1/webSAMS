@@ -276,24 +276,7 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261001-1"
-
-
-def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for label, key in STANDARD_LABELS:
-        values = payload.get(key, {})
-        rows.append(
-            {
-                "label": label,
-                "key": key,
-                "red_below": values.get("red_below", ""),
-                "yellow_min": values.get("yellow_min", ""),
-                "yellow_max": values.get("yellow_max", ""),
-                "green_above": values.get("green_above", ""),
-            }
-        )
-    return rows
+templates.env.globals["css_v"] = "20261025-2"
 
 
 def has_non_empty_value(row: dict[str, Any], keys: tuple[str, ...]) -> bool:
@@ -339,8 +322,7 @@ def render_lab_operation_page(
     except ValueError as exc:
         error = str(exc)
 
-    return templates.TemplateResponse(
-        "lab_operations.html",
+    return templates.TemplateResponse(request, "lab_operations.html",
         {
             "request": request,
             "mode": mode,

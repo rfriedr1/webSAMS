@@ -88,8 +88,7 @@ def submitters_page(
         else:
             error = "Failed to load submitters. Enable SAMS_DEBUG=true for traceback details."
 
-    return templates.TemplateResponse(
-        "submitters.html",
+    return templates.TemplateResponse(request, "submitters.html",
         {
             "request": request,
             "submitters": submitters,
@@ -146,8 +145,7 @@ def submitter_detail_page(
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
-    return templates.TemplateResponse(
-        "submitter_detail.html",
+    return templates.TemplateResponse(request, "submitter_detail.html",
         build_detail_page_context(
             request,
             SUBMITTER_DETAIL_PAGE,
@@ -181,8 +179,7 @@ async def save_submitter_detail_page(
     if saved:
         return RedirectResponse(url=f"/submitters/{user_nr}?saved=true", status_code=303)
 
-    return templates.TemplateResponse(
-        "submitter_detail.html",
+    return templates.TemplateResponse(request, "submitter_detail.html",
         build_detail_page_context(
             request,
             SUBMITTER_DETAIL_PAGE,
@@ -260,8 +257,7 @@ def projects_page(
         and len(projects) >= PROJECT_LIST_DEFAULT_LIMIT
     )
 
-    return templates.TemplateResponse(
-        "projects.html",
+    return templates.TemplateResponse(request, "projects.html",
         {
             "request": request,
             "days_window": days_window,
@@ -306,8 +302,7 @@ def project_detail_page(
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
-    return templates.TemplateResponse(
-        "project_detail.html",
+    return templates.TemplateResponse(request, "project_detail.html",
         build_detail_page_context(
             request,
             PROJECT_DETAIL_PAGE,
@@ -341,8 +336,7 @@ async def save_project_detail_page(
     if saved:
         return RedirectResponse(url=f"/projects/{project_nr}?saved=true", status_code=303)
 
-    return templates.TemplateResponse(
-        "project_detail.html",
+    return templates.TemplateResponse(request, "project_detail.html",
         build_detail_page_context(
             request,
             PROJECT_DETAIL_PAGE,

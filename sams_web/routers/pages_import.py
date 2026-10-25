@@ -47,8 +47,7 @@ TEMPLATE_PATH = (
 
 @router.get("/samples/import")
 def sample_import_page(request: Request):
-    return templates.TemplateResponse(
-        "sample_import.html",
+    return templates.TemplateResponse(request, "sample_import.html",
         {
             "request": request,
             "title": "Import Samples",

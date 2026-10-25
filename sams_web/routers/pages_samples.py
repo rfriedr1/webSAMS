@@ -55,8 +55,7 @@ def samples_landing_page(
         preferred_sample_nr = int(cookie_value)
 
     landing = service.get_samples_landing(preferred_sample_nr=preferred_sample_nr)
-    return templates.TemplateResponse(
-        "samples_landing.html",
+    return templates.TemplateResponse(request, "samples_landing.html",
         {
             "request": request,
             "last_sample_nr": landing["last_sample_nr"],
@@ -142,8 +141,7 @@ def sample_detail_page(
     )
     sample = overview["sample"]
     project = overview["project"]
-    response = templates.TemplateResponse(
-        "sample_detail.html",
+    response = templates.TemplateResponse(request, "sample_detail.html",
         build_detail_page_context(
             request,
             SAMPLE_DETAIL_PAGE,
@@ -266,8 +264,7 @@ async def save_sample_detail_page(
         )
         return response
 
-    response = templates.TemplateResponse(
-        "sample_detail.html",
+    response = templates.TemplateResponse(request, "sample_detail.html",
         build_detail_page_context(
             request,
             SAMPLE_DETAIL_PAGE,

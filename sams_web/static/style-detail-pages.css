@@ -136,7 +136,7 @@
   padding: 0.54rem 0.6rem;
   border: 1px dashed var(--line-soft);
   border-radius: 10px;
-  color: #5f7886;
+  color: var(--ink-soft);
   font-size: var(--text-sm);
   font-weight: 600;
 }
@@ -528,7 +528,7 @@ body.has-command-palette {
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #46708a;
+  color: var(--ink-soft);
 }
 
 /* The cursor signals "double-click me" on view-mode display values that
@@ -579,7 +579,7 @@ body.has-command-palette {
   align-items: center;
   justify-content: center;
   min-height: 1.56rem;
-  border: 1px solid #bdd3de;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0 0.54rem;
   font-size: var(--text-sm);
@@ -602,7 +602,7 @@ body.has-command-palette {
 }
 
 [data-edit-scope].is-editing .detail-field-shell {
-  border-color: #b8cad6;
+  border-color: var(--line-strong);
   background: var(--surface-solid);
   padding: 0.2rem 0.28rem;
 }
@@ -1395,7 +1395,7 @@ body.has-command-palette {
 }
 
 .toast-error .toast-icon {
-  background: #f5cccc;
+  background: var(--danger-bg-strong);
   color: var(--danger-text);
 }
 
@@ -1615,7 +1615,7 @@ body.has-command-palette {
 .result-box {
   padding: 0.7rem 0.86rem;
   border-radius: 12px;
-  border: 1px solid #96dcb3;
+  border: 1px solid var(--success-line);
   background: linear-gradient(180deg, var(--brand-tint), var(--success-bg));
 }
 

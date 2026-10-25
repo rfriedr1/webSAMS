@@ -175,7 +175,7 @@ def get_setup_section(section_key: str, service: SamsService = Depends(get_servi
 @router.put("/setup/{section_key}")
 def update_setup_section(
     section_key: str,
-    payload: dict[str, dict[str, Any]],
+    payload: dict[str, Any],
     service: SamsService = Depends(get_service),
 ) -> dict[str, Any]:
     try:
