@@ -265,13 +265,23 @@
         stagedTargets.forEach((item, index) => {
           const row = document.createElement("tr");
           row.dataset.graphBatchRow = "1";
-          row.innerHTML = `
-            <td>${item.sample_nr}</td>
-            <td>${item.prep_nr}</td>
-            <td>${item.target_nr}</td>
-            <td>${item.user_label || ""}</td>
-            <td><button type="button" class="graph-batch-remove-btn" data-remove-index="${index}" aria-label="Remove target">✕</button></td>
-          `;
+          // textContent, never innerHTML: user_label is the customer's own
+          // sample name (imported from their Excel sheet) and comes back
+          // through sessionStorage, so it must not be parsed as markup.
+          [item.sample_nr, item.prep_nr, item.target_nr, item.user_label || ""].forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = String(value);
+            row.appendChild(cell);
+          });
+          const actionCell = document.createElement("td");
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "graph-batch-remove-btn";
+          removeButton.dataset.removeIndex = String(index);
+          removeButton.setAttribute("aria-label", "Remove target");
+          removeButton.textContent = "\u2715";
+          actionCell.appendChild(removeButton);
+          row.appendChild(actionCell);
           tbody.appendChild(row);
         });
         if (emptyRow instanceof HTMLElement) {

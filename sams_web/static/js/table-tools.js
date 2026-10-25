@@ -35,7 +35,7 @@
     return directText;
   };
 
-  const normalizeWhitespace = (value) => String(value || "").replace(/\s+/g, " ").trim();
+  const { normalizeWhitespace } = window.SAMSUtil;
 
   const normalizeHeaderLabel = (value) => normalizeWhitespace(value).toLowerCase();
 

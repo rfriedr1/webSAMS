@@ -445,7 +445,7 @@ class SamsService:
 
     def search(self, context: str, phrase: str, limit: int = 200) -> list[dict[str, Any]]:
         from sams_web.search import run_search
-        return run_search(self.session, context_name=context, phrase=phrase, limit=limit)
+        return run_search(self.repo, context_name=context, phrase=phrase, limit=limit)
 
     def create_submitter(self, payload: dict[str, Any]):
         user = self.repo.create_submitter(payload)

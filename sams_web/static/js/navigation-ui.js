@@ -6,7 +6,7 @@
   const MAX_RECENT_PAGES = 8;
   const MAX_PINNED_PAGES = 12;
 
-  const normalizeWhitespace = (value) => String(value || "").replace(/\s+/g, " ").trim();
+  const { normalizeWhitespace } = window.SAMSUtil;
 
   const loadStoredPages = (key) => {
     try {

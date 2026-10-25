@@ -51,6 +51,7 @@ _JS_BUNDLE_FILES: tuple[str, ...] = (
     # Order matches the previous <script src> sequence in base.html;
     # each module attaches an installer to window.SAMSAppInstallers and
     # app.js fires them at DOMContentLoaded.
+    "js/util.js",
     "js/toast.js",
     "js/page-progress.js",
     "js/detail-shortcuts.js",

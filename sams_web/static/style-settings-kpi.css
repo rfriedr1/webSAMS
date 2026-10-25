@@ -228,14 +228,14 @@
 
 .status-running {
   color: var(--brand-deep);
-  border-color: #9bced9;
+  border-color: var(--line-strong);
   background: transparent;
 }
 
 .status-closed,
 .status-done {
-  color: #1f5c3a;
-  border-color: #b7dfc8;
+  color: var(--success);
+  border-color: var(--success-line);
   background: transparent;
 }
 
@@ -379,7 +379,7 @@
 }
 
 .kpi-fill-pferde {
-  background: linear-gradient(90deg, #bf7f36, #d79a52);
+  background: linear-gradient(90deg, var(--warm), #d79a52);
 }
 
 .kpi-fill-iaea_c6 {

@@ -139,7 +139,7 @@ table[data-projects-in-progress-table] tbody tr.projects-progress-row-measured:h
 }
 
 .table-summary-count {
-  border-color: #b7cddb;
+  border-color: var(--line-strong);
   color: #36586a;
   background: var(--brand-tint);
 }
@@ -652,7 +652,7 @@ a:hover {
 }
 
 .detail-breadcrumb-sep {
-  color: #a8b6bf;
+  color: var(--line-strong);
   font-size: 0.85em;
 }
 
@@ -790,12 +790,12 @@ a:hover {
 .sample-quick-nav-link:hover,
 .sample-quick-nav-link:focus-visible {
   color: #18485b;
-  border-color: #98b9c8;
+  border-color: var(--line-strong);
   background: var(--brand-tint);
 }
 
 .sample-quick-nav-current {
-  color: #1f5a72;
+  color: var(--brand);
   border-color: var(--line-strong);
   background: var(--brand-tint);
 }
@@ -827,7 +827,7 @@ a:hover {
 .sample-quick-nav-jump input {
   min-height: 1.5rem;
   width: 4.6rem;
-  border: 1px solid #bdd0da;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.14rem 0.4rem;
   text-align: center;
