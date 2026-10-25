@@ -339,8 +339,7 @@ def render_lab_operation_page(
     except ValueError as exc:
         error = str(exc)
 
-    return templates.TemplateResponse(
-        "lab_operations.html",
+    return templates.TemplateResponse(request, "lab_operations.html",
         {
             "request": request,
             "mode": mode,

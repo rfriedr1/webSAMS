@@ -105,8 +105,7 @@ def search_page(
             error = str(exc)
 
     resolved_context = SEARCH_CONTEXTS.get(context)
-    return templates.TemplateResponse(
-        "search.html",
+    return templates.TemplateResponse(request, "search.html",
         {
             "request": request,
             "contexts": list(SEARCH_CONTEXTS.keys()),
@@ -143,7 +142,7 @@ def lab_preparation_page(
         notice=bench_notice.strip() or None,
     )
     context["request"] = request
-    return templates.TemplateResponse("lab_queue.html", context)
+    return templates.TemplateResponse(request, "lab_queue.html", context)
 
 
 @router.post("/lab/preparation/bench/save")
@@ -170,7 +169,7 @@ async def lab_preparation_bench_save(
             error="Sample # and Prep # are required to save bench entry data.",
         )
         context["request"] = request
-        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
+        return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     outcome = bench.save(
         form_data=submitted,
@@ -189,7 +188,7 @@ async def lab_preparation_bench_save(
             error=outcome.save_error,
         )
         context["request"] = request
-        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
+        return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     return RedirectResponse(
         _build_prep_redirect(
@@ -229,7 +228,7 @@ def lab_graphitization_page(
         batch_error=graph_batch_error.strip() or None,
     )
     context["request"] = request
-    return templates.TemplateResponse("lab_queue.html", context)
+    return templates.TemplateResponse(request, "lab_queue.html", context)
 
 
 @router.post("/lab/graphitization/bench/save")
@@ -257,7 +256,7 @@ async def lab_graphitization_bench_save(
             error="Sample #, Prep # and Target # are required to save graphitization bench data.",
         )
         context["request"] = request
-        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
+        return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     outcome = bench.save(
         form_data=submitted,
@@ -276,7 +275,7 @@ async def lab_graphitization_bench_save(
             error=outcome.save_error,
         )
         context["request"] = request
-        return templates.TemplateResponse("lab_queue.html", context, status_code=422)
+        return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     return RedirectResponse(
         _build_graph_redirect(
@@ -363,8 +362,7 @@ def lab_analysis_page(
         else:
             magazine_query = resolved_magazine
             magazine_rows = service.list_targets_by_magazine(resolved_magazine)
-    return templates.TemplateResponse(
-        "lab_queue.html",
+    return templates.TemplateResponse(request, "lab_queue.html",
         {
             "request": request,
             "title": "Analysis Workflow",

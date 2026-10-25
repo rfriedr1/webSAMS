@@ -96,8 +96,7 @@ def dashboard(
         }
         for item in standards_cards
     ]
-    return templates.TemplateResponse(
-        "dashboard.html",
+    return templates.TemplateResponse(request, "dashboard.html",
         {
             "request": request,
             "counts": counts,
@@ -132,8 +131,7 @@ def setup_page(
     elif active_section["kind"] == "string_list":
         list_text = active_section.get("list_text", "")
 
-    return templates.TemplateResponse(
-        "setup.html",
+    return templates.TemplateResponse(request, "setup.html",
         {
             "request": request,
             "saved": saved,
@@ -149,8 +147,7 @@ def setup_page(
 
 @router.get("/help")
 def help_page(request: Request):
-    return templates.TemplateResponse(
-        "help.html",
+    return templates.TemplateResponse(request, "help.html",
         {
             "request": request,
             "magic_nav_rules": build_magic_nav_rules(),
@@ -308,8 +305,7 @@ async def setup_section_submit(
             # Keep what was typed, so a rejected path can be corrected.
             active_section["folder"] = payload.get("folder", "")
 
-        return templates.TemplateResponse(
-            "setup.html",
+        return templates.TemplateResponse(request, "setup.html",
             {
                 "request": request,
                 "saved": False,

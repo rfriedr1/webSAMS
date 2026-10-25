@@ -74,8 +74,7 @@ def target_detail_page(
         if redirect_url is not None:
             return RedirectResponse(url=redirect_url, status_code=303)
 
-    response = templates.TemplateResponse(
-        "target_detail.html",
+    response = templates.TemplateResponse(request, "target_detail.html",
         build_detail_page_context(
             request,
             TARGET_DETAIL_PAGE,
@@ -131,8 +130,7 @@ async def save_target_detail_page(
         )
         return response
 
-    response = templates.TemplateResponse(
-        "target_detail.html",
+    response = templates.TemplateResponse(request, "target_detail.html",
         build_detail_page_context(
             request,
             TARGET_DETAIL_PAGE,

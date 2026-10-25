@@ -322,7 +322,7 @@ def create_app() -> FastAPI:
         if path.startswith("/api/") or "application/json" in accept and "text/html" not in accept:
             return JSONResponse({"detail": "Not Found"}, status_code=404)
         context = {"request": request, **_build_not_found_context(request)}
-        return templates.TemplateResponse("not_found.html", context, status_code=404)
+        return templates.TemplateResponse(request, "not_found.html", context, status_code=404)
 
     return app
 
