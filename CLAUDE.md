@@ -34,6 +34,7 @@
 - `sams_web/detail_page.py`: generic detail-page context builder (`build_detail_page_context` + `DetailPageConfig`). Read side of detail pages.
 - `sams_web/preparation_bench.py` / `graphitization_bench.py`: bench workflow modules (`PreparationBench`, `GraphitizationBench`) — page_view() + save() + (graph) assign_graph_batch().
 - `sams_web/sample_photos.py`: sample photos from the shared folder — settings store, background folder index, and the `SamplePhotos` facade the routes use (see "Sample Photos" below). No database access.
+- `sams_web/setup_handlers.py`: one `SetupSectionHandler` per Setup section (see "Settings and Setup").
 - `sams_web/magic_nav.py`: sealed `NavTarget` family + parser + match-based dispatchers for the magic-nav input.
 - `sams_web/search.py`: `SearchContext` registry + `run_search()` + `fk_based_link()` rule for cell-level row links.
 - `sams_web/routers/pages.py` and the per-area `pages_*.py`: server-rendered web routes (thin dispatchers).
@@ -200,6 +201,8 @@
 - Store setup data in a generic settings file, not feature-specific filenames.
 - Current settings file: `sams_web/setup_data.json`.
 - Setup page should remain extensible for future configuration modules.
+- **One handler per Setup section** (`sams_web/setup_handlers.py`). A `SetupSectionHandler` owns everything section-specific: `kind` (picks the editor `templates/setup/_<kind>.html`), `context(service)` (editor values), `read_form(form)` (posted form → payload), `save(service, payload)` (validate + persist, `ValueError` for the operator) and `keep_typed(context, payload)` (refill the editor after a rejected save). `services.get/update_setup_section`, the Setup router and `setup.html` contain no per-section branches — before, adding Sample Photos meant editing four `if section == …` chains. **To add a section:** a `SetupSection` in `setup_sections.py`, a handler registered in `SETUP_HANDLERS`, one `setup/_<kind>.html`. `tests/test_setup_sections.py` renders and round-trips every registered section.
+- The JSON API (`GET/PUT /api/setup/{key}`) goes through the same handlers; `PUT` returns the refreshed section.
 
 ## Lab Warning Thresholds
 - The canonical list of in-app warning thresholds lives in `LAB_WARNING_THRESHOLD_FIELDS` in `sams_web/lab_warning_thresholds.py` — that tuple drives the Setup → "Lab Warning Thresholds" editor, the JSON persistence in `setup_data.json`, and the per-field formatting rules. Don't duplicate the list elsewhere; treat the code as source of truth and the Setup page as the user-facing rendering.

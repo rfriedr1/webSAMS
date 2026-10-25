@@ -279,23 +279,6 @@ templates.env.globals["app_version"] = __version__
 templates.env.globals["css_v"] = "20261025-1"
 
 
-def build_threshold_rows(payload: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for label, key in STANDARD_LABELS:
-        values = payload.get(key, {})
-        rows.append(
-            {
-                "label": label,
-                "key": key,
-                "red_below": values.get("red_below", ""),
-                "yellow_min": values.get("yellow_min", ""),
-                "yellow_max": values.get("yellow_max", ""),
-                "green_above": values.get("green_above", ""),
-            }
-        )
-    return rows
-
-
 def has_non_empty_value(row: dict[str, Any], keys: tuple[str, ...]) -> bool:
     for key in keys:
         value = row.get(key)

@@ -6,30 +6,22 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from sams_web.dependencies import get_service
 from sams_web.services import SamsService
-from sams_web.lab_warning_thresholds import LAB_WARNING_THRESHOLD_FIELDS
 from sams_web.import_settings import (
     EMAIL_SERVER_FIELDS,
     EmailSettingsStore,
     stored_password_applies,
 )
 from sams_web.sample_import.mailer import EmailError, RenderedEmail, send_email
-from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS
-from sams_web.setup_sections import (
-    SETUP_SECTION_EMAIL,
-    SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
-    SETUP_SECTION_IMPORT_HEADINGS,
-    SETUP_SECTION_LAB_WARNING_THRESHOLDS,
-    SETUP_SECTION_SAMPLE_PHOTOS,
-    SETUP_SECTION_STANDARD_THRESHOLDS,
-)
-from sams_web.thresholds import STANDARD_LABELS, THRESHOLD_FIELDS
+from sams_web.setup_handlers import handler_for
+from sams_web.setup_sections import SETUP_SECTION_MAP
+from sams_web.thresholds import STANDARD_LABELS
 
 from sams_web.magic_nav import build_magic_nav_rules
-from sams_web.routers.pages_shared import build_threshold_rows, templates
+from sams_web.routers.pages_shared import templates
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -122,15 +114,6 @@ def setup_page(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    threshold_rows = None
-    threshold_fields = None
-    list_text = None
-    if active_section["kind"] == "threshold_matrix":
-        threshold_rows = build_threshold_rows(active_section["thresholds"])
-        threshold_fields = active_section["threshold_fields"]
-    elif active_section["kind"] == "string_list":
-        list_text = active_section.get("list_text", "")
-
     return templates.TemplateResponse(request, "setup.html",
         {
             "request": request,
@@ -138,9 +121,6 @@ def setup_page(
             "error": None,
             "sections": sections,
             "active_section": active_section,
-            "threshold_rows": threshold_rows,
-            "threshold_fields": threshold_fields,
-            "list_text": list_text,
         },
     )
 
@@ -250,75 +230,24 @@ async def setup_section_submit(
     section_key: str,
     service: SamsService = Depends(get_service),
 ):
-    form = await request.form()
-    payload: dict[str, Any] = {}
-    if section_key == SETUP_SECTION_STANDARD_THRESHOLDS:
-        for _, key in STANDARD_LABELS:
-            payload[key] = {
-                field: form.get(f"{key}_{field}")
-                for field, _ in THRESHOLD_FIELDS
-            }
-    elif section_key == SETUP_SECTION_GRAPHITIZATION_SYSTEMS:
-        raw_list_text = str(form.get("graphitization_systems_text") or "")
-        payload["items"] = raw_list_text.splitlines()
-        payload["raw_text"] = raw_list_text
-    elif section_key == SETUP_SECTION_LAB_WARNING_THRESHOLDS:
-        for field in LAB_WARNING_THRESHOLD_FIELDS:
-            payload[field.key] = form.get(field.key)
-    elif section_key == SETUP_SECTION_IMPORT_HEADINGS:
-        # One newline-separated textarea per built-in sample field...
-        for field_name in SAMPLE_COLUMN_SYNONYMS:
-            payload[field_name] = form.get(f"heading_{field_name}", "")
-        # ...plus any number of operator-defined custom columns, which
-        # arrive as three parallel repeating lists.
-        payload["custom_target"] = form.getlist("custom_target")
-        payload["custom_label"] = form.getlist("custom_label")
-        payload["custom_headings"] = form.getlist("custom_headings")
-    elif section_key == SETUP_SECTION_EMAIL:
-        for field in EMAIL_SERVER_FIELDS:
-            payload[field.key] = form.get(field.key, "")
-        # Template subject/body arrive as template_<lang>_subject/_body.
-        for key in form.keys():
-            if key.startswith("template_"):
-                payload[key] = form.get(key, "")
-    elif section_key == SETUP_SECTION_SAMPLE_PHOTOS:
-        payload["folder"] = str(form.get("folder") or "")
+    if section_key not in SETUP_SECTION_MAP:
+        raise HTTPException(status_code=404, detail=f"Unknown setup section: {section_key}")
+    handler = handler_for(section_key)
+    payload = handler.read_form(await request.form())
 
     try:
         service.update_setup_section(section_key=section_key, payload=payload)
     except ValueError as exc:
-        sections = service.list_setup_sections()
-        try:
-            active_section = service.get_setup_section(section_key)
-        except ValueError as section_exc:
-            raise HTTPException(status_code=404, detail=str(section_exc)) from section_exc
-
-        threshold_rows = None
-        threshold_fields = None
-        list_text = None
-        if active_section["kind"] == "threshold_matrix":
-            threshold_rows = build_threshold_rows(payload if payload else active_section["thresholds"])
-            threshold_fields = active_section["threshold_fields"]
-        elif active_section["kind"] == "string_list":
-            list_text = str(payload.get("raw_text") or active_section.get("list_text") or "")
-        elif active_section["kind"] == "sample_photos":
-            # Keep what was typed, so a rejected path can be corrected.
-            active_section["folder"] = payload.get("folder", "")
-
+        active_section = handler.keep_typed(service.get_setup_section(section_key), payload)
         return templates.TemplateResponse(request, "setup.html",
             {
                 "request": request,
                 "saved": False,
                 "error": str(exc),
-                "sections": sections,
+                "sections": service.list_setup_sections(),
                 "active_section": active_section,
-                "threshold_rows": threshold_rows,
-                "threshold_fields": threshold_fields,
-                "list_text": list_text,
             },
             status_code=400,
         )
-
-    from fastapi.responses import RedirectResponse  # local import to keep module imports light
 
     return RedirectResponse(url=f"/setup?section={section_key}&saved=true", status_code=303)
