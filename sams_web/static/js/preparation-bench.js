@@ -28,57 +28,6 @@
     return `${year}-${month}-${day}`;
   };
 
-  const installBenchDirtyMarkers = (form) => {
-    if (!(form instanceof HTMLFormElement)) {
-      return { refresh: () => {} };
-    }
-    const controls = Array.from(form.querySelectorAll("input, select, textarea")).filter((control) => {
-      if (!(control instanceof HTMLElement)) {
-        return false;
-      }
-      if (control instanceof HTMLInputElement && control.type === "hidden") {
-        return false;
-      }
-      if ("disabled" in control && control.disabled) {
-        return false;
-      }
-      return true;
-    });
-
-    const readCurrent = (control) => {
-      if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-        return control.checked ? "1" : "0";
-      }
-      return "value" in control ? String(control.value ?? "") : "";
-    };
-
-    const wrapperFor = (control) =>
-      control.closest(".prep-bench-field, .prep-bench-checkbox-row");
-
-    controls.forEach((control) => {
-      control.dataset.benchInitialValue = readCurrent(control);
-    });
-
-    const refresh = () => {
-      controls.forEach((control) => {
-        const wrapper = wrapperFor(control);
-        if (!(wrapper instanceof HTMLElement)) {
-          return;
-        }
-        const dirty = (control.dataset.benchInitialValue || "") !== readCurrent(control);
-        wrapper.classList.toggle("is-dirty", dirty);
-      });
-    };
-
-    controls.forEach((control) => {
-      const handler = () => refresh();
-      control.addEventListener("input", handler);
-      control.addEventListener("change", handler);
-    });
-
-    return { refresh };
-  };
-
   installers.installPreparationBench = () => {
     const benches = document.querySelectorAll("[data-prep-bench]");
     benches.forEach((bench) => {
@@ -86,146 +35,19 @@
         return;
       }
 
-      const lookupForm = bench.querySelector("[data-prep-bench-lookup-form]");
-      const scanInput = bench.querySelector("[data-prep-bench-scan-input]");
-      const prepInput = bench.querySelector("[data-prep-bench-prep-input]");
       const saveForm = bench.querySelector("[data-prep-bench-save-form]");
 
-      if (lookupForm) {
-        const initialSampleLookupValue =
-          scanInput instanceof HTMLInputElement ? scanInput.value : "";
-        let lastValidPrepLookupValue =
-          prepInput instanceof HTMLInputElement ? prepInput.value : "";
-
-        const getDatalistAllowedValues = (input) => {
-          if (!(input instanceof HTMLInputElement)) {
-            return null;
-          }
-          const listId = input.getAttribute("list");
-          if (!listId) {
-            return null;
-          }
-          const datalist = bench.querySelector(`#${CSS.escape(listId)}`);
-          if (!(datalist instanceof HTMLDataListElement)) {
-            return null;
-          }
-          const values = new Set();
-          datalist.querySelectorAll("option").forEach((option) => {
-            const value = (option.getAttribute("value") || "").trim();
-            if (value !== "") {
-              values.add(value);
-            }
-          });
-          return values;
-        };
-
-        const validatePrepLookupField = () => {
-          if (!(prepInput instanceof HTMLInputElement)) {
-            return true;
-          }
-          const raw = prepInput.value.trim();
-          if (raw === "") {
-            prepInput.setCustomValidity("");
-            return true;
-          }
-          const allowed = getDatalistAllowedValues(prepInput);
-          if (!allowed || allowed.size === 0) {
-            prepInput.setCustomValidity("");
-            lastValidPrepLookupValue = prepInput.value;
-            return true;
-          }
-          if (allowed.has(raw)) {
-            prepInput.setCustomValidity("");
-            lastValidPrepLookupValue = prepInput.value;
-            return true;
-          }
-          prepInput.setCustomValidity("Prep # must match an existing value.");
-          prepInput.reportValidity();
-          prepInput.value = lastValidPrepLookupValue || "";
-          prepInput.setCustomValidity("");
-          return false;
-        };
-
-        if (scanInput instanceof HTMLInputElement) {
-          const clearPrepIfSampleChanged = () => {
-            if (scanInput.value === initialSampleLookupValue) {
-              return;
-            }
-            if (prepInput instanceof HTMLInputElement) {
-              prepInput.value = "";
-            }
-            lastValidPrepLookupValue = "";
-          };
-          scanInput.addEventListener("input", clearPrepIfSampleChanged);
-          scanInput.addEventListener("change", clearPrepIfSampleChanged);
-
-          // Up/down steppers for Sample #, matching the native spinner on
-          // Prep #: step the number, drop the now-stale prep, and load the
-          // new sample straight away.
-          bench.querySelectorAll("[data-prep-bench-sample-step]").forEach((button) => {
-            if (!(button instanceof HTMLButtonElement)) {
-              return;
-            }
-            button.addEventListener("click", () => {
-              const delta = Number.parseInt(button.dataset.prepBenchSampleStep || "0", 10);
-              if (!Number.isFinite(delta) || delta === 0) {
-                return;
-              }
-              const raw = scanInput.value.trim();
-              // Empty field: start from whichever sample is on the bench.
-              const base = Number.parseInt(
-                raw !== "" ? raw : bench.dataset.prepBenchCurrentSample || "",
-                10,
-              );
-              if (!Number.isFinite(base)) {
-                scanInput.focus();
-                return;
-              }
-              const next = Math.max(1, base + delta);
-              if (String(next) === raw) {
-                return;
-              }
-              scanInput.value = String(next);
-              clearPrepIfSampleChanged();
-              lookupForm.requestSubmit();
-            });
-          });
-        }
-
-        if (prepInput instanceof HTMLInputElement) {
-          prepInput.addEventListener("change", () => {
-            if (!validatePrepLookupField()) {
-              return;
-            }
-            lookupForm.requestSubmit();
-          });
-        }
-
-        [scanInput, prepInput].forEach((control) => {
-          if (!(control instanceof HTMLInputElement)) {
-            return;
-          }
-          control.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter") {
-              return;
-            }
-            event.preventDefault();
-            if (control === prepInput && !validatePrepLookupField()) {
-              return;
-            }
-            lookupForm.requestSubmit();
-          });
-        });
-
-        lookupForm.addEventListener("submit", (event) => {
-          if (prepInput instanceof HTMLInputElement && !validatePrepLookupField()) {
-            event.preventDefault();
-          }
-        });
-      }
+      window.SAMSBench.installLookupForm({
+        bench,
+        form: bench.querySelector("[data-prep-bench-lookup-form]"),
+        sampleInput: bench.querySelector("[data-prep-bench-scan-input]"),
+        sampleStepAttr: "data-prep-bench-sample-step",
+        currentSample: () => bench.dataset.prepBenchCurrentSample || "",
+        dependents: [{ input: bench.querySelector("[data-prep-bench-prep-input]"), label: "Prep #" }],
+      });
 
       if (saveForm) {
-        const dirtyMarkers = installBenchDirtyMarkers(saveForm);
+        const dirtyMarkers = window.SAMSBench.installDirtyMarkers(saveForm);
         const weightStart = saveForm.querySelector("[data-prep-bench-weight-start]");
         const weightMid = saveForm.querySelector("[data-prep-bench-weight-medium]");
         const weightMid2 = saveForm.querySelector("[data-prep-bench-weight-medium-2]");
