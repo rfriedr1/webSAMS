@@ -539,6 +539,21 @@ class RecordOutcome:
     check: EaCheck | None = None
 
 
+def _sparks(standard: CheckStandard | None, history: Sequence[Any]) -> list[dict[str, Any]]:
+    """One trend line per certified element of ``standard`` (C % and N % for
+    acetanilide); an element with fewer than two values has no line."""
+    sparks = []
+    for el in standard.elements if standard else ():
+        points = [
+            {"v": check_value(c, el.symbol), "passed": bool(c.passed)}
+            for c in history
+            if check_value(c, el.symbol) is not None
+        ]
+        if len(points) > 1:
+            sparks.append({"symbol": el.symbol, "element": el.gauge(), "points": points})
+    return sparks
+
+
 class EaCheckLog:
     """What the routes use. One instance per request."""
 
@@ -609,7 +624,6 @@ class EaCheckLog:
             ea=instrument.key, since=now - timedelta(days=120), include_voided=False
         )
         oldest_unsigned = unsigned_since.get(instrument.key)
-        spark_symbol = default.elements[0].symbol if default else "c"
         return {
             "key": instrument.key,
             "label": instrument.label,
@@ -635,15 +649,7 @@ class EaCheckLog:
                     }
                     for s in standards
                 ],
-                "spark": {
-                    "symbol": spark_symbol,
-                    "element": default.element(spark_symbol).gauge() if default else None,
-                    "points": [
-                        {"v": check_value(c, spark_symbol), "passed": bool(c.passed)}
-                        for c in history
-                        if check_value(c, spark_symbol) is not None
-                    ],
-                },
+                "sparks": _sparks(default, history),
             },
         }
 

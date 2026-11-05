@@ -170,6 +170,20 @@ def test_several_checks_per_day_status_follows_latest(service):
     assert card["state"] == "passed" and len(card["attempts"]) == 3
 
 
+def test_card_has_one_trend_per_certified_element(service):
+    record(service, T0, c="71.5", n="10.3")
+    record(service, T0 + timedelta(days=1), c="71.9", n="10.6")
+    card = log_at(service, T0 + timedelta(days=1, hours=1)).strip_view()["cards"][0]
+    sparks = {s["symbol"]: [p["v"] for p in s["points"]] for s in card["config"]["sparks"]}
+    assert sparks == {"c": [71.5, 71.9], "n": [10.3, 10.6]}
+
+
+def test_card_shows_no_trend_before_two_checks(service):
+    record(service, T0)
+    card = log_at(service, T0 + timedelta(hours=1)).strip_view()["cards"][0]
+    assert card["config"]["sparks"] == []
+
+
 def test_void_falls_back_to_previous_attempt(service):
     record(service, T0)
     bad = record(service, T0 + timedelta(hours=1), c="17.2", comment="typo")

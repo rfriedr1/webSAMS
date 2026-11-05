@@ -49,11 +49,15 @@
             <span class="ea-summary-label">Streak</span><strong>{{ card.streak }} d</strong>
           </div>
         </div>
-        {% if cfg.spark.points|length > 1 %}
-        <div class="ea-spark-wrap">
-          <span class="ea-summary-label">{{ cfg.spark.element.label }} % · last {{ cfg.spark.points|length }} checks</span>
-          <svg class="ea-spark" data-ea-spark viewBox="0 0 300 48" preserveAspectRatio="none" role="img"
-               aria-label="Trend of the last {{ cfg.spark.points|length }} {{ cfg.spark.element.label }} % values"></svg>
+        {% if cfg.sparks %}
+        <div class="ea-sparks">
+          {% for spark in cfg.sparks %}
+          <div class="ea-spark-wrap">
+            <span class="ea-summary-label">{{ spark.element.label }} % · last {{ spark.points|length }} checks</span>
+            <svg class="ea-spark" data-ea-spark data-symbol="{{ spark.symbol }}" viewBox="0 0 300 48" preserveAspectRatio="none" role="img"
+                 aria-label="Trend of the last {{ spark.points|length }} {{ spark.element.label }} % values"></svg>
+          </div>
+          {% endfor %}
         </div>
         {% endif %}
       </div>

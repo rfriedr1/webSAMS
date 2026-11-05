@@ -177,7 +177,9 @@
   const installCard = (card) => {
     const form = card.querySelector("[data-ea-entry]");
     const config = readJson(card.querySelector("[data-ea-card-config]"), {});
-    drawSpark(card.querySelector("[data-ea-spark]"), config.spark);
+    (config.sparks || []).forEach((spark) => {
+      drawSpark(card.querySelector(`[data-ea-spark][data-symbol="${spark.symbol}"]`), spark);
+    });
     if (!form) return;
 
     const submit = form.querySelector("[data-ea-submit]");
