@@ -1,0 +1,102 @@
+{#- Shared pieces of the EA check UI: entry gauges, statistics table, chart
+    figure. Imported by _ea_check_strip.html, ea_checks.html and the QC
+    sign-off print body. Values come pre-formatted from ea_checks.py. -#}
+
+{% macro num(value, digits=2) -%}
+{%- if value is none -%}<span class="detail-empty">—</span>{%- else -%}{{ "%.*f"|format(digits, value) }}{%- endif -%}
+{%- endmacro %}
+
+{% macro signed_num(value, digits=2) -%}
+{%- if value is none -%}<span class="detail-empty">—</span>{%- else -%}{{ "%+.*f"|format(digits, value) }}{%- endif -%}
+{%- endmacro %}
+
+{#- One certified element: number box (submitted) + gauge (range input, mouse /
+    wheel / arrow keys). ea-checks.js keeps them in sync; without JS the
+    number box alone still works. -#}
+{% macro element_field(card_key, standard_key, el) %}
+{% set field_id = "ea-" ~ card_key ~ "-" ~ standard_key ~ "-" ~ el.symbol %}
+<div class="ea-field" data-ea-field data-symbol="{{ el.symbol }}" data-label="{{ el.label }}"
+     data-min="{{ el.min }}" data-max="{{ el.max }}" data-ref="{{ el.ref }}"
+     data-step="{{ el.step }}" data-lo="{{ el.lo }}" data-hi="{{ el.hi }}" data-decimals="{{ el.decimals }}">
+  <div class="ea-field-head">
+    <label for="{{ field_id }}">{{ el.label }} %</label>
+    <span class="ea-field-verdict" data-ea-verdict aria-live="polite"></span>
+  </div>
+  <input id="{{ field_id }}" class="ea-number" type="text" inputmode="decimal" autocomplete="off"
+         name="value_{{ el.symbol }}" placeholder="{{ el.ref }}" data-ea-number />
+  <div class="ea-gauge is-untouched" data-ea-gauge>
+    <div class="ea-gauge-track" aria-hidden="true">
+      <span class="ea-gauge-window" style="left: {{ el.pos_min }}%; width: {{ el.pos_max - el.pos_min }}%;"></span>
+      <span class="ea-gauge-ticks" data-ea-ticks></span>
+      <span class="ea-gauge-ref" style="left: {{ el.pos_ref }}%;"></span>
+    </div>
+    <input class="ea-range" type="range" min="{{ el.lo }}" max="{{ el.hi }}" step="{{ el.step }}"
+           value="{{ el.ref }}" aria-label="{{ el.label }} % gauge" aria-describedby="{{ field_id }}-scale" data-ea-range />
+  </div>
+  <div class="ea-gauge-scale" id="{{ field_id }}-scale" aria-hidden="true">
+    <span style="left: {{ el.pos_min }}%;">{{ el.min }}</span>
+    <span class="is-ref" style="left: {{ el.pos_ref }}%;">{{ el.ref }}</span>
+    <span style="left: {{ el.pos_max }}%;">{{ el.max }}</span>
+  </div>
+</div>
+{% endmacro %}
+
+{#- Statistics: one column per certified element, plain-language rows. -#}
+{% macro stats_table(stats) %}
+{% set els = stats.elements %}
+<div class="ea-stats">
+  <dl class="ea-stats-counts">
+    <div><dt>Checks</dt><dd>{{ stats.n }}</dd></div>
+    <div class="{% if stats.n_failed %}is-bad{% endif %}"><dt>Failed</dt><dd>{{ stats.n_failed }}</dd></div>
+    <div class="{% if stats.missed_workdays %}is-warn{% endif %}" title="Monday–Friday without any check. Public holidays are not known to the app and count too.">
+      <dt>Workdays without check</dt><dd>{{ stats.missed_workdays }}</dd>
+    </div>
+  </dl>
+  {% if els %}
+  <table class="ea-stats-table" data-table-plain>
+    <thead>
+      <tr><th scope="col"></th>{% for e in els %}<th scope="col">{{ e.label }} %</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      <tr><th scope="row">Reference value</th>{% for e in els %}<td>{{ num(e.ref) }}</td>{% endfor %}</tr>
+      <tr><th scope="row">Pass window</th>{% for e in els %}<td>{{ num(e.min, 1) }} – {{ num(e.max, 1) }}</td>{% endfor %}</tr>
+      <tr><th scope="row" title="Mean of the measured values">Mean</th>{% for e in els %}<td>{{ num(e.mean) }}</td>{% endfor %}</tr>
+      <tr><th scope="row" title="Sample standard deviation (n − 1): the scatter of the check — precision">Standard deviation (s)</th>{% for e in els %}<td>{{ num(e.sd, 3) }}</td>{% endfor %}</tr>
+      <tr><th scope="row" title="Mean minus reference value: how far the EA reads off — trueness / drift">Bias (mean − ref.)</th>{% for e in els %}<td>{{ signed_num(e.bias) }}{% if e.bias_pct is not none %} <span class="ea-muted">({{ signed_num(e.bias_pct, 1) }} %)</span>{% endif %}</td>{% endfor %}</tr>
+      <tr><th scope="row" title="Points further than 3 s from the mean: unusual for this EA, worth a look even when inside the pass window">Outside ±3s</th>{% for e in els %}<td class="{% if e.n_outside_3s %}is-warn{% endif %}">{{ e.n_outside_3s }}</td>{% endfor %}</tr>
+    </tbody>
+  </table>
+  <p class="ea-stats-note">Mean, s and bias use the passed checks; failed checks are counted above and listed with their comments.</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{#- Control chart(s): ea-checks.js draws one inline SVG per element from the JSON. -#}
+{% macro charts(chart, caption="") %}
+{% if chart.points %}
+<div class="ea-charts">
+  {% for el in chart.elements %}
+  <figure class="ea-chart" data-ea-chart data-symbol="{{ el.symbol }}">
+    <figcaption>{{ el.label }} % {% if caption %}<span class="ea-muted">· {{ caption }}</span>{% endif %}</figcaption>
+    <div class="ea-chart-canvas" data-ea-chart-canvas></div>
+  </figure>
+  {% endfor %}
+  <script type="application/json" data-ea-chart-data>{{ chart | tojson }}</script>
+  <p class="ea-chart-legend" aria-hidden="true">
+    <span class="lg-window"></span> pass window
+    <span class="lg-ref"></span> reference
+    <span class="lg-2s"></span> mean ± 2s
+    <span class="lg-3s"></span> mean ± 3s
+    <span class="lg-fail"></span> failed
+  </p>
+</div>
+{% else %}
+<p class="table-empty-row ea-empty">No checks in this period.</p>
+{% endif %}
+{% endmacro %}
+
+{% macro result_badge(passed, voided=false) %}
+{% if voided %}<span class="ea-result is-voided">voided</span>
+{% elif passed %}<span class="ea-result is-pass">✓ pass</span>
+{% else %}<span class="ea-result is-fail">✗ fail</span>{% endif %}
+{% endmacro %}

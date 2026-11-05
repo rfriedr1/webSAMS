@@ -276,6 +276,13 @@ class SamsService:
             seen.add(value)
         return cleaned or list(DEFAULT_GRAPHITIZATION_SYSTEMS)
 
+    def ea_standards_in_use(self) -> set[str]:
+        """Check-standard keys that have logged EA checks (empty while the
+        table does not exist yet)."""
+        if self.repo.missing_qc_tables():
+            return set()
+        return self.repo.ea_standards_in_use()
+
     def get_lab_warning_thresholds(self) -> dict[str, float]:
         return self.lab_warning_threshold_store.load()
 

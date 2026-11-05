@@ -1,4 +1,51 @@
 {
+  "ea_checks": {
+    "instruments": [
+      {
+        "key": "ea1",
+        "label": "EA 1 \u00b7 AGE64",
+        "standards": [
+          "acetanilide"
+        ],
+        "systems": [
+          "age64.1",
+          "age64.2"
+        ]
+      },
+      {
+        "key": "ea2",
+        "label": "EA 2 \u00b7 AGE / MAG",
+        "standards": [
+          "acetanilide"
+        ],
+        "systems": [
+          "age.1",
+          "age.2",
+          "mag"
+        ]
+      }
+    ],
+    "signoff_reminder_days": 31,
+    "standards": [
+      {
+        "c": {
+          "max": 78.0,
+          "min": 64.0,
+          "ref": 71.09,
+          "step": 0.1
+        },
+        "key": "acetanilide",
+        "lot": "",
+        "n": {
+          "max": 11.4,
+          "min": 9.4,
+          "ref": 10.36,
+          "step": 0.1
+        },
+        "name": "Acetanilide"
+      }
+    ]
+  },
   "email_settings": {
     "bcc": "",
     "from_address": "c14@ceza.de",
@@ -32,6 +79,7 @@
     "age64.2",
     "autosampler"
   ],
+  "lab_staff": [],
   "lab_warning_thresholds": {
     "preparation_yield_percent_min": 0.5,
     "target_total_c_ug_min": 500.0

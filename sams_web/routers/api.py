@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.inspection import inspect
 
 from sams_web.dependencies import get_sample_photos, get_service
+from sams_web.ea_checks import EaCheckLog
 from sams_web.sample_photos import SamplePhotos
 from sams_web.schemas import (
     DashboardCounts,
@@ -63,6 +65,21 @@ def sample_photo_folder_status(
     photos: SamplePhotos = Depends(get_sample_photos),
 ) -> dict[str, Any]:
     return photos.status(refresh=refresh)
+
+
+@router.get("/ea-checks")
+def list_ea_checks(
+    ea: str = Query(default=""),
+    standard: str = Query(default=""),
+    since: date | None = Query(default=None),
+    service: SamsService = Depends(get_service),
+) -> dict[str, Any]:
+    """Logged EA checks (voided ones included, flagged), oldest first."""
+    log = EaCheckLog(service)
+    if not log.available:
+        raise HTTPException(status_code=503, detail=f"Missing tables: {', '.join(log.missing_tables)}")
+    since_dt = datetime.combine(since, time.min) if since else None
+    return {"checks": log.api_rows(ea=ea.strip() or None, standard=standard.strip() or None, since=since_dt)}
 
 
 @router.get("/dashboard/counts", response_model=DashboardCounts)

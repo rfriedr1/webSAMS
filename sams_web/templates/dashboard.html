@@ -21,6 +21,25 @@
     <article><h3>Waiting for Graph</h3><p>{{ counts.waiting_for_graph }}</p></article>
     <article><h3>Waiting for Meas</h3><p>{{ counts.waiting_for_meas }}</p></article>
     <article><h3>Express</h3><p>{{ counts.waiting_express }}</p></article>
+    {% if ea_tile %}
+    <article class="ea-check-tile{% if ea_tile.overdue %} is-overdue{% endif %}">
+      <h3><a href="/lab/ea-checks" class="ea-check-tile-link">EA checks today</a></h3>
+      {% if ea_tile.available %}
+      <ul class="ea-check-tile-list">
+        {% for item in ea_tile["items"] %}
+        <li class="ea-state-{{ item.state }}" title="{{ item.state_label }}">
+          <span class="ea-state-dot" aria-hidden="true"></span>
+          <span class="ea-check-tile-label">{{ item.label }}</span>
+          <span class="sr-only">{{ item.state_label }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if ea_tile.overdue %}<p class="ea-check-tile-note">Sign-off overdue</p>{% endif %}
+      {% else %}
+      <p class="ea-check-tile-note">Not set up yet</p>
+      {% endif %}
+    </article>
+    {% endif %}
   </div>
 
   <details class="kpi-chart kpi-collapsible" open>

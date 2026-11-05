@@ -11,6 +11,7 @@ from fastapi.responses import RedirectResponse
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
 from sams_web.preparation_bench import PreparationBench
+from sams_web.routers.pages_ea_checks import ea_strip_context
 from sams_web.search import SEARCH_CONTEXTS
 from sams_web.routers.pages_shared import parse_positive_int, templates
 from sams_web.services import SamsService
@@ -169,6 +170,8 @@ async def lab_preparation_bench_save(
             error="Sample # and Prep # are required to save bench entry data.",
         )
         context["request"] = request
+        if context.get("graph_bench_entry_enabled"):
+            context.update(ea_strip_context(service, request, return_url="/lab/graphitization"))
         return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     outcome = bench.save(
@@ -188,6 +191,8 @@ async def lab_preparation_bench_save(
             error=outcome.save_error,
         )
         context["request"] = request
+        if context.get("graph_bench_entry_enabled"):
+            context.update(ea_strip_context(service, request, return_url="/lab/graphitization"))
         return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     return RedirectResponse(
@@ -228,6 +233,7 @@ def lab_graphitization_page(
         batch_error=graph_batch_error.strip() or None,
     )
     context["request"] = request
+    context.update(ea_strip_context(service, request))
     return templates.TemplateResponse(request, "lab_queue.html", context)
 
 
@@ -256,6 +262,8 @@ async def lab_graphitization_bench_save(
             error="Sample #, Prep # and Target # are required to save graphitization bench data.",
         )
         context["request"] = request
+        if context.get("graph_bench_entry_enabled"):
+            context.update(ea_strip_context(service, request, return_url="/lab/graphitization"))
         return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     outcome = bench.save(
@@ -275,6 +283,8 @@ async def lab_graphitization_bench_save(
             error=outcome.save_error,
         )
         context["request"] = request
+        if context.get("graph_bench_entry_enabled"):
+            context.update(ea_strip_context(service, request, return_url="/lab/graphitization"))
         return templates.TemplateResponse(request, "lab_queue.html", context, status_code=422)
 
     return RedirectResponse(

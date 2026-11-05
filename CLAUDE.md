@@ -33,6 +33,8 @@
 - `sams_web/detail_update.py`: generic single-entity form-update primitive (`apply_detail_update` + `DetailUpdateConfig` per entity). All write paths flow through here; per-entity configs live next to the viewmodels.
 - `sams_web/detail_page.py`: generic detail-page context builder (`build_detail_page_context` + `DetailPageConfig`). Read side of detail pages.
 - `sams_web/preparation_bench.py` / `graphitization_bench.py`: bench workflow modules (`PreparationBench`, `GraphitizationBench`) — page_view() + save() + (graph) assign_graph_batch().
+- `sams_web/ea_checks.py`: daily EA checks — settings (`EaCheckSettingsStore`), pure rules (`evaluate`, `summarize`, `passing_streak`), the `EaCheckLog` facade the routes use, and `EaCheckSignoffSubject` (see "EA Checks and QC Sign-off" below).
+- `sams_web/qc_signoff.py`: generic QC sign-off engine (`QcSignoffs`, `SignoffSubject` registry). `sams_web/lab_staff.py`: Setup → Lab Staff (operator chips, `may_sign_off`).
 - `sams_web/sample_photos.py`: sample photos from the shared folder — settings store, background folder index, and the `SamplePhotos` facade the routes use (see "Sample Photos" below). No database access.
 - `sams_web/setup_handlers.py`: one `SetupSectionHandler` per Setup section (see "Settings and Setup").
 - `sams_web/magic_nav.py`: sealed `NavTarget` family + parser + match-based dispatchers for the magic-nav input.
@@ -120,6 +122,7 @@
 - `/sub` opens `Samples/Submitters` (the list — distinct from the `sub<number>` prefix, which opens one submitter)
 - `/proj` opens `Samples/Projects`
 - `/import` opens `Samples/Import`
+- `/ea` opens `Lab/EA Checks`
 - Commands are matched *before* the `pr` / `sub` prefixes and always start with `/`, so a new command can never shadow an identifier form. Add one by extending `MAGIC_IDENTIFIER_COMMAND_ROUTES` + `..._LABELS` in `magic_nav.py`; the `/help` rules table is generated from those dicts, but the cheat-sheet overlay (`magic-nav-ui.js`), the command palette's own `magicCommandMap` (`navigation-ui.js`), the input's rotating placeholders (`base.html`), the `/help` prose list and `not_found.html` are hand-written and must be updated too.
 - Unknown pattern: show `unknown ID`.
 - Not-found IDs: show inline error in the patch area and do not navigate.
@@ -253,6 +256,17 @@
 - The viewer is one `<dialog>` built by `sample-photos.js`: wheel / pinch / `+` `-` zoom around the cursor, drag to pan, double-click toggles fit ↔ actual size, `0` fit, `1` actual size, `←` `→` previous/next, `Esc` close. Its key handler captures on `document` and stops propagation so the record shortcuts (`e`, `[`, `]`, …) cannot fire underneath.
 - `style-photos.css` and `js/sample-photos.js` load only on the sample page (`extra_styles` / `extra_scripts`), like the bench assets.
 
+## EA Checks and QC Sign-off
+- Daily check of each elemental analyzer with a check standard (acetanilide): an ISO 17025 intermediate check, **not** a calibration. Design and rationale: `docs/adr/0005-qc-signoff-and-ea-checks.md`; DDL: `docs/sql/0005_qc_ea_checks.sql` (tables created by hand; pages say "not set up yet" until they exist — `SamsRepository.missing_qc_tables`).
+- **Entry strip** `_ea_check_strip.html` (+ `ea_strip_context()` in `routers/pages_ea_checks.py`) sits at the top of Lab → Graphitization and Lab → EA Checks: one card per EA, number box + draggable gauge per element (native `<input type=range>` under a drawn track; snap = the element's `step` from Setup, 0.1 by default), staff chips (last pick in `localStorage`), required comment when out of window. **An untouched gauge never submits a value** — only the number box carries `name=value_<el>`, and it stays empty until typed or the needle is moved. Several checks per day are normal; an EA's status is its latest non-voided attempt.
+- **Records are never updated or deleted**: a mistyped check is voided (`POST /lab/ea-checks/{id}/void`, reason + who); a signed-off check cannot be voided. Each row snapshots the standard's lot, reference and window.
+- **Statistics** (`ea_checks.summarize`, the only place they are computed — page, review dialog, sign-off snapshot and print view all use it): n, failed, workdays without check, and per element mean / s / bias / ±2s / ±3s / outside ±3s. Mean, s and bias use **passed** checks only.
+- **QC sign-off is generic** (`qc_signoff.py`): a `SignoffSubject` per kind (`items`, `summarize`, `describe`, `body_context` + `body_template`), registered in `signoff_subjects()`. Routes `POST /qc/signoffs` and the printable `GET /qc/signoffs/{id}` know no subject. **To add OXA2 / blanks / IAEA sign-offs:** one handler + one `templates/qc/_<subject>_signoff_body.html`; no DDL. Items are linked through `qc_signoff_item_t` (unique per item), so BATS-owned rows can be signed without altering their tables.
+- Graph Batch Builder: system pills whose EA has no passing check today get `data-ea-warning` (dot + note under the pills, from `ea-checks.js`); a hint, never a block.
+- Dashboard: "EA checks today" tile in the Lab Queues cards (`EaCheckLog.dashboard_tile`), incl. overdue sign-off (Setup → EA Checks → reminder days).
+- `style-ea-checks.css` / `js/ea-checks.js` load only on the graphitization, EA Checks and sign-off print pages. The control charts are hand-drawn inline SVG (no chart library); the y-axis zooms on the data and ±3s, with the pass window clipped.
+- **`data-table-plain`** on a `<table>` opts it out of `table-tools.js` (no search/sort/export/wrap) — for small key/value tables such as the statistics block or a printed record.
+
 ## Current Workflow Notes
 - Main navigation labels:
 - `Dashboard`
@@ -264,7 +278,7 @@
 - `API Docs`
 - Secondary navigation:
 - Under `Samples`: `Sample`, `Projects`, `Submitters`, `Import`
-- Under `Lab`: `Preparation`, `Graphitization`, `Analysis`
+- Under `Lab`: `Preparation`, `Graphitization`, `Analysis`, `EA Checks`
 - Breadcrumb navigation is shown on pages via the shared `base.html` layout.
 - Dedicated detail pages exist for sample, preparation, and target.
 - `Samples -> Sample` lands on `/samples`, which is a **landing page** (not a redirect) with action cards: Resume last sample (only when different from newest), Newest sample, Browse all samples (→ `/search?context=samples`), and a Magic Nav explainer. The "last sample" is read from the `last_sample_nr` cookie.

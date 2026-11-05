@@ -22,11 +22,15 @@ from sams_web.import_settings import (
     ImportHeadingStore,
     available_targets,
 )
+from sams_web.ea_checks import ELEMENTS, EaCheckSettingsStore
+from sams_web.lab_staff import LabStaffStore
 from sams_web.lab_warning_thresholds import LAB_WARNING_THRESHOLD_FIELDS
 from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS
 from sams_web.sample_photos import SamplePhotoSettingsStore
 from sams_web.setup_sections import (
+    SETUP_SECTION_EA_CHECKS,
     SETUP_SECTION_EMAIL,
+    SETUP_SECTION_LAB_STAFF,
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS,
     SETUP_SECTION_IMPORT_HEADINGS,
     SETUP_SECTION_LAB_WARNING_THRESHOLDS,
@@ -273,6 +277,112 @@ class SamplePhotosHandler(SetupSectionHandler):
         return context
 
 
+def _num_text(value: Any) -> str:
+    if value is None or value == "":
+        return ""
+    try:
+        return f"{float(value):g}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+EA_STANDARD_FIELDS = ("std_key", "std_name", "std_lot") + tuple(
+    f"std_{symbol}_{part}" for symbol, _ in ELEMENTS for part in ("ref", "min", "max", "step")
+)
+EA_INSTRUMENT_FIELDS = ("inst_key", "inst_label", "inst_systems", "inst_standards")
+
+
+class EaChecksHandler(SetupSectionHandler):
+    kind = "ea_checks"
+
+    @staticmethod
+    def _rows_from_raw(raw: Mapping[str, Any]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+        standards: list[dict[str, str]] = []
+        for item in raw.get("standards") or []:
+            if not isinstance(item, Mapping):
+                continue
+            row = {"std_key": str(item.get("key") or ""), "std_name": str(item.get("name") or ""),
+                   "std_lot": str(item.get("lot") or "")}
+            for symbol, _ in ELEMENTS:
+                element = item.get(symbol) if isinstance(item.get(symbol), Mapping) else {}
+                for part in ("ref", "min", "max", "step"):
+                    row[f"std_{symbol}_{part}"] = _num_text(element.get(part))
+            standards.append(row)
+        instruments = [
+            {
+                "inst_key": str(item.get("key") or ""),
+                "inst_label": str(item.get("label") or ""),
+                "inst_systems": ", ".join(str(x) for x in item.get("systems") or []),
+                "inst_standards": ", ".join(str(x) for x in item.get("standards") or []),
+            }
+            for item in raw.get("instruments") or []
+            if isinstance(item, Mapping)
+        ]
+        return standards, instruments
+
+    def context(self, service):
+        store = EaCheckSettingsStore(service.setup_store)
+        raw = store.raw()
+        standards, instruments = self._rows_from_raw(raw)
+        return {
+            "storage_section": store.section_key,
+            "ea_elements": ELEMENTS,
+            "ea_standard_rows": standards,
+            "ea_instrument_rows": instruments,
+            "ea_reminder_days": raw.get("signoff_reminder_days", 31),
+            "ea_system_options": service.get_graphitization_systems(),
+        }
+
+    def read_form(self, form):
+        payload: dict[str, Any] = {name: form.getlist(name) for name in EA_STANDARD_FIELDS + EA_INSTRUMENT_FIELDS}
+        payload["signoff_reminder_days"] = form.get("signoff_reminder_days", "")
+        return payload
+
+    def save(self, service, payload):
+        store = EaCheckSettingsStore(service.setup_store)
+        current = {s.key for s in store.load().standards}
+        posted = {str(k or "").strip().lower() for k in payload.get("std_key") or []}
+        # Only ask the database when a standard is actually being removed.
+        in_use = service.ea_standards_in_use() if current - posted else set()
+        store.update(payload, standards_in_use=in_use)
+
+    def keep_typed(self, context, payload):
+        def rows(fields):
+            cols = {f: list(payload.get(f) or []) for f in fields}
+            count = max(len(v) for v in cols.values())
+            return [{f: str(cols[f][i]) if i < len(cols[f]) else "" for f in fields} for i in range(count)]
+
+        context["ea_standard_rows"] = rows(EA_STANDARD_FIELDS)
+        context["ea_instrument_rows"] = rows(EA_INSTRUMENT_FIELDS)
+        context["ea_reminder_days"] = payload.get("signoff_reminder_days", "")
+        return context
+
+
+class LabStaffHandler(SetupSectionHandler):
+    kind = "lab_staff"
+
+    def context(self, service):
+        store = LabStaffStore(service.setup_store)
+        return {
+            "storage_section": store.section_key,
+            "staff_rows": [{"name": m.name, "role": "signer" if m.may_sign_off else "staff"} for m in store.load()],
+        }
+
+    def read_form(self, form):
+        return {"names": form.getlist("staff_name"), "roles": form.getlist("staff_role")}
+
+    def save(self, service, payload):
+        LabStaffStore(service.setup_store).update(payload)
+
+    def keep_typed(self, context, payload):
+        names = list(payload.get("names") or [])
+        roles = list(payload.get("roles") or [])
+        context["staff_rows"] = [
+            {"name": str(n), "role": str(roles[i]) if i < len(roles) else "staff"} for i, n in enumerate(names)
+        ]
+        return context
+
+
 SETUP_HANDLERS: dict[str, SetupSectionHandler] = {
     SETUP_SECTION_STANDARD_THRESHOLDS: StandardThresholdsHandler(),
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS: GraphitizationSystemsHandler(),
@@ -280,6 +390,8 @@ SETUP_HANDLERS: dict[str, SetupSectionHandler] = {
     SETUP_SECTION_IMPORT_HEADINGS: ImportHeadingsHandler(),
     SETUP_SECTION_EMAIL: EmailSettingsHandler(),
     SETUP_SECTION_SAMPLE_PHOTOS: SamplePhotosHandler(),
+    SETUP_SECTION_EA_CHECKS: EaChecksHandler(),
+    SETUP_SECTION_LAB_STAFF: LabStaffHandler(),
 }
 
 #: Sections registered in `setup_sections.py` without a handler render the

@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% from "_ea_check_macros.html" import stats_table, charts, result_badge, num %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-ea-checks.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/ea-checks.js?v={{ css_v }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>EA Checks</h2>
+    <p>
+      Daily check of each elemental analyzer with a check standard — a go/no-go check of the
+      instrument (ISO 17025 intermediate check), not a calibration. Statistics and supervisor
+      sign-off below.
+    </p>
+  </div>
+  {% if signoff_error %}<p class="error" role="alert">{{ signoff_error }}</p>{% endif %}
+  {% if ea_strip.available %}
+  <form method="get" action="/lab/ea-checks" class="ea-filter" data-ea-filter>
+    <label>
+      EA
+      <select name="ea" data-no-searchable>
+        <option value="">All</option>
+        {% for inst in instruments %}
+        <option value="{{ inst.key }}" {% if inst.key == ea_filter %}selected{% endif %}>{{ inst.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Period
+      <select name="period" data-no-searchable>
+        {% for key, label in periods %}
+        <option value="{{ key }}" {% if key == period %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="ea-filter-apply">Show</button>
+  </form>
+  {% endif %}
+</section>
+
+{% include "_ea_check_strip.html" %}
+
+{% if ea_strip.available %}
+{% for sec in sections %}
+<section class="panel ea-section" id="{{ sec.dom_id }}">
+  <div class="ea-section-head">
+    <div>
+      <h3>{{ sec.ea_label }} <span class="ea-muted">— {{ sec.standard_label }}{% if sec.lot %} · lot {{ sec.lot }}{% endif %}</span></h3>
+      <p class="ea-muted">Statistics: {{ period_label | lower }}{% if sec.stats.from %} · {{ sec.stats["from"][:10] }} – {{ sec.stats["to"][:10] }}{% endif %}</p>
+    </div>
+    <div class="ea-signoff-status{% if sec.overdue %} is-overdue{% endif %}">
+      {% if sec.unsigned_count %}
+      <span>
+        <strong>{{ sec.unsigned_count }}</strong> check{{ "s" if sec.unsigned_count != 1 }} not yet signed off
+        ({{ sec.review_range }})
+        {% if sec.overdue %}<span class="badge ea-overdue-badge">overdue</span>{% endif %}
+      </span>
+      <button type="button" class="ea-review-open" data-ea-review-open="review-{{ sec.dom_id }}">Review &amp; sign off</button>
+      {% else %}
+      <span class="ea-all-signed">✓ All checks signed off</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ea-section-body">
+    {{ stats_table(sec.stats) }}
+    {{ charts(sec.chart) }}
+  </div>
+
+  {% if sec.unsigned_count %}
+  <dialog class="ea-review" id="review-{{ sec.dom_id }}" aria-labelledby="review-{{ sec.dom_id }}-title">
+    <form method="post" action="/qc/signoffs" class="ea-review-form">
+      <header class="ea-review-head">
+        <h3 id="review-{{ sec.dom_id }}-title">Sign off: {{ sec.ea_label }} — {{ sec.standard_label }}</h3>
+        <button type="button" class="ea-dialog-close" data-ea-dialog-close aria-label="Close">×</button>
+      </header>
+      <p class="ea-muted">
+        {{ sec.unsigned_count }} check{{ "s" if sec.unsigned_count != 1 }},
+        {{ sec.review_rows[0].checked_at }} – {{ sec.review_rows[-1].checked_at }}.
+        Exactly these checks are signed; anything logged after you opened this page stays for the next sign-off.
+      </p>
+      {{ stats_table(sec.review) }}
+      {{ charts(sec.review_chart, "set to sign off") }}
+      {% set failures = sec.review_rows | rejectattr("passed") | list %}
+      {% if failures %}
+      <h4 class="ea-review-sub">Failed checks</h4>
+      <ul class="ea-failure-list">
+        {% for f in failures %}
+        <li><strong>{{ f.checked_at }}</strong> · {{ f.values_text }} · {{ f.operator }} — {{ f.comment or "no comment" }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <input type="hidden" name="subject_type" value="ea_check" />
+      <input type="hidden" name="subject_key" value="{{ sec.key }}" />
+      <input type="hidden" name="period_to" value="{{ sec.review_period_to }}" />
+      <input type="hidden" name="next" value="{{ ea_return_url }}" />
+
+      {% if signers %}
+      <fieldset class="ea-review-fieldset">
+        <legend>Signed by</legend>
+        <div class="ea-operator">
+          {% for name in signers %}
+          <label class="ea-chip"><input type="radio" name="signer" value="{{ name }}" required {% if signers|length == 1 %}checked{% endif %} /><span>{{ name }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <fieldset class="ea-review-fieldset">
+        <legend>Verdict</legend>
+        <div class="ea-operator">
+          <label class="ea-chip"><input type="radio" name="verdict" value="accepted" required checked data-ea-verdict-choice /><span>Accepted</span></label>
+          <label class="ea-chip"><input type="radio" name="verdict" value="accepted_remarks" data-ea-verdict-choice /><span>Accepted with remarks</span></label>
+          <label class="ea-chip ea-chip-danger"><input type="radio" name="verdict" value="rejected" data-ea-verdict-choice /><span>Rejected</span></label>
+        </div>
+      </fieldset>
+      <label class="ea-review-comment">
+        <span data-ea-review-comment-label>Comment (optional)</span>
+        <textarea name="comment" rows="2" maxlength="500" data-ea-review-comment></textarea>
+      </label>
+      <div class="ea-review-actions">
+        <button type="button" class="ea-secondary" data-ea-dialog-close>Cancel</button>
+        <button type="submit" class="ea-submit">Sign off {{ sec.unsigned_count }} check{{ "s" if sec.unsigned_count != 1 }}</button>
+      </div>
+      {% else %}
+      <p class="ea-setup-notice">
+        Nobody may sign off yet. Mark a supervisor as <em>may sign off</em> in
+        <a href="/setup?section=lab_staff">Setup → Lab Staff</a>.
+      </p>
+      {% endif %}
+    </form>
+  </dialog>
+  {% endif %}
+</section>
+{% endfor %}
+
+<section class="panel" id="ea-history">
+  <details class="table-collapsible" open data-table-filter data-table-download-label="Download EA checks as Excel">
+    <summary class="table-summary">
+      <span class="table-summary-title">All checks · {{ period_label | lower }}</span>
+      <span class="badge table-summary-count">{{ history_rows|length }} rows</span>
+    </summary>
+    {% if history_rows %}
+    <div class="table-wrap table-wrap-dashboard">
+      <table class="ea-history-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Time</th><th>EA</th><th>Standard</th><th>Lot</th>
+            <th>C %</th><th>N %</th><th>Result</th><th>By</th><th>Comment</th><th>Signed off</th><th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in history_rows %}
+          <tr class="{% if r.voided %}is-voided{% endif %}">
+            <td>{{ r.date }}</td>
+            <td>{{ r.time }}</td>
+            <td>{{ r.ea_label }}</td>
+            <td>{{ r.standard }}</td>
+            <td>{{ r.rm_lot or "" }}</td>
+            <td class="num">{{ num(r.conc_c) }}</td>
+            <td class="num">{{ num(r.conc_n) }}</td>
+            <td>{{ result_badge(r.passed, r.voided) }}</td>
+            <td>{{ r.operator }}</td>
+            <td>{{ r.comment }}{% if r.voided %} <span class="ea-muted">[voided by {{ r.voided_by }}: {{ r.void_reason }}]</span>{% endif %}</td>
+            <td>{% if r.signoff_id %}<a class="table-link" href="/qc/signoffs/{{ r.signoff_id }}">#{{ r.signoff_id }}</a>{% endif %}</td>
+            <td>
+              {% if not r.voided and not r.signoff_id %}
+              <button type="button" class="ea-void-open" data-ea-void-open="{{ r.id }}"
+                      data-ea-void-label="{{ r.date }} {{ r.time }} · {{ r.ea_label }} · {{ r.values_text }}"
+                      title="Void this check (mistyped entry)" aria-label="Void check of {{ r.date }} {{ r.time }}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+    {% else %}
+    <p class="table-empty-row">No checks in this period. Log one with the strip above.</p>
+    {% endif %}
+  </details>
+</section>
+
+<dialog class="ea-review ea-void-dialog" data-ea-void-dialog aria-labelledby="ea-void-title">
+  <form method="post" action="" data-ea-void-form>
+    <header class="ea-review-head">
+      <h3 id="ea-void-title">Void check</h3>
+      <button type="button" class="ea-dialog-close" data-ea-dialog-close aria-label="Close">×</button>
+    </header>
+    <p data-ea-void-label></p>
+    <p class="ea-muted">The check stays in the record, struck through and excluded from statistics. Use this for mistyped entries — a real failed check is logged, not voided.</p>
+    <input type="hidden" name="next" value="{{ ea_return_url }}" />
+    <label class="ea-review-comment">Reason <input type="text" name="reason" maxlength="255" required placeholder="e.g. typo: 17.2 instead of 71.2" /></label>
+    <label class="ea-review-comment">
+      Voided by
+      {% if staff %}
+      <select name="by" required data-no-searchable>
+        <option value="">—</option>
+        {% for name in staff %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
+      </select>
+      {% else %}
+      <input type="text" name="by" maxlength="40" required />
+      {% endif %}
+    </label>
+    <div class="ea-review-actions">
+      <button type="button" class="ea-secondary" data-ea-dialog-close>Cancel</button>
+      <button type="submit" class="ea-submit ea-danger">Void check</button>
+    </div>
+  </form>
+</dialog>
+
+<section class="panel" id="qc-signoffs">
+  <details class="table-collapsible" open data-table-filter data-table-download-label="Download sign-offs as Excel">
+    <summary class="table-summary">
+      <span class="table-summary-title">Sign-off history</span>
+      <span class="badge table-summary-count">{{ signoff_rows|length }} rows</span>
+    </summary>
+    {% if signoff_rows %}
+    <div class="table-wrap table-wrap-dashboard">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Signed</th><th>EA · standard</th><th>Period</th><th>Checks</th><th>Failed</th>
+            <th>C % mean ± s</th><th>N % mean ± s</th><th>Verdict</th><th>By</th><th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in signoff_rows %}
+          {% set els = s.stats.get("elements", []) %}
+          {% set c = els | selectattr("symbol", "equalto", "c") | first %}
+          {% set n = els | selectattr("symbol", "equalto", "n") | first %}
+          <tr>
+            <td><a class="table-link" href="/qc/signoffs/{{ s.id }}" title="Printable record">#{{ s.id }}</a></td>
+            <td>{{ s.signed_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ s.description }}</td>
+            <td>{{ s.period_from.strftime("%Y-%m-%d") }} – {{ s.period_to.strftime("%Y-%m-%d") }}</td>
+            <td class="num">{{ s.n_items }}</td>
+            <td class="num">{{ s.n_flagged }}</td>
+            <td class="num">{% if c %}{{ num(c.mean) }} ± {{ num(c.sd, 3) }}{% endif %}</td>
+            <td class="num">{% if n %}{{ num(n.mean) }} ± {{ num(n.sd, 3) }}{% endif %}</td>
+            <td><span class="ea-verdict ea-verdict-{{ s.verdict }}">{{ s.verdict_label }}</span></td>
+            <td>{{ s.signed_by }}</td>
+            <td>{{ s.comment }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+    {% else %}
+    <p class="table-empty-row">No sign-offs yet. Use <strong>Review &amp; sign off</strong> on an EA above.</p>
+    {% endif %}
+  </details>
+</section>
+{% endif %}
+{% endblock %}

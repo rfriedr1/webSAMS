@@ -167,6 +167,7 @@
             <dt><kbd>/prep</kbd></dt><dd>Jump to Lab/Preparation</dd>
             <dt><kbd>/graph</kbd></dt><dd>Jump to Lab/Graphitization</dd>
             <dt><kbd>/ana</kbd></dt><dd>Jump to Lab/Analysis</dd>
+            <dt><kbd>/ea</kbd></dt><dd>Jump to Lab/EA Checks</dd>
             <dt><kbd>/sub</kbd></dt><dd>Jump to Submitters</dd>
             <dt><kbd>/proj</kbd></dt><dd>Jump to Projects</dd>
             <dt><kbd>/import</kbd></dt><dd>Jump to Sample Import</dd>

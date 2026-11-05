@@ -1,0 +1,95 @@
+{#- Setup editor for sections of kind "ea_checks" (see setup_handlers.py). Included by setup.html. -#}
+{% macro standard_row(row) %}
+<div class="setup-custom-row setup-ea-standard-row">
+  <div class="setup-ea-ident">
+    <div class="import-field">
+      <label>Key</label>
+      <input type="text" name="std_key" value="{{ row.std_key }}" placeholder="acetanilide" spellcheck="false" />
+    </div>
+    <div class="import-field">
+      <label>Name</label>
+      <input type="text" name="std_name" value="{{ row.std_name }}" placeholder="Acetanilide" />
+    </div>
+    <div class="import-field">
+      <label>Lot / batch</label>
+      <input type="text" name="std_lot" value="{{ row.std_lot }}" maxlength="40" placeholder="e.g. B123456" />
+    </div>
+  </div>
+  {% for symbol, label in active_section.ea_elements %}
+  <div class="setup-ea-element">
+    <span class="setup-ea-element-label">{{ label }} %</span>
+    {% for part, part_label in [("ref", "Reference"), ("min", "Min"), ("max", "Max"), ("step", "Gauge step")] %}
+    <div class="import-field">
+      <label>{{ part_label }}</label>
+      <input type="text" inputmode="decimal" name="std_{{ symbol }}_{{ part }}" value="{{ row['std_' ~ symbol ~ '_' ~ part] }}" />
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro instrument_row(row) %}
+<div class="setup-custom-row setup-ea-instrument-row">
+  <div class="import-field">
+    <label>Key</label>
+    <input type="text" name="inst_key" value="{{ row.inst_key }}" placeholder="ea1" spellcheck="false" />
+  </div>
+  <div class="import-field">
+    <label>Label</label>
+    <input type="text" name="inst_label" value="{{ row.inst_label }}" placeholder="EA 1 · AGE64" />
+  </div>
+  <div class="import-field">
+    <label>Graphitization systems</label>
+    <input type="text" name="inst_systems" value="{{ row.inst_systems }}" placeholder="age64.1, age64.2" spellcheck="false" />
+  </div>
+  <div class="import-field">
+    <label>Check standards (first = default)</label>
+    <input type="text" name="inst_standards" value="{{ row.inst_standards }}" placeholder="acetanilide" spellcheck="false" />
+  </div>
+</div>
+{% endmacro %}
+
+{% set blank_standard = {} %}
+{% set blank_instrument = {"inst_key": "", "inst_label": "", "inst_systems": "", "inst_standards": ""} %}
+
+<form method="post" action="{{ active_section.form_action }}">
+  <h4 class="setup-subhead">Check standards</h4>
+  <p class="setup-note">
+    The material measured for the daily check, with its reference value and the pass window.
+    A check passes when every certified element is inside <em>min … max</em> (limits included).
+    Leave an element blank if the standard does not certify it. <em>Gauge step</em> is how far
+    the needle moves per mouse/arrow step on the entry strip. Values are copied onto each logged
+    check, so changing them later never rewrites history. Clear the key to remove a standard
+    (not possible once checks were logged with it).
+  </p>
+  <div class="setup-custom-list" data-setup-rows="standard">
+    {% for row in active_section.ea_standard_rows %}{{ standard_row(row) }}{% endfor %}
+  </div>
+  <template data-setup-row-template="standard">{{ standard_row(blank_standard) }}</template>
+  <button type="button" class="setup-add-row" data-setup-add-row="standard">+ Add a standard</button>
+
+  <h4 class="setup-subhead">Elemental analyzers</h4>
+  <p class="setup-note">
+    One row per EA. <em>Graphitization systems</em> (comma-separated) are the systems that use
+    this EA — the Graph Batch Builder warns when their EA has no passing check today.
+    Configured systems: {{ active_section.ea_system_options | join(", ") }}.
+    Clear the key to remove an EA.
+  </p>
+  <div class="setup-custom-list" data-setup-rows="instrument">
+    {% for row in active_section.ea_instrument_rows %}{{ instrument_row(row) }}{% endfor %}
+  </div>
+  <template data-setup-row-template="instrument">{{ instrument_row(blank_instrument) }}</template>
+  <button type="button" class="setup-add-row" data-setup-add-row="instrument">+ Add an EA</button>
+
+  <h4 class="setup-subhead">Sign-off</h4>
+  <div class="import-field setup-ea-reminder">
+    <label for="ea-signoff-reminder">Remind when checks are unsigned for more than (days)</label>
+    <input id="ea-signoff-reminder" type="number" min="1" max="366" name="signoff_reminder_days" value="{{ active_section.ea_reminder_days }}" />
+  </div>
+
+  <div class="setup-actions">
+    <button type="submit">Save {{ active_section.title }}</button>
+  </div>
+</form>
+{% include "setup/_add_row_script.html" %}

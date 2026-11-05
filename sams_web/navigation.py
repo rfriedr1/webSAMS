@@ -28,6 +28,7 @@ SUB_NAV_ITEMS: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "preparation", "label": "Preparation", "href": "/lab/preparation", "external": False},
         {"key": "graphitization", "label": "Graphitization", "href": "/lab/graphitization", "external": False},
         {"key": "analysis", "label": "Analysis", "href": "/lab/analysis", "external": False},
+        {"key": "ea_checks", "label": "EA Checks", "href": "/lab/ea-checks", "external": False},
     ),
     # Search / Setup / Help deliberately have NO sub-nav: each previously
     # showed a single chip duplicating the main nav item ("System
@@ -49,6 +50,7 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Lab Operations: Preparation", "href": "/lab/preparation"},
     {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
     {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
+    {"label": "Lab Operations: EA Checks", "href": "/lab/ea-checks"},
     {"label": "Search: Global", "href": "/search?global=1"},
     {"label": "Setup", "href": "/setup"},
     {"label": "Help", "href": "/help"},
@@ -78,7 +80,7 @@ def resolve_active_module(request: Request) -> str:
         return "api_docs"
     if path.startswith("/search") and search_global == "1":
         return "search"
-    if path.startswith("/lab/"):
+    if path.startswith("/lab/") or path.startswith("/qc/"):
         return "lab_operations"
     if path.startswith("/search") and search_mode == "analysis":
         return "lab_operations"
@@ -120,6 +122,8 @@ def is_subnav_active(request: Request, module: str, item_key: str) -> bool:
             return path.startswith("/lab/graphitization") or (path.startswith("/search") and search_context == "targets" and search_mode != "analysis")
         if item_key == "analysis":
             return path.startswith("/lab/analysis") or (path.startswith("/search") and search_mode == "analysis")
+        if item_key == "ea_checks":
+            return path.startswith("/lab/ea-checks") or path.startswith("/qc/")
 
     if module == "search" and item_key == "global_search":
         return path.startswith("/search") and resolve_active_module(request) == "search"

@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from sams_web.ea_checks import EaCheckLog
 from sams_web.dependencies import get_service
 from sams_web.services import SamsService
 from sams_web.import_settings import (
@@ -97,6 +98,7 @@ def dashboard(
             "standards_cards": standards_cards,
             "standards_chart": standards_chart,
             "show_on_hold": show_on_hold,
+            "ea_tile": EaCheckLog(service).dashboard_tile(),
         },
     )
 

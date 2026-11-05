@@ -131,8 +131,19 @@
         crumbs.push({ label: "Graphitization", href: "/lab/graphitization" });
       } else if (labMode === "analysis") {
         crumbs.push({ label: "Analysis", href: "/lab/analysis" });
+      } else if (labMode === "ea-checks") {
+        crumbs.push({ label: "EA Checks", href: "/lab/ea-checks" });
       } else {
         crumbs.push({ label: titleCaseToken(labMode), href: path });
+      }
+      return crumbs;
+    }
+
+    if (root === "qc") {
+      crumbs.push({ label: "Lab Operations", href: "/lab/preparation" });
+      crumbs.push({ label: "EA Checks", href: "/lab/ea-checks" });
+      if (segments[1] === "signoffs" && segments[2]) {
+        crumbs.push({ label: `Sign-off #${segments[2]}`, href: path });
       }
       return crumbs;
     }
@@ -450,6 +461,7 @@
           { label: "Lab Operations: Preparation", href: "/lab/preparation" },
           { label: "Lab Operations: Graphitization", href: "/lab/graphitization" },
           { label: "Lab Operations: Analysis", href: "/lab/analysis" },
+          { label: "Lab Operations: EA Checks", href: "/lab/ea-checks" },
           { label: "Search: Global", href: "/search?global=1" },
           { label: "Settings", href: "/setup" },
           { label: "Help", href: "/help" },
@@ -492,6 +504,7 @@
         "/prep": "/lab/preparation",
         "/graph": "/lab/graphitization",
         "/ana": "/lab/analysis",
+        "/ea": "/lab/ea-checks",
         "/sub": "/submitters",
         "/proj": "/projects",
         "/import": "/samples/import",

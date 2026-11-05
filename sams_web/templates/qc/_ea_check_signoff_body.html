@@ -1,0 +1,17 @@
+{#- EA-check part of a QC sign-off print view (EaCheckSignoffSubject.body_template). -#}
+{% from "_ea_check_macros.html" import stats_table, charts, result_badge, num %}
+{{ stats_table(signoff.stats) }}
+{{ charts(signoff.body.chart) }}
+<h3 class="qc-print-sub">Checks covered</h3>
+<table class="qc-print-table" data-table-plain>
+  <thead><tr><th>Date</th><th>Time</th><th>Lot</th><th>C %</th><th>N %</th><th>Result</th><th>By</th><th>Comment</th></tr></thead>
+  <tbody>
+    {% for r in signoff.body.rows %}
+    <tr class="{% if not r.passed %}is-fail{% endif %}">
+      <td>{{ r.date }}</td><td>{{ r.time }}</td><td>{{ r.rm_lot }}</td>
+      <td class="num">{{ num(r.conc_c) }}</td><td class="num">{{ num(r.conc_n) }}</td>
+      <td>{{ result_badge(r.passed) }}</td><td>{{ r.operator }}</td><td>{{ r.comment }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
