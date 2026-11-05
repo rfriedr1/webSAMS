@@ -61,6 +61,19 @@ def sign(service, period_to, **overrides):
     return QcSignoffs(service, now=T0 + timedelta(days=30)).sign(**args)
 
 
+def test_unsigned_view_drops_signed_checks(service):
+    ids = seed_checks(service, 3)
+    log = EaCheckLog(service, now=T0 + timedelta(days=30))
+    assert [r["id"] for r in log.page_view(period="unsigned")["history_rows"]] == list(reversed(ids))
+    assert sign(service, (T0 + timedelta(days=1)).isoformat()).success  # first two signed
+    log = EaCheckLog(service, now=T0 + timedelta(days=30))
+    assert [r["id"] for r in log.page_view(period="unsigned")["history_rows"]] == [ids[2]]
+    assert sign(service, (T0 + timedelta(days=2)).isoformat()).success  # all signed
+    log = EaCheckLog(service, now=T0 + timedelta(days=30))
+    assert log.page_view(period="unsigned")["history_rows"] == []
+    assert len(log.page_view(period="all")["history_rows"]) == 3
+
+
 def test_signs_exactly_the_unsigned_set_up_to_period_to(service):
     ids = seed_checks(service, 5, fail_index=2)
     cutoff = (T0 + timedelta(days=3)).isoformat()  # 4 checks reviewed; the 5th came later

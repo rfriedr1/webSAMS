@@ -891,8 +891,14 @@ class EaCheckLog:
                         },
                     }
                 )
+        if period == "unsigned":
+            # Exactly what still waits for a sign-off: signed checks drop out,
+            # and so do voided ones (they are never signed; other periods list them).
+            history_checks = [c for c in period_checks if not c.voided and str(c.id) not in signed]
+        else:
+            history_checks = period_checks
         context["history_rows"] = [
-            check_row(c, signoff_id=signed.get(str(c.id)), labels=labels) for c in reversed(period_checks)
+            check_row(c, signoff_id=signed.get(str(c.id)), labels=labels) for c in reversed(history_checks)
         ]
         context["signoff_rows"] = signoffs.history(subject_type=SUBJECT_TYPE)
         return context

@@ -142,7 +142,7 @@
 <section class="panel" id="ea-history">
   <details class="table-collapsible" open data-table-filter data-table-download-label="Download EA checks as Excel">
     <summary class="table-summary">
-      <span class="table-summary-title">All checks · {{ period_label | lower }}</span>
+      <span class="table-summary-title">Checks · {{ period_label | lower }}</span>
       <span class="badge table-summary-count">{{ history_rows|length }} rows</span>
     </summary>
     {% if history_rows %}
@@ -185,7 +185,11 @@
     </div>
     <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
     {% else %}
+    {% if period == "unsigned" %}
+    <p class="table-empty-row">Every check is signed off. Pick another period above to see signed checks.</p>
+    {% else %}
     <p class="table-empty-row">No checks in this period. Log one with the strip above.</p>
+    {% endif %}
     {% endif %}
   </details>
 </section>
