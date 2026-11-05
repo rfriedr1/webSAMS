@@ -90,6 +90,22 @@ _Avoid_: Graph workflow, Graph page.
 **Sequence**:
 The measurement order of a **Target** within a **Magazine**, as stored in `measprog_t.sequence`. Independent of **Position** — operators may measure in a different order than the physical layout (e.g. interleaving standards regardless of slot).
 
+**EA check**:
+The daily (or more frequent) measurement of a **Check standard** on an elemental analyzer (EA) before samples are combusted on it: the measured C % / N % must lie inside the standard's pass window. A go/no-go check of the instrument — an ISO 17025 *intermediate check* — **not** a calibration or standardisation; nothing is corrected with it. Stored in `ea_check_t`; a failed check carries a comment and is usually followed by a re-run the same day. EA 1 is shared by AGE and MAG, EA 2 serves AGE64 (configurable in Setup → EA Checks). See [ADR-0005](docs/adr/0005-qc-signoff-and-ea-checks.md).
+_Avoid_: EA calibration, EA standard, acetanilide run.
+
+**Check standard**:
+The material measured in an **EA check** — acetanilide today (C 71.09 %, N 10.36 %) — with its lot, reference values and pass window, configured in Setup. Not a **Standard** in the AMS sense (it is not a `sample_t` row and never goes through a **Graph batch**).
+_Avoid_: Standard (unqualified), reference material (too broad).
+
+**QC sign-off**:
+A supervisor's recorded review of a set of quality-control results: who signed, when, which items, the verdict (*accepted*, *accepted with remarks*, *rejected*) and the statistics as reviewed. Generic across kinds of QC — the *subject type* (`ea_check` now; OXA2 scatter, blanks, IAEA standards later) and *subject key* (e.g. `ea1|acetanilide`) say what was reviewed. Stored in `qc_signoff_t` with the covered items in `qc_signoff_item_t`. An item is signed at most once.
+_Avoid_: Approval, check (the paper log's word), validation.
+
+**Void**:
+Marking a wrongly entered QC record as invalid without deleting it — who, when and why are kept, the record stays visible and is excluded from statistics. Only for entry mistakes; a genuinely failed **EA check** is logged, not voided. A signed-off record cannot be voided.
+_Avoid_: Delete, cancel.
+
 ## Relationships
 
 - A **Submitter** owns one or more **Projects**.
@@ -103,6 +119,7 @@ The measurement order of a **Target** within a **Magazine**, as stored in `measp
 - A **Preparation** belongs to one **Prep batch**.
 - A **Target** belongs to one **Graph batch** at the graphitization stage and to one **Magazine** at the measurement stage.
 - A **Prep batch**, **Graph batch**, or **Magazine** may contain a mix of **Samples** and **Standards**.
+- An **EA check** measures one **Check standard** on one EA; a **QC sign-off** covers a set of EA checks of one (EA, check standard) pair.
 
 ## Flagged ambiguities
 

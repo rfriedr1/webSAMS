@@ -14,6 +14,9 @@
 - calc_set_t(calcset, a_off, a_err_abs, a_err_rel, b_off, b_err_abs, b_err_rel, iso_off, iso_err_abs, iso_err_rel, isobar, magazine, date_calc, user_calc, charge, first_run, last_run, comment, fract, edit, deadtime, ba_nom, ra_nom, scatter, weighting, poisson, cycles, ra_norm, ba_norm)  
 # this table stores the variables used during data-evaluation of a magazine
   
+- ea_check_t(id, ea, standard, rm_lot, checked_at, weight_mg, conc_c, conc_n, c_ref, c_min, c_max, n_ref, n_min, n_max, passed, operator, comment, voided, void_reason, voided_by, voided_at, created_at)  
+# webSAMS-owned (ADR-0005): one row per measurement of a check standard (acetanilide) on an elemental analyzer; reference values and pass window are snapshotted per row; never updated except to void. weight_mg = standard weighed in (mg, optional). DDL: docs/sql/0005_qc_ea_checks.sql + 0006_ea_check_weight.sql
+
 - fraction_t(fraction, indexnr)
 
 - graphbatch_t(batch, batch_nr)  
@@ -42,6 +45,12 @@
 
 - project_t(project_nr, project, user_nr, invoice_nr, in_date, out_date, desired_date, priority, report_type, letter, project_comment, status, price, project_type, research, report, invoice, AuftragsNr, invoice_date, advisor, sample_storage_loc, FreeOfCharge, order_nr, supervisor, return_to_sender, returned_to_sender, prep_return_to_sender, prep_returned_to_sender)  
 # this table holds all the information about a project, projects belong to users, projects can have samples
+
+- qc_signoff_t(id, subject_type, subject_key, period_from, period_to, n_items, n_flagged, stats_json, verdict, signed_by, signed_at, comment)  
+# webSAMS-owned (ADR-0005): a supervisor's sign-off of a set of QC items (generic: subject_type 'ea_check' now, OXA2/blanks/IAEA later); stats_json = statistics as reviewed
+
+- qc_signoff_item_t(signoff_id, item_type, item_ref)  
+# webSAMS-owned (ADR-0005): which items a sign-off covered; unique on (item_type, item_ref) so an item is signed once. A link table so items in BATS tables can be signed without altering them
 
 - reporttype_t(type, indexnr)  
 # this table has a list of all possible report types that can be assigned to a project
@@ -105,6 +114,7 @@
 - project_t.research -> research_t.research
 - project_t.status -> projectstatus_t.status
 - project_t.user_nr -> user_t.user_nr
+- qc_signoff_item_t.signoff_id -> qc_signoff_t.id
 - sample_t.fraction -> fraction_t.fraction
 - sample_t.material -> material_t.material
 - sample_t.project_nr -> project_t.project_nr

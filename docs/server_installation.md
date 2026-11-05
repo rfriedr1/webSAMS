@@ -323,8 +323,30 @@ Open **Setup** in SAMS Web and work through:
    (section 7) — **LocalSystem** reaches the network as the computer account, which
    usually has none.
 
+7. **EA Checks** and **Lab Staff** — the elemental analyzers with their check standard
+   (acetanilide: reference values, pass window, lot), and the names shown as chips when
+   a check is logged. Tick *may sign off* for the lab director / deputies. These need
+   the database tables below.
+
 After the first **Save**, `C:\ProgramData\webSAMS\setup_data.json` exists; include it
 in backups (section 11).
+
+### EA checks and QC sign-off
+
+The daily EA checks (Lab → EA Checks, and the strip on Lab → Graphitization) and the
+supervisor sign-off are stored in three tables that webSAMS owns — BATS does not use them.
+They are not created automatically. Run these scripts once on each database, in order
+(the test database first, then `db_dmams`), with a MySQL account allowed to
+`CREATE TABLE` / `ALTER TABLE`:
+
+1. [`docs/sql/0005_qc_ea_checks.sql`](sql/0005_qc_ea_checks.sql) — creates the three tables.
+2. [`docs/sql/0006_ea_check_weight.sql`](sql/0006_ea_check_weight.sql) — adds the weight of
+   the check standard (`ea_check_t.weight_mg`).
+
+The app's own account then needs `SELECT, INSERT, UPDATE` on them (`UPDATE` only for
+voiding a check). Until a table or column exists the pages say "not set up yet" and name
+what is missing, instead of failing.
+Background: [ADR-0005](adr/0005-qc-signoff-and-ea-checks.md).
 
 ---
 

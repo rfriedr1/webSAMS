@@ -1,0 +1,33 @@
+{#- Setup editor for sections of kind "lab_staff" (see setup_handlers.py). Included by setup.html. -#}
+{% macro staff_row(row) %}
+<div class="setup-custom-row setup-staff-row">
+  <div class="import-field">
+    <label>Name</label>
+    <input type="text" name="staff_name" value="{{ row.name }}" maxlength="40" placeholder="Leni" />
+  </div>
+  <div class="import-field">
+    <label>Role</label>
+    <select name="staff_role" data-no-searchable>
+      <option value="staff" {% if row.role != "signer" %}selected{% endif %}>Lab staff</option>
+      <option value="signer" {% if row.role == "signer" %}selected{% endif %}>Lab staff + may sign off</option>
+    </select>
+  </div>
+</div>
+{% endmacro %}
+
+<form method="post" action="{{ active_section.form_action }}">
+  <p class="setup-note">
+    These names appear as one-click chips wherever a lab check is logged (EA checks), and the
+    ones marked <em>may sign off</em> can sign off QC results (lab director, deputies).
+    Clear a name to remove it — names already stored on records are not changed.
+  </p>
+  <div class="setup-custom-list" data-setup-rows="staff">
+    {% for row in active_section.staff_rows %}{{ staff_row(row) }}{% endfor %}
+  </div>
+  <template data-setup-row-template="staff">{{ staff_row({"name": "", "role": "staff"}) }}</template>
+  <button type="button" class="setup-add-row" data-setup-add-row="staff">+ Add a person</button>
+  <div class="setup-actions">
+    <button type="submit">Save {{ active_section.title }}</button>
+  </div>
+</form>
+{% include "setup/_add_row_script.html" %}

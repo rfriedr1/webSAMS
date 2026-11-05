@@ -657,7 +657,9 @@
       containers.add(container);
     });
     document.querySelectorAll("table").forEach((table) => {
-      if (table.closest("[data-table-filter]")) {
+      // `data-table-plain`: a small key/value table (statistics, a printed
+      // record) that is not a data list — no search, sort or export.
+      if (table.closest("[data-table-filter]") || table.hasAttribute("data-table-plain")) {
         return;
       }
       const wrap = table.closest(".table-wrap");
@@ -672,7 +674,7 @@
   };
 
   installers.installTableWrapping = () => {
-    document.querySelectorAll("table").forEach((table) => {
+    document.querySelectorAll("table:not([data-table-plain])").forEach((table) => {
       ensureTableWrap(table);
     });
   };

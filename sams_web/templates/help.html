@@ -27,7 +27,7 @@
           {% for rule in magic_nav_rules %}
           <li><kbd>{{ rule.example }}</kbd> — {{ rule.description }}</li>
           {% endfor %}
-          <li><kbd>/prep</kbd> · <kbd>/graph</kbd> · <kbd>/ana</kbd> jump to the matching Lab page.</li>
+          <li><kbd>/prep</kbd> · <kbd>/graph</kbd> · <kbd>/ana</kbd> · <kbd>/ea</kbd> jump to the matching Lab page (<kbd>/ea</kbd> = EA Checks).</li>
           <li><kbd>/sub</kbd> · <kbd>/proj</kbd> · <kbd>/import</kbd> jump to Submitters, Projects, and Sample&nbsp;Import.</li>
           <li>
             A command always starts with <kbd>/</kbd>, so <kbd>/sub</kbd> (the submitter <em>list</em>)
@@ -181,6 +181,34 @@
       <li>
         Need the blank form to send a customer?
         <a href="/samples/import/template">Download the template</a> from the upload step.
+      </li>
+    </ul>
+  </div>
+
+  <div class="card" id="help-ea-checks">
+    <h3>EA checks (acetanilide)</h3>
+    <ul>
+      <li>
+        <strong>Log the daily check</strong> in the <em>EA checks today</em> strip at the top of
+        <a href="/lab/graphitization">Lab → Graphitization</a> or <a href="/lab/ea-checks">Lab → EA Checks</a>
+        (<kbd>/ea</kbd>): type C % and N % (comma or point) — or drag the needle, click on the gauge,
+        use the mouse wheel or the arrow keys (0.1 per step). Pick your name and press <em>Enter</em>.
+        The field turns green inside the pass window and red outside it.
+      </li>
+      <li>
+        <strong>Out of the window?</strong> The check is still logged as <em>failed</em>, with a short comment
+        on what you will do. Re-run as often as needed — the EA's status for the day is its latest check.
+        The Graph Batch Builder marks systems whose EA has no passing check yet, but never blocks.
+      </li>
+      <li>
+        <strong>Typed a wrong number?</strong> Void it with the × in the history table (reason required).
+        Nothing is ever deleted; signed-off checks can no longer be voided.
+      </li>
+      <li>
+        <strong>Sign-off</strong>: the lab director opens <em>Review &amp; sign off</em> on the EA Checks page,
+        sees exactly the unsigned checks with their statistics (mean, s, bias, failures) and signs with a verdict.
+        Each sign-off has a printable record for the audit binder. Analyzers, check standards and who may sign
+        are set in <a href="/setup?section=ea_checks">Setup → EA Checks</a> and <a href="/setup?section=lab_staff">Lab Staff</a>.
       </li>
     </ul>
   </div>

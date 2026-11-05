@@ -1,0 +1,18 @@
+<script>
+  // "+ Add …" buttons: clone <template data-setup-row-template="X"> into
+  // [data-setup-rows="X"]. Shared by the repeated-row Setup editors.
+  (() => {
+    document.querySelectorAll("[data-setup-add-row]").forEach((button) => {
+      if (button.dataset.wired) return;
+      button.dataset.wired = "1";
+      const name = button.dataset.setupAddRow;
+      const host = document.querySelector(`[data-setup-rows="${name}"]`);
+      const tpl = document.querySelector(`[data-setup-row-template="${name}"]`);
+      if (!host || !tpl) return;
+      button.addEventListener("click", () => {
+        host.appendChild(tpl.content.cloneNode(true));
+        host.lastElementChild?.querySelector("input, select")?.focus();
+      });
+    });
+  })();
+</script>

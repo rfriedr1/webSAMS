@@ -11,6 +11,8 @@ SETUP_SECTION_LAB_WARNING_THRESHOLDS = "lab_warning_thresholds"
 SETUP_SECTION_IMPORT_HEADINGS = "import_column_headings"
 SETUP_SECTION_EMAIL = "email_settings"
 SETUP_SECTION_SAMPLE_PHOTOS = "sample_photos"
+SETUP_SECTION_EA_CHECKS = "ea_checks"
+SETUP_SECTION_LAB_STAFF = "lab_staff"
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,22 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         editable=True,
         status="active",
         form_action="/setup/sample_photos",
+    ),
+    SetupSection(
+        key=SETUP_SECTION_EA_CHECKS,
+        title="EA Checks",
+        description="Elemental analyzers, the check standards measured on them (e.g. acetanilide) with reference values and pass windows, and the sign-off reminder.",
+        editable=True,
+        status="active",
+        form_action="/setup/ea_checks",
+    ),
+    SetupSection(
+        key=SETUP_SECTION_LAB_STAFF,
+        title="Lab Staff",
+        description="People who log lab checks, and who may sign off QC results. Shown as one-click name chips.",
+        editable=True,
+        status="active",
+        form_action="/setup/lab_staff",
     ),
 )
 

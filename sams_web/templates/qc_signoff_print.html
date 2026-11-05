@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{#- Printable QC sign-off record (generic). The subject's body template
+    renders the kind-specific part; this page frames it with the facts every
+    sign-off has. Print it (Ctrl/⌘ P) for the audit binder. -#}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-ea-checks.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/ea-checks.js?v={{ css_v }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="panel qc-print">
+  <div class="qc-print-toolbar">
+    <a href="{{ signoff.return_url }}#qc-signoffs" class="ea-secondary">← Back</a>
+    <button type="button" class="ea-submit" data-qc-print>Print</button>
+  </div>
+  <header class="qc-print-head">
+    <div>
+      <p class="qc-print-kicker">QC sign-off record #{{ signoff.id }} · {{ signoff.subject_label }}</p>
+      <h2>{{ signoff.description }}</h2>
+    </div>
+    <span class="ea-verdict ea-verdict-{{ signoff.verdict }}">{{ signoff.verdict_label }}</span>
+  </header>
+  <dl class="qc-print-facts">
+    <div><dt>Period</dt><dd>{{ signoff.period_from.strftime("%Y-%m-%d %H:%M") }} – {{ signoff.period_to.strftime("%Y-%m-%d %H:%M") }}</dd></div>
+    <div><dt>Items</dt><dd>{{ signoff.n_items }} ({{ signoff.n_flagged }} flagged)</dd></div>
+    <div><dt>Signed by</dt><dd>{{ signoff.signed_by }}</dd></div>
+    <div><dt>Signed at</dt><dd>{{ signoff.signed_at.strftime("%Y-%m-%d %H:%M") }}</dd></div>
+    {% if signoff.comment %}<div class="qc-print-wide"><dt>Comment</dt><dd>{{ signoff.comment }}</dd></div>{% endif %}
+  </dl>
+  {% if signoff.body_template %}{% include signoff.body_template %}{% endif %}
+  <footer class="qc-print-foot">
+    <p>Statistics as reviewed (stored with the sign-off). Recorded in webSAMS v{{ app_version }}; names are picked from Setup → Lab Staff (no login yet).</p>
+    <div class="qc-print-signature"><span>Signature</span></div>
+  </footer>
+</section>
+{% endblock %}

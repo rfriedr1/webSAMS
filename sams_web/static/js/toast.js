@@ -104,11 +104,23 @@
         toasted = true;
       }
     });
-    const noticeKeys = ["bench_notice", "graph_notice", "graph_batch_notice"];
+    const noticeKeys = ["bench_notice", "graph_notice", "graph_batch_notice", "ea_check_notice", "signoff_notice"];
     noticeKeys.forEach((key) => {
       const value = params.get(key);
       if (value) {
-        show(value.replace(/\+/g, " "), "info");
+        // A failed EA check is logged fine but must not read as a success.
+        const kind = key === "ea_check_notice" && value.includes("FAILED") ? "error" : "info";
+        show(value.replace(/\+/g, " "), kind);
+        params.delete(key);
+        toasted = true;
+      }
+    });
+    // Rejected EA-check / sign-off posts redirect back with *_error; the
+    // page also shows them inline, the toast makes sure they are noticed.
+    ["ea_check_error", "signoff_error"].forEach((key) => {
+      const value = params.get(key);
+      if (value) {
+        show(value.replace(/\+/g, " "), "error", { duration: 8000 });
         params.delete(key);
         toasted = true;
       }

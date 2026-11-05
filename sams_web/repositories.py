@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 
-from sqlalchemy import and_, case, false, func, select, text, tuple_
+from sqlalchemy import String, and_, case, cast, exists, false, func, select, text, tuple_
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, selectinload
 
 from sams_web.models import (
+    EaCheck,
+    QcSignoff,
+    QcSignoffItem,
     Method,
     Preparation,
     Project,
@@ -937,3 +941,147 @@ class SamsRepository:
           AND (project_t.out_date < '1900-01-01' OR project_t.out_date IS NULL)
         ORDER BY sample_t.sample_nr
         """
+
+    # ---- Quality control: EA checks + generic QC sign-off --------------------
+    # Tables created by hand on the server (ADR-0005). `qc_tables_available`
+    # lets pages degrade to a "not set up yet" notice instead of a 500 while
+    # they do not exist.
+
+    QC_TABLES = ("ea_check_t", "qc_signoff_t", "qc_signoff_item_t")
+    # Columns added after the tables were first created (docs/sql/0006_…).
+    # A missing one is reported as "table.column".
+    QC_LATER_COLUMNS = {"ea_check_t": ("weight_mg",)}
+
+    def missing_qc_tables(self) -> list[str]:
+        missing: list[str] = []
+        for table in self.QC_TABLES:
+            if not self._qc_probe(f"SELECT 1 FROM {table} WHERE 1 = 0"):
+                missing.append(table)
+                continue
+            for column in self.QC_LATER_COLUMNS.get(table, ()):
+                if not self._qc_probe(f"SELECT {column} FROM {table} WHERE 1 = 0"):
+                    missing.append(f"{table}.{column}")
+        return missing
+
+    def _qc_probe(self, sql: str) -> bool:
+        try:
+            self.session.execute(text(sql))
+        except DBAPIError:
+            self.session.rollback()
+            return False
+        return True
+
+    def add_ea_check(self, payload: dict[str, Any]) -> EaCheck:
+        check = EaCheck(**payload)
+        self.session.add(check)
+        self.session.flush()
+        return check
+
+    def get_ea_check(self, check_id: int) -> EaCheck | None:
+        return self.session.get(EaCheck, check_id)
+
+    def list_ea_checks(
+        self,
+        *,
+        ea: str | None = None,
+        standard: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        include_voided: bool = True,
+    ) -> list[EaCheck]:
+        stmt = select(EaCheck)
+        if ea:
+            stmt = stmt.where(EaCheck.ea == ea)
+        if standard:
+            stmt = stmt.where(EaCheck.standard == standard)
+        if since is not None:
+            stmt = stmt.where(EaCheck.checked_at >= since)
+        if until is not None:
+            stmt = stmt.where(EaCheck.checked_at <= until)
+        if not include_voided:
+            stmt = stmt.where(EaCheck.voided == 0)
+        stmt = stmt.order_by(EaCheck.checked_at.asc(), EaCheck.id.asc())
+        return list(self.session.scalars(stmt))
+
+    def latest_ea_checks(self, *, ea: str, standard: str, limit: int) -> list[EaCheck]:
+        """The most recent non-voided checks, oldest first."""
+        stmt = (
+            select(EaCheck)
+            .where(EaCheck.ea == ea, EaCheck.standard == standard, EaCheck.voided == 0)
+            .order_by(EaCheck.checked_at.desc(), EaCheck.id.desc())
+            .limit(limit)
+        )
+        return list(reversed(list(self.session.scalars(stmt))))
+
+    def ea_standards_in_use(self) -> set[str]:
+        return {str(v) for v in self.session.scalars(select(EaCheck.standard).distinct())}
+
+    def void_ea_check(self, check: EaCheck, *, reason: str, by: str, at: datetime) -> None:
+        check.voided = 1
+        check.void_reason = reason
+        check.voided_by = by
+        check.voided_at = at
+        self.session.flush()
+
+    def oldest_unsigned_ea_check_at(self, item_type: str) -> dict[str, datetime]:
+        """Per EA: when the oldest non-voided, not-yet-signed check was made."""
+        signed = exists().where(
+            QcSignoffItem.item_type == item_type,
+            QcSignoffItem.item_ref == cast(EaCheck.id, String),
+        )
+        stmt = (
+            select(EaCheck.ea, func.min(EaCheck.checked_at))
+            .where(EaCheck.voided == 0, ~signed)
+            .group_by(EaCheck.ea)
+        )
+        return {str(ea): at for ea, at in self.session.execute(stmt) if at is not None}
+
+    def signed_item_refs(self, item_type: str, refs: Iterable[str] | None = None) -> dict[str, int]:
+        """`item_ref -> signoff_id` for the signed items of a type
+        (restricted to `refs` when given)."""
+        stmt = select(QcSignoffItem.item_ref, QcSignoffItem.signoff_id).where(
+            QcSignoffItem.item_type == item_type
+        )
+        if refs is not None:
+            ref_list = list(refs)
+            if not ref_list:
+                return {}
+            stmt = stmt.where(QcSignoffItem.item_ref.in_(ref_list))
+        return {str(ref): int(sid) for ref, sid in self.session.execute(stmt)}
+
+    def create_qc_signoff(
+        self,
+        payload: dict[str, Any],
+        *,
+        item_type: str,
+        item_refs: list[str],
+    ) -> QcSignoff:
+        signoff = QcSignoff(**payload)
+        self.session.add(signoff)
+        self.session.flush()
+        for ref in item_refs:
+            self.session.add(QcSignoffItem(signoff_id=signoff.id, item_type=item_type, item_ref=ref))
+        self.session.flush()
+        return signoff
+
+    def list_qc_signoffs(
+        self,
+        *,
+        subject_type: str | None = None,
+        subject_key: str | None = None,
+    ) -> list[QcSignoff]:
+        stmt = select(QcSignoff)
+        if subject_type:
+            stmt = stmt.where(QcSignoff.subject_type == subject_type)
+        if subject_key:
+            stmt = stmt.where(QcSignoff.subject_key == subject_key)
+        stmt = stmt.order_by(QcSignoff.signed_at.desc(), QcSignoff.id.desc())
+        return list(self.session.scalars(stmt))
+
+    def get_qc_signoff(self, signoff_id: int) -> QcSignoff | None:
+        return self.session.get(QcSignoff, signoff_id)
+
+    def list_qc_signoff_item_refs(self, signoff_id: int) -> list[str]:
+        stmt = select(QcSignoffItem.item_ref).where(QcSignoffItem.signoff_id == signoff_id)
+        return [str(ref) for ref in self.session.scalars(stmt)]
+

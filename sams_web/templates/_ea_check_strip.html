@@ -1,0 +1,160 @@
+{#- EA checks today: one card per EA with status, today's attempts and the
+    entry form (number box + gauge per element, staff chips). Included by
+    lab_queue.html (graphitization) and ea_checks.html; needs `ea_strip`,
+    `ea_return_url` and optionally `ea_check_error` (see
+    routers/pages_ea_checks.ea_strip_context). -#}
+{% from "_ea_check_macros.html" import element_field %}
+<section class="panel ea-strip" id="ea-check-strip" data-ea-strip>
+  <div class="ea-strip-head">
+    <h2>EA checks today</h2>
+    {% if request.url.path != "/lab/ea-checks" %}
+    <a class="ea-strip-link" href="/lab/ea-checks">Statistics &amp; sign-off <span aria-hidden="true">→</span></a>
+    {% endif %}
+  </div>
+
+  {% if not ea_strip.available %}
+  <div class="ea-setup-notice">
+    <strong>The EA check log is not set up yet.</strong>
+    Missing in the database: <code>{{ ea_strip.missing_tables | join("</code>, <code>") | safe }}</code>
+    — run the scripts in <code>docs/sql/</code> (see <code>docs/server_installation.md</code>, section "EA checks and QC sign-off").
+  </div>
+  {% elif not ea_strip.cards %}
+  <div class="ea-setup-notice">
+    No elemental analyzers configured. Add them in <a href="/setup?section=ea_checks">Setup → EA Checks</a>.
+  </div>
+  {% else %}
+  {% if ea_check_error %}<p class="error ea-strip-error" role="alert">{{ ea_check_error }}</p>{% endif %}
+  <div class="ea-strip-cards">
+    {% for card in ea_strip.cards %}
+    {% set cfg = card.config %}
+    <article class="ea-card ea-state-{{ card.state }}" data-ea-card data-ea-key="{{ card.key }}">
+      <header class="ea-card-head">
+        <div class="ea-card-title">
+          <h3>{{ card.label }}</h3>
+          {% if card.systems %}<p class="ea-card-sub">{{ card.systems | join(" · ") }}</p>{% endif %}
+        </div>
+        <span class="ea-pill" role="status">
+          <span class="ea-pill-icon" aria-hidden="true">{% if card.state == "passed" %}✓{% elif card.state == "failed" %}✗{% else %}◷{% endif %}</span>
+          {{ card.state_label }}
+        </span>
+      </header>
+
+      {% if card.latest and card.state == "passed" %}
+      <div class="ea-summary">
+        <div class="ea-summary-values">
+          {% for el in (cfg.standards | selectattr("key", "equalto", card.latest.standard) | first or {"elements": []}).elements %}
+          <div><span class="ea-summary-label">{{ el.label }} %</span><strong>{{ "%.2f"|format(card.latest["conc_" ~ el.symbol]) if card.latest["conc_" ~ el.symbol] is not none else "—" }}</strong></div>
+          {% endfor %}
+          <div title="Consecutive workdays whose last check passed">
+            <span class="ea-summary-label">Streak</span><strong>{{ card.streak }} d</strong>
+          </div>
+        </div>
+        {% if cfg.sparks %}
+        <div class="ea-sparks">
+          {% for spark in cfg.sparks %}
+          <div class="ea-spark-wrap">
+            <div class="ea-spark-head">
+              <span class="ea-summary-label">{{ spark.element.label }} % · last {{ spark.points|length }} checks</span>
+              <span class="ea-spark-ref" title="Dashed line: reference value of the check standard">
+                <span class="ea-spark-dash" aria-hidden="true"></span>ref. {{ spark.element.ref }}
+              </span>
+            </div>
+            <svg class="ea-spark" data-ea-spark data-symbol="{{ spark.symbol }}" viewBox="0 0 300 48" preserveAspectRatio="none" role="img"
+                 aria-label="Trend of the last {{ spark.points|length }} {{ spark.element.label }} % values"></svg>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if card.attempts %}
+      <ol class="ea-timeline" aria-label="Today's checks">
+        {% for a in card.attempts %}
+        <li class="{% if a.passed %}is-pass{% else %}is-fail{% endif %}"
+            title="{{ a.values_text }}{% if a.weight_text %} · {{ a.weight_text }}{% endif %}{% if a.comment %} — {{ a.comment }}{% endif %}">
+          <span aria-hidden="true">{% if a.passed %}✓{% else %}✗{% endif %}</span>
+          {{ a.time }} {{ a.operator }}<span class="sr-only">: {{ "passed" if a.passed else "failed" }}, {{ a.values_text }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+
+      {% if card.state == "passed" %}
+      <button type="button" class="ea-another" data-ea-another aria-expanded="false">
+        <span aria-hidden="true">+</span> Another check
+      </button>
+      {% endif %}
+
+      <form method="post" action="/lab/ea-checks" class="ea-entry" data-ea-entry {% if card.state == "passed" %}hidden{% endif %}>
+        <input type="hidden" name="ea" value="{{ card.key }}" />
+        <input type="hidden" name="next" value="{{ ea_return_url }}" />
+        {% if cfg.standards|length > 1 %}
+        <label class="ea-standard-select">
+          Standard
+          <select name="standard" data-ea-standard data-no-searchable>
+            {% for std in cfg.standards %}
+            <option value="{{ std.key }}" {% if std.key == cfg.default_standard %}selected{% endif %}>{{ std.name }}{% if std.lot %} · lot {{ std.lot }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% else %}
+        <input type="hidden" name="standard" value="{{ cfg.default_standard }}" />
+        {% set only = cfg.standards | first %}
+        {% if only %}<p class="ea-standard-note">{{ only.name }}{% if only.lot %} · lot {{ only.lot }}{% endif %}</p>{% endif %}
+        {% endif %}
+
+        <div class="ea-weight">
+          <label for="ea-{{ card.key }}-weight">Weight</label>
+          <input id="ea-{{ card.key }}-weight" class="ea-weight-input" type="text" inputmode="decimal"
+                 autocomplete="off" name="weight_mg" placeholder="optional" data-ea-weight />
+          <span class="ea-weight-unit" aria-hidden="true">mg</span>
+        </div>
+
+        {% for std in cfg.standards %}
+        <fieldset class="ea-fields" data-ea-standard-fields="{{ std.key }}"
+                  {% if std.key != cfg.default_standard %}hidden disabled{% endif %}>
+          <legend class="sr-only">{{ std.name }} values</legend>
+          {% for el in std.elements %}{{ element_field(card.key, std.key, el) }}{% endfor %}
+        </fieldset>
+        {% endfor %}
+
+        <div class="ea-operator" role="radiogroup" aria-label="Measured by">
+          <span class="ea-operator-label">By</span>
+          {% if ea_strip.staff %}
+          {% for name in ea_strip.staff %}
+          <label class="ea-chip">
+            <input type="radio" name="operator" value="{{ name }}" data-ea-operator />
+            <span>{{ name }}</span>
+          </label>
+          {% endfor %}
+          {% else %}
+          <input type="text" name="operator" maxlength="40" placeholder="Your name" class="ea-operator-text" />
+          <a class="ea-muted" href="/setup?section=lab_staff">add staff in Setup</a>
+          {% endif %}
+        </div>
+
+        <div class="ea-comment" data-ea-comment hidden>
+          <label for="ea-{{ card.key }}-comment" data-ea-comment-label>Comment</label>
+          <input id="ea-{{ card.key }}-comment" type="text" name="comment" maxlength="255"
+                 placeholder="What happened / what you will do" data-ea-comment-input />
+        </div>
+
+        <div class="ea-entry-actions">
+          <button type="button" class="ea-note-toggle" data-ea-note-toggle>Add note</button>
+          <p class="ea-hint" data-ea-hint aria-live="polite"></p>
+          <button type="submit" class="ea-submit" data-ea-submit>
+            <span data-ea-submit-label>Log check</span>
+          </button>
+        </div>
+      </form>
+
+      {% if card.overdue %}
+      <a class="ea-overdue" href="/lab/ea-checks#ea-{{ card.key }}-{{ cfg.default_standard | replace('.', '-') }}">Sign-off overdue — checks since {{ card.oldest_unsigned.strftime("%d.%m.%Y") }}</a>
+      {% endif %}
+      <script type="application/json" data-ea-card-config>{{ cfg | tojson }}</script>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>

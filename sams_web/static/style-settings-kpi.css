@@ -797,3 +797,26 @@
 
 .setup-test-mail-status.is-ok { color: var(--success); }
 .setup-test-mail-status.is-error { color: var(--danger); }
+
+/* ---- Setup → EA Checks / Lab Staff (repeated-row editors) ------------- */
+
+.setup-ea-standard-row { grid-template-columns: minmax(0, 1fr); }
+.setup-ea-ident { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-3); }
+.setup-ea-element {
+  display: grid;
+  grid-template-columns: 3.2rem repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.setup-ea-element-label { font-weight: 800; color: var(--brand); padding-bottom: 0.45rem; }
+.setup-ea-instrument-row { grid-template-columns: 0.7fr 1.2fr 1.4fr 1.4fr; }
+.setup-staff-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); max-width: 40rem; }
+.setup-ea-reminder { max-width: 26rem; }
+
+@media (max-width: 860px) {
+  .setup-ea-ident,
+  .setup-ea-instrument-row,
+  .setup-staff-row { grid-template-columns: minmax(0, 1fr); }
+  .setup-ea-element { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setup-ea-element-label { grid-column: 1 / -1; padding-bottom: 0; }
+}

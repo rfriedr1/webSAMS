@@ -2,6 +2,9 @@
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/style-benches.css?v={{ css_v }}" />
+{% if graph_bench_entry_enabled %}
+<link rel="stylesheet" href="/static/style-ea-checks.css?v={{ css_v }}" />
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -9,6 +12,9 @@
 <script src="/static/js/bench-number-stepper.js?v={{ css_v }}" defer></script>
 <script src="/static/js/preparation-bench.js?v={{ css_v }}" defer></script>
 <script src="/static/js/graphitization-bench.js?v={{ css_v }}" defer></script>
+{% if graph_bench_entry_enabled %}
+<script src="/static/js/ea-checks.js?v={{ css_v }}" defer></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -36,6 +42,7 @@
 {% endif %}
 
 {% if graph_bench_entry_enabled %}
+{% if ea_strip %}{% include "_ea_check_strip.html" %}{% endif %}
 {% include "_graphitization_bench.html" %}
 {% endif %}
 

@@ -13,6 +13,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, foreign, mapped_column, relationship
 
@@ -322,3 +324,81 @@ class TargetP(Base):
     target_stop: Mapped[int | None] = mapped_column(Integer)
     not_tobedated: Mapped[int | None] = mapped_column(Integer)
     project_nr: Mapped[int | None] = mapped_column(Integer)
+
+
+# ---- Quality control (ISO 17025 records) -----------------------------------
+# These tables are owned by webSAMS (not BATS) and created by hand on the
+# MySQL server — DDL in `schema_summary.md` / `docs/server_installation.md`,
+# rationale in `docs/adr/0005-qc-signoff-and-ea-checks.md`.
+
+
+class EaCheck(Base):
+    """One measurement of a check standard (e.g. acetanilide) on an EA.
+
+    Never updated or deleted: a wrong entry is *voided*. The standard's lot,
+    reference values and pass window are snapshotted on the row so the
+    record stays true after Setup changes.
+    """
+
+    __tablename__ = "ea_check_t"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ea: Mapped[str] = mapped_column(String(20), index=True)
+    standard: Mapped[str] = mapped_column(String(30))
+    rm_lot: Mapped[str | None] = mapped_column(String(40))
+    checked_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    weight_mg: Mapped[float | None] = mapped_column(Float)  # standard weighed in (mg); optional
+    conc_c: Mapped[float | None] = mapped_column(Float)
+    conc_n: Mapped[float | None] = mapped_column(Float)
+    c_ref: Mapped[float | None] = mapped_column(Float)
+    c_min: Mapped[float | None] = mapped_column(Float)
+    c_max: Mapped[float | None] = mapped_column(Float)
+    n_ref: Mapped[float | None] = mapped_column(Float)
+    n_min: Mapped[float | None] = mapped_column(Float)
+    n_max: Mapped[float | None] = mapped_column(Float)
+    passed: Mapped[int] = mapped_column(Integer)
+    operator: Mapped[str] = mapped_column(String(40))
+    comment: Mapped[str | None] = mapped_column(String(255))
+    voided: Mapped[int] = mapped_column(Integer, default=0)
+    void_reason: Mapped[str | None] = mapped_column(String(255))
+    voided_by: Mapped[str | None] = mapped_column(String(40))
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
+
+
+class QcSignoff(Base):
+    """A supervisor's sign-off of a set of QC items of one subject.
+
+    Generic on purpose: `subject_type` names the kind of check ('ea_check'
+    today; OXA2 scatter, blanks, IAEA standards later) and `subject_key`
+    what within it ('ea1|acetanilide'). `stats_json` is the statistics
+    snapshot exactly as reviewed; its shape belongs to the subject type.
+    """
+
+    __tablename__ = "qc_signoff_t"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(30), index=True)
+    subject_key: Mapped[str] = mapped_column(String(40))
+    period_from: Mapped[datetime] = mapped_column(DateTime)
+    period_to: Mapped[datetime] = mapped_column(DateTime)
+    n_items: Mapped[int] = mapped_column(Integer)
+    n_flagged: Mapped[int] = mapped_column(Integer)
+    stats_json: Mapped[str | None] = mapped_column(Text)
+    verdict: Mapped[str] = mapped_column(String(20))
+    signed_by: Mapped[str] = mapped_column(String(40))
+    signed_at: Mapped[datetime] = mapped_column(DateTime)
+    comment: Mapped[str | None] = mapped_column(String(500))
+
+
+class QcSignoffItem(Base):
+    """Which items a sign-off covered. A link table rather than a column on
+    the item, because future items live in BATS-owned tables (`target_t`)
+    that webSAMS must not alter. An item is signed at most once."""
+
+    __tablename__ = "qc_signoff_item_t"
+    __table_args__ = (UniqueConstraint("item_type", "item_ref", name="ux_qc_item_once"),)
+
+    signoff_id: Mapped[int] = mapped_column(ForeignKey("qc_signoff_t.id"), primary_key=True)
+    item_type: Mapped[str] = mapped_column(String(30), primary_key=True)
+    item_ref: Mapped[str] = mapped_column(String(40), primary_key=True)

@@ -5,8 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from sams_web.routers.pages_dashboard_setup_help import router as dashboard_setup_help_router
+from sams_web.routers.pages_ea_checks import router as ea_checks_router
 from sams_web.routers.pages_import import router as sample_import_router
 from sams_web.routers.pages_magic_samples import router as magic_samples_router
+from sams_web.routers.pages_qc import router as qc_router
 from sams_web.routers.pages_search_lab_import import router as search_lab_import_router
 from sams_web.routers.pages_users_projects import router as users_projects_router
 
@@ -18,3 +20,5 @@ router.include_router(users_projects_router)
 router.include_router(sample_import_router)
 router.include_router(magic_samples_router)
 router.include_router(search_lab_import_router)
+router.include_router(ea_checks_router)
+router.include_router(qc_router)
