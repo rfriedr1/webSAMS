@@ -492,12 +492,14 @@ class SamsRepository:
         }
 
     def get_dashboard_tables(self, show_on_hold: bool = False) -> dict[str, list[dict[str, Any]]]:
+        # Order is the dashboard's display order (Queue Tables pills and
+        # panels): express first, because those samples jump the queue.
         return {
+            "waiting_express": self._fetch_rows(self._sql_waiting_express()),
             "planned": self._fetch_rows(self._sql_planned(show_on_hold=show_on_hold)),
             "in_prep": self._fetch_rows(self._sql_in_prep()),
             "waiting_for_graph": self._fetch_rows(self._sql_waiting_for_graph_table()),
             "waiting_for_meas": self._fetch_rows(self._sql_waiting_for_meas()),
-            "waiting_express": self._fetch_rows(self._sql_waiting_express()),
         }
 
     def get_standard_counts(self) -> dict[str, int]:

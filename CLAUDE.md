@@ -44,7 +44,7 @@
 - `sams_web/viewmodels/detail_sections*.py`: detail-page field grouping/formatting + per-entity configs (`SUBMITTER_DETAIL`, `PROJECT_DETAIL`, etc. for write; `*_DETAIL_PAGE` for read).
 - `sams_web/templates/*`: Jinja templates. `_detail_fields.html` holds the detail-page macros: headline cards, `render_detail_field_row`, and **`render_detail_sections`** — the secondary section grid every detail page renders through (never hand-write that loop again; it was copied five times before). `lab_queue.html` owns the lab queue tables and *includes* `_preparation_bench.html` / `_graphitization_bench.html`, matching the `preparation_bench.py` / `graphitization_bench.py` split.
 - `sams_web/static/app.js`: shared table-tools etc.
-- `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, prep/graph bench UIs).
+- `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, anchor-details, prep/graph bench UIs).
 - `sams_web/static/style*.css`: split per concern (`style-core`, `style-detail-pages`, `style-tables`, `style-benches`, `style-settings-kpi`); `style.css` is the entrypoint that imports them.
 
 ## Data Access Strategy
@@ -287,6 +287,7 @@
 - `Samples -> Sample` lands on `/samples`, which is a **landing page** (not a redirect) with action cards: Resume last sample (only when different from newest), Newest sample, Browse all samples (→ `/search?context=samples`), and a Magic Nav explainer. The "last sample" is read from the `last_sample_nr` cookie.
 - Sample page is a navigation hub to preparations and targets.
 - Table features are centrally handled in `sams_web/static/app.js`; new tables should follow existing hooks to inherit behavior automatically.
+- Dashboard **Queue Tables** run Express first (order = the dict order of `SamsRepository.get_dashboard_tables`; the first one renders open). Clicking a queue pill opens that table's collapsed `<details>` before scrolling — `anchor-details.js` does this for any `#hash` link whose target is, contains (as direct child) or sits inside a closed `<details>`, also on load / `hashchange`.
 - Dashboard layout: two side-by-side conceptual panels — **Lab Queues** (Planned / In Prep / Waiting for Graph / Waiting for Meas / Express + queue distribution chart) and **Standards Ready for Analysis** (Oxas / Blanks / Pferde / IAEA-C6 / IAEA-C7 / IAEA-C8 + standard distribution chart). Each chart sits inside a `<details>` collapsible.
 
 ## Development Guardrails
