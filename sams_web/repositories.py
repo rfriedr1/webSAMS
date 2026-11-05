@@ -948,16 +948,28 @@ class SamsRepository:
     # they do not exist.
 
     QC_TABLES = ("ea_check_t", "qc_signoff_t", "qc_signoff_item_t")
+    # Columns added after the tables were first created (docs/sql/0006_…).
+    # A missing one is reported as "table.column".
+    QC_LATER_COLUMNS = {"ea_check_t": ("weight_mg",)}
 
     def missing_qc_tables(self) -> list[str]:
         missing: list[str] = []
         for table in self.QC_TABLES:
-            try:
-                self.session.execute(text(f"SELECT 1 FROM {table} WHERE 1 = 0"))
-            except DBAPIError:
-                self.session.rollback()
+            if not self._qc_probe(f"SELECT 1 FROM {table} WHERE 1 = 0"):
                 missing.append(table)
+                continue
+            for column in self.QC_LATER_COLUMNS.get(table, ()):
+                if not self._qc_probe(f"SELECT {column} FROM {table} WHERE 1 = 0"):
+                    missing.append(f"{table}.{column}")
         return missing
+
+    def _qc_probe(self, sql: str) -> bool:
+        try:
+            self.session.execute(text(sql))
+        except DBAPIError:
+            self.session.rollback()
+            return False
+        return True
 
     def add_ea_check(self, payload: dict[str, Any]) -> EaCheck:
         check = EaCheck(**payload)

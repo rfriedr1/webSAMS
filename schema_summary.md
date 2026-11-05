@@ -14,8 +14,8 @@
 - calc_set_t(calcset, a_off, a_err_abs, a_err_rel, b_off, b_err_abs, b_err_rel, iso_off, iso_err_abs, iso_err_rel, isobar, magazine, date_calc, user_calc, charge, first_run, last_run, comment, fract, edit, deadtime, ba_nom, ra_nom, scatter, weighting, poisson, cycles, ra_norm, ba_norm)  
 # this table stores the variables used during data-evaluation of a magazine
   
-- ea_check_t(id, ea, standard, rm_lot, checked_at, conc_c, conc_n, c_ref, c_min, c_max, n_ref, n_min, n_max, passed, operator, comment, voided, void_reason, voided_by, voided_at, created_at)  
-# webSAMS-owned (ADR-0005): one row per measurement of a check standard (acetanilide) on an elemental analyzer; reference values and pass window are snapshotted per row; never updated except to void. DDL: docs/sql/0005_qc_ea_checks.sql
+- ea_check_t(id, ea, standard, rm_lot, checked_at, weight_mg, conc_c, conc_n, c_ref, c_min, c_max, n_ref, n_min, n_max, passed, operator, comment, voided, void_reason, voided_by, voided_at, created_at)  
+# webSAMS-owned (ADR-0005): one row per measurement of a check standard (acetanilide) on an elemental analyzer; reference values and pass window are snapshotted per row; never updated except to void. weight_mg = standard weighed in (mg, optional). DDL: docs/sql/0005_qc_ea_checks.sql + 0006_ea_check_weight.sql
 
 - fraction_t(fraction, indexnr)
 

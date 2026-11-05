@@ -151,7 +151,7 @@
         <thead>
           <tr>
             <th>Date</th><th>Time</th><th>EA</th><th>Standard</th><th>Lot</th>
-            <th>C %</th><th>N %</th><th>Result</th><th>By</th><th>Comment</th><th>Signed off</th><th><span class="sr-only">Actions</span></th>
+            <th>Weight (mg)</th><th>C %</th><th>N %</th><th>Result</th><th>By</th><th>Comment</th><th>Signed off</th><th><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -162,6 +162,7 @@
             <td>{{ r.ea_label }}</td>
             <td>{{ r.standard }}</td>
             <td>{{ r.rm_lot or "" }}</td>
+            <td class="num">{{ num(r.weight_mg, 3) }}</td>
             <td class="num">{{ num(r.conc_c) }}</td>
             <td class="num">{{ num(r.conc_n) }}</td>
             <td>{{ result_badge(r.passed, r.voided) }}</td>

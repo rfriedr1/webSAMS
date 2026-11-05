@@ -77,7 +77,7 @@ def list_ea_checks(
     """Logged EA checks (voided ones included, flagged), oldest first."""
     log = EaCheckLog(service)
     if not log.available:
-        raise HTTPException(status_code=503, detail=f"Missing tables: {', '.join(log.missing_tables)}")
+        raise HTTPException(status_code=503, detail=f"Missing in the database: {', '.join(log.missing_tables)}")
     since_dt = datetime.combine(since, time.min) if since else None
     return {"checks": log.api_rows(ea=ea.strip() or None, standard=standard.strip() or None, since=since_dt)}
 

@@ -122,6 +122,19 @@
 .ea-standard-select { display: grid; gap: 2px; font-size: var(--text-sm); font-weight: 600; color: var(--ink-soft); }
 .ea-standard-note { margin: 0; font-size: var(--text-xs); color: var(--muted); }
 
+.ea-weight { display: flex; align-items: center; gap: var(--space-2); }
+.ea-weight label { font-size: var(--text-sm); font-weight: 700; color: var(--ink-soft); }
+.ea-weight-input {
+  width: 7.5rem;
+  min-height: 2.1rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding: 0.2rem 0.5rem;
+}
+.ea-weight-input.is-invalid { border-color: var(--danger-line); background: var(--danger-bg); }
+.ea-weight-input::placeholder { color: var(--line-strong); font-style: italic; }
+.ea-weight-unit { font-size: var(--text-sm); color: var(--muted); }
+
 .ea-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));

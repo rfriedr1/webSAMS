@@ -347,6 +347,7 @@ class EaCheck(Base):
     standard: Mapped[str] = mapped_column(String(30))
     rm_lot: Mapped[str | None] = mapped_column(String(40))
     checked_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    weight_mg: Mapped[float | None] = mapped_column(Float)  # standard weighed in (mg); optional
     conc_c: Mapped[float | None] = mapped_column(Float)
     conc_n: Mapped[float | None] = mapped_column(Float)
     c_ref: Mapped[float | None] = mapped_column(Float)

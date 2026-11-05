@@ -21,10 +21,12 @@ from sams_web.ea_checks import (
     DEFAULT_SETTINGS,
     EaCheckLog,
     EaCheckSettingsStore,
+    check_row,
     day_outcomes,
     evaluate,
     missed_workdays,
     parse_percent,
+    parse_weight,
     passing_streak,
     settings_from_raw,
     summarize,
@@ -58,9 +60,9 @@ def log_at(service, when: datetime) -> EaCheckLog:
     return EaCheckLog(service, now=when)
 
 
-def record(service, when, c="71.8", n="10.5", ea="ea1", comment="", operator="Leni"):
+def record(service, when, c="71.8", n="10.5", ea="ea1", comment="", operator="Leni", weight=""):
     return log_at(service, when).record(
-        {"ea": ea, "value_c": c, "value_n": n, "operator": operator, "comment": comment}
+        {"ea": ea, "value_c": c, "value_n": n, "operator": operator, "comment": comment, "weight_mg": weight}
     )
 
 
@@ -253,6 +255,33 @@ def test_missing_tables_degrade_gracefully(service):
     assert log.missing_tables == ["ea_check_t"]
     assert log.strip_view()["available"] is False
     assert not log.record({"ea": "ea1"}).success
+
+
+def test_missing_later_column_is_reported(service, monkeypatch):
+    monkeypatch.setattr(type(service.repo), "QC_LATER_COLUMNS", {"ea_check_t": ("weight_mg", "not_there")})
+    log = EaCheckLog(service)
+    assert log.missing_tables == ["ea_check_t.not_there"]
+    assert log.strip_view()["available"] is False
+
+
+def test_weight_is_optional_and_stored_in_mg(service):
+    done = record(service, T0, weight="1,502")
+    assert done.success and done.check.weight_mg == 1.502
+    row = check_row(done.check)
+    assert row["weight_mg"] == 1.502 and row["weight_text"] == "1.502 mg"
+    plain = record(service, T0 + timedelta(hours=1))
+    assert plain.success and plain.check.weight_mg is None and check_row(plain.check)["weight_text"] == ""
+
+
+@pytest.mark.parametrize("raw, message", [("abc", "not a number"), ("0", "between 0 and 100 mg"), ("1502", "between 0 and 100 mg")])
+def test_implausible_weight_is_refused(service, raw, message):
+    outcome = record(service, T0, weight=raw)
+    assert not outcome.success and message in outcome.error
+
+
+def test_parse_weight():
+    assert parse_weight(None) is None and parse_weight(" ") is None
+    assert parse_weight("2.34567") == 2.346
 
 
 # ---- routes -------------------------------------------------------------------

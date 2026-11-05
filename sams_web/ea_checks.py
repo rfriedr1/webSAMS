@@ -50,6 +50,9 @@ ELEMENTS: tuple[tuple[str, str], ...] = (("c", "C"), ("n", "N"))
 KEY_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,19}$")
 SUBJECT_TYPE = "ea_check"
 COMMENT_MAX_LENGTH = 255
+# Upper bound for the weighed-in standard: EA capsules hold a few mg, so a
+# larger number is almost always a unit slip (µg typed as mg).
+WEIGHT_MAX_MG = 100.0
 DEFAULT_STEP = 0.1
 DEFAULT_REMINDER_DAYS = 31
 
@@ -363,6 +366,24 @@ def parse_percent(raw: Any) -> float | None:
     return round(value, 3)
 
 
+def parse_weight(raw: Any) -> float | None:
+    """Weight of the standard in mg: blank → None (optional), `1,502` or
+    `1.502` → 1.502. Raises `ValueError` outside (0, WEIGHT_MAX_MG]."""
+    try:
+        value = parse_number(raw)
+    except ValueError:
+        raise ValueError("is not a number") from None
+    if value is None:
+        return None
+    if not 0 < value <= WEIGHT_MAX_MG:
+        raise ValueError(f"must be between 0 and {WEIGHT_MAX_MG:g} mg")
+    return round(value, 3)
+
+
+def fmt_weight(value: Any) -> str:
+    return "" if value is None else f"{float(value):.3f} mg"
+
+
 def check_value(check: Any, symbol: str) -> float | None:
     value = getattr(check, f"conc_{symbol}", None)
     return float(value) if value is not None else None
@@ -516,6 +537,8 @@ def check_row(check: EaCheck, *, signoff_id: int | None = None, labels: Mapping[
         "checked_at": check.checked_at.isoformat(sep=" ", timespec="minutes"),
         "date": check.checked_at.strftime("%Y-%m-%d"),
         "time": check.checked_at.strftime("%H:%M"),
+        "weight_mg": float(check.weight_mg) if check.weight_mg is not None else None,
+        "weight_text": fmt_weight(check.weight_mg),
         **{f"conc_{s}": check_value(check, s) for s, _ in ELEMENTS},
         "values_text": values_text(check),
         "passed": bool(check.passed),
@@ -711,6 +734,10 @@ class EaCheckLog:
                 missing = " and ".join(f"{e.label} %" for e in standard.elements)
                 return RecordOutcome(False, error=f"Set {missing} first.")
             values[spec.symbol] = value
+        try:
+            weight = parse_weight(form.get("weight_mg"))
+        except ValueError as exc:
+            return RecordOutcome(False, error=f"Weight {exc}.")
         passed, _ = evaluate(values, standard)
         comment = str(form.get("comment") or "").strip()
         if len(comment) > COMMENT_MAX_LENGTH:
@@ -724,6 +751,7 @@ class EaCheckLog:
             "standard": standard.key,
             "rm_lot": standard.lot or None,
             "checked_at": self.now(),
+            "weight_mg": weight,
             "passed": 1 if passed else 0,
             "operator": operator,
             "comment": comment or None,

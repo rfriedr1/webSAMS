@@ -10,6 +10,7 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const OPERATOR_KEY = "sams.eaCheck.operator";
+  const WEIGHT_MAX_MG = 100; // keep in step with ea_checks.WEIGHT_MAX_MG
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   const readJson = (node, fallback) => {
@@ -221,6 +222,22 @@
       update();
     });
 
+    // Weight of the standard (mg): optional; flagged while it is not a
+    // plausible number (mirrors ea_checks.parse_weight on the server).
+    const weight = form.querySelector("[data-ea-weight]");
+    const weightProblem = () => {
+      const text = (weight?.value || "").trim().replace(",", ".");
+      if (!text) return "";
+      const value = Number(text);
+      if (!Number.isFinite(value)) return "Weight is not a number.";
+      if (value <= 0 || value > WEIGHT_MAX_MG) return `Weight must be between 0 and ${WEIGHT_MAX_MG} mg.`;
+      return "";
+    };
+    weight?.addEventListener("input", () => {
+      weight.classList.toggle("is-invalid", Boolean(weightProblem()));
+      weight.setAttribute("aria-invalid", weightProblem() ? "true" : "false");
+    });
+
     noteToggle?.addEventListener("click", () => {
       noteOpen = true;
       update();
@@ -252,6 +269,12 @@
         event.preventDefault();
         say(`Set ${active.map((f) => `${f.spec.label} %`).join(" and ")} first.`);
         missing[0].focus();
+        return;
+      }
+      if (weightProblem()) {
+        event.preventDefault();
+        say(weightProblem());
+        weight.focus();
         return;
       }
       const operatorField = form.querySelector("[name=operator]:checked, input[type=text][name=operator]");

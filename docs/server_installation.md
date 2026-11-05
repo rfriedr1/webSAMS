@@ -335,11 +335,17 @@ in backups (section 11).
 
 The daily EA checks (Lab → EA Checks, and the strip on Lab → Graphitization) and the
 supervisor sign-off are stored in three tables that webSAMS owns — BATS does not use them.
-They are not created automatically. Run the SQL in
-[`docs/sql/0005_qc_ea_checks.sql`](sql/0005_qc_ea_checks.sql) once on each database
-(the test database first, then `db_dmams`), with a MySQL account allowed to `CREATE TABLE`.
+They are not created automatically. Run these scripts once on each database, in order
+(the test database first, then `db_dmams`), with a MySQL account allowed to
+`CREATE TABLE` / `ALTER TABLE`:
+
+1. [`docs/sql/0005_qc_ea_checks.sql`](sql/0005_qc_ea_checks.sql) — creates the three tables.
+2. [`docs/sql/0006_ea_check_weight.sql`](sql/0006_ea_check_weight.sql) — adds the weight of
+   the check standard (`ea_check_t.weight_mg`).
+
 The app's own account then needs `SELECT, INSERT, UPDATE` on them (`UPDATE` only for
-voiding a check). Until the tables exist the pages say "not set up yet" instead of failing.
+voiding a check). Until a table or column exists the pages say "not set up yet" and name
+what is missing, instead of failing.
 Background: [ADR-0005](adr/0005-qc-signoff-and-ea-checks.md).
 
 ---

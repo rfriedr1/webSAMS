@@ -15,8 +15,8 @@
   {% if not ea_strip.available %}
   <div class="ea-setup-notice">
     <strong>The EA check log is not set up yet.</strong>
-    Create the database table(s) <code>{{ ea_strip.missing_tables | join("</code>, <code>") | safe }}</code>
-    — the SQL is in <code>docs/server_installation.md</code> (section "EA checks and QC sign-off").
+    Missing in the database: <code>{{ ea_strip.missing_tables | join("</code>, <code>") | safe }}</code>
+    — run the scripts in <code>docs/sql/</code> (see <code>docs/server_installation.md</code>, section "EA checks and QC sign-off").
   </div>
   {% elif not ea_strip.cards %}
   <div class="ea-setup-notice">
@@ -67,7 +67,7 @@
       <ol class="ea-timeline" aria-label="Today's checks">
         {% for a in card.attempts %}
         <li class="{% if a.passed %}is-pass{% else %}is-fail{% endif %}"
-            title="{{ a.values_text }}{% if a.comment %} — {{ a.comment }}{% endif %}">
+            title="{{ a.values_text }}{% if a.weight_text %} · {{ a.weight_text }}{% endif %}{% if a.comment %} — {{ a.comment }}{% endif %}">
           <span aria-hidden="true">{% if a.passed %}✓{% else %}✗{% endif %}</span>
           {{ a.time }} {{ a.operator }}<span class="sr-only">: {{ "passed" if a.passed else "failed" }}, {{ a.values_text }}</span>
         </li>
@@ -98,6 +98,13 @@
         {% set only = cfg.standards | first %}
         {% if only %}<p class="ea-standard-note">{{ only.name }}{% if only.lot %} · lot {{ only.lot }}{% endif %}</p>{% endif %}
         {% endif %}
+
+        <div class="ea-weight">
+          <label for="ea-{{ card.key }}-weight">Weight</label>
+          <input id="ea-{{ card.key }}-weight" class="ea-weight-input" type="text" inputmode="decimal"
+                 autocomplete="off" name="weight_mg" placeholder="optional" data-ea-weight />
+          <span class="ea-weight-unit" aria-hidden="true">mg</span>
+        </div>
 
         {% for std in cfg.standards %}
         <fieldset class="ea-fields" data-ea-standard-fields="{{ std.key }}"
