@@ -948,8 +948,9 @@ class SamsRepository:
     # they do not exist.
 
     QC_TABLES = ("ea_check_t", "qc_signoff_t", "qc_signoff_item_t")
-    # Columns added after the tables were first created (docs/sql/0006_…).
-    # A missing one is reported as "table.column".
+    # Columns that a table created from an earlier version of the DDL may
+    # lack (weight_mg came after the first test install). A missing one is
+    # reported as "table.column" instead of failing in the ORM.
     QC_LATER_COLUMNS = {"ea_check_t": ("weight_mg",)}
 
     def missing_qc_tables(self) -> list[str]:
