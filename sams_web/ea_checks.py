@@ -72,8 +72,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         }
     ],
     "instruments": [
-        {"key": "ea1", "label": "EA 1 · AGE64", "systems": ["age64.1", "age64.2"], "standards": ["acetanilide"]},
-        {"key": "ea2", "label": "EA 2 · AGE / MAG", "systems": ["age.1", "age.2", "mag"], "standards": ["acetanilide"]},
+        {"key": "ea1", "label": "EA 1 · AGE / MAG", "systems": ["age.1", "age.2", "mag"], "standards": ["acetanilide"]},
+        {"key": "ea2", "label": "EA 2 · AGE64", "systems": ["age64.1", "age64.2"], "standards": ["acetanilide"]},
     ],
     "signoff_reminder_days": DEFAULT_REMINDER_DAYS,
 }

@@ -3,18 +3,7 @@
     "instruments": [
       {
         "key": "ea1",
-        "label": "EA 1 \u00b7 AGE64",
-        "standards": [
-          "acetanilide"
-        ],
-        "systems": [
-          "age64.1",
-          "age64.2"
-        ]
-      },
-      {
-        "key": "ea2",
-        "label": "EA 2 \u00b7 AGE / MAG",
+        "label": "EA 1 \u00b7 AGE / MAG",
         "standards": [
           "acetanilide"
         ],
@@ -22,6 +11,17 @@
           "age.1",
           "age.2",
           "mag"
+        ]
+      },
+      {
+        "key": "ea2",
+        "label": "EA 2 \u00b7 AGE64",
+        "standards": [
+          "acetanilide"
+        ],
+        "systems": [
+          "age64.1",
+          "age64.2"
         ]
       }
     ],

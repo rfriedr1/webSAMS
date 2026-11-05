@@ -91,7 +91,7 @@ _Avoid_: Graph workflow, Graph page.
 The measurement order of a **Target** within a **Magazine**, as stored in `measprog_t.sequence`. Independent of **Position** — operators may measure in a different order than the physical layout (e.g. interleaving standards regardless of slot).
 
 **EA check**:
-The daily (or more frequent) measurement of a **Check standard** on an elemental analyzer (EA) before samples are combusted on it: the measured C % / N % must lie inside the standard's pass window. A go/no-go check of the instrument — an ISO 17025 *intermediate check* — **not** a calibration or standardisation; nothing is corrected with it. Stored in `ea_check_t`; a failed check carries a comment and is usually followed by a re-run the same day. EA 1 serves AGE64, EA 2 is shared by AGE and MAG (configurable in Setup → EA Checks). See [ADR-0005](docs/adr/0005-qc-signoff-and-ea-checks.md).
+The daily (or more frequent) measurement of a **Check standard** on an elemental analyzer (EA) before samples are combusted on it: the measured C % / N % must lie inside the standard's pass window. A go/no-go check of the instrument — an ISO 17025 *intermediate check* — **not** a calibration or standardisation; nothing is corrected with it. Stored in `ea_check_t`; a failed check carries a comment and is usually followed by a re-run the same day. EA 1 is shared by AGE and MAG, EA 2 serves AGE64 (configurable in Setup → EA Checks). See [ADR-0005](docs/adr/0005-qc-signoff-and-ea-checks.md).
 _Avoid_: EA calibration, EA standard, acetanilide run.
 
 **Check standard**:

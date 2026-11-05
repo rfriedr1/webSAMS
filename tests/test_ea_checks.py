@@ -196,11 +196,11 @@ def test_void_falls_back_to_previous_attempt(service):
 
 
 def test_system_warnings_name_systems_of_unchecked_eas(service):
-    record(service, T0)  # ea1 passed, ea2 not checked
+    record(service, T0)  # ea1 (AGE / MAG) passed, ea2 (AGE64) not checked
     log = log_at(service, T0 + timedelta(hours=1))
     warnings = log.system_warnings(log.strip_view())
-    assert "age64.1" not in warnings
-    assert warnings["mag"].endswith("not checked yet")
+    assert "mag" not in warnings and "age.1" not in warnings
+    assert warnings["age64.1"].endswith("not checked yet")
 
 
 def test_stats_never_mix_standards(service):
