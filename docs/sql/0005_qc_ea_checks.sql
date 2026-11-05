@@ -2,6 +2,11 @@
 -- Run once per database (db_dmams_test2, then db_dmams). webSAMS owns these
 -- tables; BATS does not use them. Until they exist the EA Checks page and
 -- the strip on Lab -> Graphitization show "not set up yet" instead of failing.
+--
+-- Run the whole script in this order (DBeaver: "Execute script", Alt+X, not
+-- "Execute statement"): qc_signoff_item_t references qc_signoff_t, and
+-- MariaDB reports a missing or non-InnoDB parent table as
+-- errno 150 "Foreign key constraint is incorrectly formed".
 
 CREATE TABLE qc_signoff_t (
   id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -17,7 +22,7 @@ CREATE TABLE qc_signoff_t (
   signed_at     DATETIME     NOT NULL,
   comment       VARCHAR(500) NULL,
   KEY ix_qc_signoff_subject (subject_type, subject_key, signed_at)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE qc_signoff_item_t (
   signoff_id    INT          NOT NULL,
@@ -26,7 +31,7 @@ CREATE TABLE qc_signoff_item_t (
   PRIMARY KEY (signoff_id, item_type, item_ref),
   UNIQUE KEY ux_qc_item_once (item_type, item_ref),
   CONSTRAINT fk_qc_item_signoff FOREIGN KEY (signoff_id) REFERENCES qc_signoff_t (id)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE ea_check_t (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,4 +52,4 @@ CREATE TABLE ea_check_t (
   voided_at   DATETIME     NULL,
   created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY ix_ea_checked (ea, standard, checked_at)
-);
+) ENGINE=InnoDB;
