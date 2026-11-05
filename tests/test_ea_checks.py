@@ -178,6 +178,8 @@ def test_card_has_one_trend_per_certified_element(service):
     card = log_at(service, T0 + timedelta(days=1, hours=1)).strip_view()["cards"][0]
     sparks = {s["symbol"]: [p["v"] for p in s["points"]] for s in card["config"]["sparks"]}
     assert sparks == {"c": [71.5, 71.9], "n": [10.3, 10.6]}
+    first = card["config"]["sparks"][0]["points"][0]
+    assert first["checked_at"] == T0.isoformat(sep=" ", timespec="minutes") and first["operator"] == "Leni"
 
 
 def test_card_shows_no_trend_before_two_checks(service):

@@ -143,6 +143,32 @@
     };
   };
 
+  // ---- Hover tooltip (sparklines and control charts) -------------------------
+
+  const tooltip = (() => {
+    let node = null;
+    return {
+      show(host, lines, left, top) {
+        if (!node) {
+          node = document.createElement("div");
+          node.className = "ea-chart-tooltip";
+          node.setAttribute("role", "status");
+        }
+        host.appendChild(node);
+        node.replaceChildren(...lines.map((line, i) => {
+          const row = document.createElement(i === 0 ? "strong" : "span");
+          row.textContent = line;
+          return row;
+        }));
+        node.hidden = false;
+        const maxLeft = host.clientWidth - node.offsetWidth - 4;
+        node.style.left = `${Math.max(4, Math.min(left + 12, maxLeft))}px`;
+        node.style.top = `${Math.max(0, top - node.offsetHeight - 10)}px`;
+      },
+      hide() { if (node) node.hidden = true; },
+    };
+  })();
+
   // ---- Sparkline ------------------------------------------------------------
 
   const drawSpark = (node, spark) => {
@@ -170,6 +196,39 @@
       if (!p.passed || i === spark.points.length - 1) {
         node.appendChild(svg("circle", { cx: x(i), cy: y(p.v), r: 2.6, class: p.passed ? "spark-last" : "spark-fail" }));
       }
+    });
+
+    // Hover: the nearest check's date, value and verdict.
+    const cursor = svg("line", { x1: 0, x2: 0, y1: 0, y2: 48, class: "spark-cursor", visibility: "hidden" });
+    node.appendChild(cursor);
+    const host = node.parentElement;
+    node.addEventListener("pointermove", (event) => {
+      const box = node.getBoundingClientRect();
+      const px = ((event.clientX - box.left) / box.width) * 300;
+      let best = 0;
+      spark.points.forEach((_, i) => {
+        if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i;
+      });
+      const p = spark.points[best];
+      cursor.setAttribute("x1", x(best));
+      cursor.setAttribute("x2", x(best));
+      cursor.setAttribute("visibility", "visible");
+      const lines = [
+        `${p.checked_at || ""} · ${el.label} ${p.v.toFixed(2)} %`,
+        `${p.passed ? "✓ pass" : "✗ fail"}${p.operator ? ` · ${p.operator}` : ""}`,
+      ];
+      // SVG elements have no offsetTop/offsetLeft: measure against the host.
+      const hostBox = host.getBoundingClientRect();
+      tooltip.show(
+        host,
+        lines,
+        box.left - hostBox.left + (x(best) / 300) * box.width,
+        box.top - hostBox.top + (y(p.v) / 48) * box.height,
+      );
+    });
+    node.addEventListener("pointerleave", () => {
+      cursor.setAttribute("visibility", "hidden");
+      tooltip.hide();
     });
   };
 
@@ -308,29 +367,6 @@
 
   // ---- Control chart ----------------------------------------------------------
 
-  const tooltip = (() => {
-    let node = null;
-    return {
-      show(host, lines, left, top) {
-        if (!node) {
-          node = document.createElement("div");
-          node.className = "ea-chart-tooltip";
-          node.setAttribute("role", "status");
-        }
-        host.appendChild(node);
-        node.replaceChildren(...lines.map((line, i) => {
-          const row = document.createElement(i === 0 ? "strong" : "span");
-          row.textContent = line;
-          return row;
-        }));
-        node.hidden = false;
-        const maxLeft = host.clientWidth - node.offsetWidth - 4;
-        node.style.left = `${Math.max(4, Math.min(left + 12, maxLeft))}px`;
-        node.style.top = `${Math.max(0, top - node.offsetHeight - 10)}px`;
-      },
-      hide() { if (node) node.hidden = true; },
-    };
-  })();
 
   const drawChart = (figure, data) => {
     const canvas = figure.querySelector("[data-ea-chart-canvas]");

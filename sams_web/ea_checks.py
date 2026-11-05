@@ -568,7 +568,12 @@ def _sparks(standard: CheckStandard | None, history: Sequence[Any]) -> list[dict
     sparks = []
     for el in standard.elements if standard else ():
         points = [
-            {"v": check_value(c, el.symbol), "passed": bool(c.passed)}
+            {
+                "v": check_value(c, el.symbol),
+                "passed": bool(c.passed),
+                "checked_at": c.checked_at.isoformat(sep=" ", timespec="minutes"),
+                "operator": c.operator,
+            }
             for c in history
             if check_value(c, el.symbol) is not None
         ]

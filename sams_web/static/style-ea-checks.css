@@ -71,6 +71,8 @@
 .ea-summary-label { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 600; }
 
 .ea-sparks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+.ea-spark-wrap { position: relative; }
+.ea-spark .spark-cursor { stroke: var(--ink-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .ea-spark { display: block; width: 100%; height: 48px; margin-top: 2px; }
 .ea-spark .spark-window { fill: var(--success-bg); }
 .ea-spark .spark-ref { stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
