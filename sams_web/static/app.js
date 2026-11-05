@@ -25,6 +25,7 @@
     installers.installMagicIdentifierHelp?.();
     installers.installDetailEditMode?.();
     installers.installDetailEmptyFields?.();
+    installers.installAnchorDetails?.();
     installers.installFieldErrorSummary?.();
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();

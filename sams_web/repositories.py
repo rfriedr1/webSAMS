@@ -51,6 +51,48 @@ class SamsRepository:
     def get_submitter(self, user_nr: int) -> Submitter | None:
         return self.session.get(Submitter, user_nr)
 
+    # `user_t.last_name` is latin1_swedish_ci, where `ä` sorts as its own
+    # letter, so `hack` would not find `Häck`. Converting to a Unicode
+    # collation folds case and accents (ä = a, é = e, ß = ss). The cast
+    # rules out the index, which does not matter on ~3 000 rows.
+    _FOLDED_LAST_NAME = "CONVERT(TRIM(user_t.last_name) USING utf8mb4) COLLATE utf8mb4_unicode_ci"
+    _FOLDED_PARAM = "CONVERT(:{name} USING utf8mb4) COLLATE utf8mb4_unicode_ci"
+
+    def find_submitter_nrs_by_last_name(self, name: str) -> list[int]:
+        """Submitter numbers for a Magic Nav last-name lookup (`sub:meier`).
+
+        Exact last-name matches win; only when there are none does a
+        substring match apply. So `roth` opens the one *Roth* even though
+        several *Rothe* records exist, while `häc` still finds *Häck*.
+        Case and accents are ignored on MySQL; other dialects (the SQLite
+        test database) fold case only.
+        """
+        needle = " ".join(name.split())
+        if not needle:
+            return []
+        escaped = needle.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        pattern = f"%{escaped}%"
+        if self.session.get_bind().dialect.name == "mysql":
+            exact_clause = text(
+                f"{self._FOLDED_LAST_NAME} = {self._FOLDED_PARAM.format(name='needle')}"
+            ).bindparams(needle=needle)
+            like_clause = text(
+                f"{self._FOLDED_LAST_NAME} LIKE {self._FOLDED_PARAM.format(name='pattern')} ESCAPE '!'"
+            ).bindparams(pattern=pattern)
+        else:
+            folded = func.lower(func.trim(Submitter.last_name))
+            exact_clause = folded == needle.lower()
+            like_clause = folded.like(pattern.lower(), escape="!")
+        for clause in (exact_clause, like_clause):
+            nrs = list(
+                self.session.scalars(
+                    select(Submitter.user_nr).where(clause).order_by(Submitter.user_nr)
+                )
+            )
+            if nrs:
+                return nrs
+        return []
+
     def get_adjacent_submitter_nrs(self, user_nr: int) -> tuple[int | None, int | None]:
         previous = self.session.scalar(
             select(func.max(Submitter.user_nr)).where(Submitter.user_nr < user_nr)
@@ -450,12 +492,14 @@ class SamsRepository:
         }
 
     def get_dashboard_tables(self, show_on_hold: bool = False) -> dict[str, list[dict[str, Any]]]:
+        # Order is the dashboard's display order (Queue Tables pills and
+        # panels): express first, because those samples jump the queue.
         return {
+            "waiting_express": self._fetch_rows(self._sql_waiting_express()),
             "planned": self._fetch_rows(self._sql_planned(show_on_hold=show_on_hold)),
             "in_prep": self._fetch_rows(self._sql_in_prep()),
             "waiting_for_graph": self._fetch_rows(self._sql_waiting_for_graph_table()),
             "waiting_for_meas": self._fetch_rows(self._sql_waiting_for_meas()),
-            "waiting_express": self._fetch_rows(self._sql_waiting_express()),
         }
 
     def get_standard_counts(self) -> dict[str, int]:

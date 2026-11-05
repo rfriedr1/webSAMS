@@ -5,14 +5,20 @@ The Magic Nav input box (in `templates/base.html`) accepts a small grammar:
 - `12345`            → opens sample 12345
 - `12345.1`          → opens preparation 12345/1
 - `12345.1.1`        → opens target 12345/1/1
-- `pr123`            → opens project 123
-- `sub210`           → opens submitter 210
+- `pr:123`           → opens project 123
+- `sub:210`          → opens submitter 210
+- `sub:meier`        → looks a submitter up by last name
 - `/prep`, `/graph`, `/ana` → opens the lab workflow page
+
+Prefixes follow one rule: prefix, optional separator (`:`, space, or
+nothing), value. Digits are a number, a value starting with a letter is a
+name (only for prefixes in `MAGIC_IDENTIFIER_NAME_PREFIXES`). The colon form
+is what the UI documents; `sub210` / `pr123` keep working.
 
 This module owns:
 
 - The **`NavTarget` sealed family** (`SampleNav`, `PreparationNav`,
-  `TargetNav`, `ProjectNav`, `SubmitterNav`, `CommandNav`) — each carrying
+  `TargetNav`, `ProjectNav`, `SubmitterNav`, `SubmitterNameNav`, `CommandNav`) — each carrying
   only the identifiers it actually needs, plus the resolved URL `target`.
 - **`resolve_magic_identifier(raw)`** — the parser. Returns the matching
   `NavTarget` or `None` if the input doesn't fit any pattern.
@@ -33,7 +39,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Any, Protocol
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 
 # ---- Config: prefix routes, labels, commands -----------------------------
@@ -45,6 +51,15 @@ MAGIC_IDENTIFIER_PREFIX_ROUTES: dict[str, tuple[str, str]] = {
 MAGIC_IDENTIFIER_PREFIX_LABELS: dict[str, str] = {
     "pr": "project number",
     "sub": "submitter number",
+}
+# Prefixes that also accept a name (`sub:meier`). The value is matched only
+# when it starts with a letter, so `sub:210` stays a number lookup. A later
+# `pr:<name>` is one entry here plus a NavTarget and a repository query.
+MAGIC_IDENTIFIER_NAME_PREFIXES: dict[str, tuple[str, str]] = {
+    "sub": ("submitter", "/submitters/lookup?name={name}"),
+}
+MAGIC_IDENTIFIER_NAME_LABELS: dict[str, str] = {
+    "sub": "submitter last name",
 }
 MAGIC_IDENTIFIER_SAMPLE_LABEL = "sample number"
 MAGIC_IDENTIFIER_PREPARATION_LABEL = "preparation"
@@ -108,12 +123,54 @@ class SubmitterNav:
 
 
 @dataclass(frozen=True)
+class SubmitterNameNav:
+    """`sub:meier` — a last-name lookup. `target` is the lookup route, which
+    opens the submitter when exactly one record matches and the filtered
+    submitter list otherwise (names repeat, and one person is often stored
+    several times with different addresses)."""
+
+    target: str
+    last_name: str
+
+
+@dataclass(frozen=True)
 class CommandNav:
     target: str
     command: str
 
 
-NavTarget = SampleNav | PreparationNav | TargetNav | ProjectNav | SubmitterNav | CommandNav
+NavTarget = (
+    SampleNav
+    | PreparationNav
+    | TargetNav
+    | ProjectNav
+    | SubmitterNav
+    | SubmitterNameNav
+    | CommandNav
+)
+
+
+def _name_pattern(prefix: str) -> re.Pattern[str]:
+    # The name must start with a letter (Unicode-aware, so `Häck` works) and
+    # may then hold letters, digits, spaces, dots, apostrophes and hyphens:
+    # `van der Berg`, `O'Brien`, `Müller-Lüdenscheidt`.
+    return re.compile(rf"{re.escape(prefix)}[\s:]*([^\W\d_][\w .'\-]*)", re.IGNORECASE)
+
+
+_NAME_PATTERNS = {prefix: _name_pattern(prefix) for prefix in MAGIC_IDENTIFIER_NAME_PREFIXES}
+
+
+def _resolve_name_lookup(raw: str) -> NavTarget | None:
+    for prefix, pattern in _NAME_PATTERNS.items():
+        match = pattern.fullmatch(raw)
+        if match is None:
+            continue
+        name = " ".join(match.group(1).split())
+        entity_kind, target_template = MAGIC_IDENTIFIER_NAME_PREFIXES[prefix]
+        target_url = target_template.format(name=quote(name))
+        if entity_kind == "submitter":
+            return SubmitterNameNav(target=target_url, last_name=name)
+    return None
 
 
 # ---- Parser ---------------------------------------------------------------
@@ -124,8 +181,8 @@ def resolve_magic_identifier(raw: str) -> NavTarget | None:
 
     Patterns tried in order: command literal (`/prep`), 3-part numeric
     (`12345.1.1`), 2-part numeric (`12345.1`), bare digits (`12345`),
-    prefixed (`pr123`, `sub210`). Comparison is case-insensitive on the
-    input.
+    prefixed number (`pr:123`, `sub210`), prefixed name (`sub:meier`).
+    Comparison is case-insensitive; a name keeps the case it was typed in.
     """
     value = raw.strip().lower()
     if value == "":
@@ -163,7 +220,7 @@ def resolve_magic_identifier(raw: str) -> NavTarget | None:
 
     prefixed = re.fullmatch(r"([a-z]+)[\s:_-]*(\d+)", value)
     if prefixed is None:
-        return None
+        return _resolve_name_lookup(raw.strip())
     prefix, identifier_str = prefixed.groups()
     route_spec = MAGIC_IDENTIFIER_PREFIX_ROUTES.get(prefix)
     if route_spec is None:
@@ -187,6 +244,7 @@ class _NavService(Protocol):
     def target_exists(self, sample_nr: int, prep_nr: int, target_nr: int) -> bool: ...
     def project_exists(self, project_nr: int) -> bool: ...
     def submitter_exists(self, user_nr: int) -> bool: ...
+    def submitter_name_exists(self, last_name: str) -> bool: ...
 
 
 def nav_exists(nav: NavTarget, service: _NavService) -> bool:
@@ -207,6 +265,8 @@ def nav_exists(nav: NavTarget, service: _NavService) -> bool:
             return service.project_exists(p)
         case SubmitterNav(user_nr=u):
             return service.submitter_exists(u)
+        case SubmitterNameNav(last_name=n):
+            return service.submitter_name_exists(n)
 
 
 def nav_not_found_message(nav: NavTarget) -> str:
@@ -224,6 +284,12 @@ def nav_not_found_message(nav: NavTarget) -> str:
             return f"Project #{p} was not found."
         case SubmitterNav(user_nr=u):
             return f"Submitter #{u} was not found."
+        case SubmitterNameNav(last_name=n):
+            return submitter_name_not_found_message(n)
+
+
+def submitter_name_not_found_message(last_name: str) -> str:
+    return f'No submitter with last name "{last_name}" was found.'
 
 
 # ---- Feedback URL helper --------------------------------------------------
@@ -277,11 +343,25 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
         entity_kind, _target_template = route_spec
         rules.append(
             {
-                "pattern": f"{prefix}<number>",
-                "example": f"{prefix}123",
+                "pattern": f"{prefix}:<number>",
+                "example": f"{prefix}:123",
                 "description": (
                     f"Opens {entity_kind} detail "
-                    f"(label: {MAGIC_IDENTIFIER_PREFIX_LABELS.get(prefix, 'unknown ID')})."
+                    f"(label: {MAGIC_IDENTIFIER_PREFIX_LABELS.get(prefix, 'unknown ID')}). "
+                    f"The colon is optional: {prefix}123 works too."
+                ),
+            }
+        )
+    for prefix in sorted(MAGIC_IDENTIFIER_NAME_PREFIXES.keys()):
+        entity_kind, _target_template = MAGIC_IDENTIFIER_NAME_PREFIXES[prefix]
+        rules.append(
+            {
+                "pattern": f"{prefix}:<last name>",
+                "example": f"{prefix}:meier",
+                "description": (
+                    f"Looks a {entity_kind} up by last name, ignoring case and accents "
+                    f"(label: {MAGIC_IDENTIFIER_NAME_LABELS.get(prefix, 'name')}). "
+                    "One match opens it; several open the list filtered to that name."
                 ),
             }
         )
@@ -300,7 +380,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
 
 INVALID_MAGIC_NAV_MESSAGE = (
     "Invalid Magic Nav ID. Use 12345, 12345.1, 12345.1.1, "
-    "pr456, sub210, or a command: /prep, /graph, /ana, /sub, /proj, /import."
+    "pr:456, sub:210, sub:meier, or a command: /prep, /graph, /ana, /ea, /sub, /proj, /import."
 )
 
 
@@ -310,16 +390,20 @@ __all__ = [
     "TargetNav",
     "ProjectNav",
     "SubmitterNav",
+    "SubmitterNameNav",
     "CommandNav",
     "NavTarget",
     "resolve_magic_identifier",
     "nav_exists",
     "nav_not_found_message",
+    "submitter_name_not_found_message",
     "append_magic_feedback",
     "build_magic_nav_rules",
     "INVALID_MAGIC_NAV_MESSAGE",
     "MAGIC_IDENTIFIER_PREFIX_ROUTES",
     "MAGIC_IDENTIFIER_PREFIX_LABELS",
+    "MAGIC_IDENTIFIER_NAME_PREFIXES",
+    "MAGIC_IDENTIFIER_NAME_LABELS",
     "MAGIC_IDENTIFIER_SAMPLE_LABEL",
     "MAGIC_IDENTIFIER_PREPARATION_LABEL",
     "MAGIC_IDENTIFIER_TARGET_LABEL",

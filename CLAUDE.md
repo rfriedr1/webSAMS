@@ -44,7 +44,7 @@
 - `sams_web/viewmodels/detail_sections*.py`: detail-page field grouping/formatting + per-entity configs (`SUBMITTER_DETAIL`, `PROJECT_DETAIL`, etc. for write; `*_DETAIL_PAGE` for read).
 - `sams_web/templates/*`: Jinja templates. `_detail_fields.html` holds the detail-page macros: headline cards, `render_detail_field_row`, and **`render_detail_sections`** — the secondary section grid every detail page renders through (never hand-write that loop again; it was copied five times before). `lab_queue.html` owns the lab queue tables and *includes* `_preparation_bench.html` / `_graphitization_bench.html`, matching the `preparation_bench.py` / `graphitization_bench.py` split.
 - `sams_web/static/app.js`: shared table-tools etc.
-- `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, prep/graph bench UIs).
+- `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, anchor-details, prep/graph bench UIs).
 - `sams_web/static/style*.css`: split per concern (`style-core`, `style-detail-pages`, `style-tables`, `style-benches`, `style-settings-kpi`); `style.css` is the entrypoint that imports them.
 
 ## Data Access Strategy
@@ -113,8 +113,10 @@
 
 ## Magic Nav Rules
 - Input only digits: treat as `sample_nr` and open sample detail.
+- **One rule for prefixes: prefix, optional separator (`:`, space, or nothing), value.** Digits are a number; a value starting with a letter is a name (only for prefixes in `MAGIC_IDENTIFIER_NAME_PREFIXES`). The UI documents the **colon form** (`pr:456`, `sub:210`, `sub:meier`) and says the colon is optional; `pr456` / `sub210` keep working.
 - Prefix `pr` + digits: treat as `project_nr` and open project detail.
 - Prefix `sub` + digits: treat as `user_nr` and open submitter detail.
+- Prefix `sub` + name (`sub:meier`): last-name lookup via `/submitters/lookup?name=` (`SubmitterNameNav`). **It never guesses**: exactly one record opens it; several (names repeat, and 267 people are stored more than once with different addresses) redirect to `/submitters?q=<name>`, which pre-fills the table search on the Last Name column (`data-table-search-initial` / `data-table-search-column`) and shows town + e-mail to tell them apart; none gives the inline error. Matching (`SamsRepository.find_submitter_nrs_by_last_name`): exact last name first, substring only when there is no exact hit. `user_t.last_name` is `latin1_swedish_ci` (ä ≠ a), so the query converts to `utf8mb4_unicode_ci` to fold case and accents; the table filter folds accents too (`SAMSUtil.foldForSearch`). `subotic` therefore means `sub` + `otic`: write `sub:subotic`.
 - Magic commands:
 - `/prep` opens `Lab/Preparation`
 - `/graph` opens `Lab/Graphitization`
@@ -285,6 +287,7 @@
 - `Samples -> Sample` lands on `/samples`, which is a **landing page** (not a redirect) with action cards: Resume last sample (only when different from newest), Newest sample, Browse all samples (→ `/search?context=samples`), and a Magic Nav explainer. The "last sample" is read from the `last_sample_nr` cookie.
 - Sample page is a navigation hub to preparations and targets.
 - Table features are centrally handled in `sams_web/static/app.js`; new tables should follow existing hooks to inherit behavior automatically.
+- Dashboard **Queue Tables** run Express first (order = the dict order of `SamsRepository.get_dashboard_tables`; the first one renders open). Clicking a queue pill opens that table's collapsed `<details>` before scrolling — `anchor-details.js` does this for any `#hash` link whose target is, contains (as direct child) or sits inside a closed `<details>`, also on load / `hashchange`.
 - Dashboard layout: two side-by-side conceptual panels — **Lab Queues** (Planned / In Prep / Waiting for Graph / Waiting for Meas / Express + queue distribution chart) and **Standards Ready for Analysis** (Oxas / Blanks / Pferde / IAEA-C6 / IAEA-C7 / IAEA-C8 + standard distribution chart). Each chart sits inside a `<details>` collapsible.
 
 ## Development Guardrails
