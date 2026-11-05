@@ -199,14 +199,6 @@ def test_void_falls_back_to_previous_attempt(service):
     assert "already voided" in log.void(bad.check.id, reason="x", by="Leni").error
 
 
-def test_system_warnings_name_systems_of_unchecked_eas(service):
-    record(service, T0)  # ea1 (AGE / MAG) passed, ea2 (AGE64) not checked
-    log = log_at(service, T0 + timedelta(hours=1))
-    warnings = log.system_warnings(log.strip_view())
-    assert "mag" not in warnings and "age.1" not in warnings
-    assert warnings["age64.1"].endswith("not checked yet")
-
-
 def test_stats_never_mix_standards(service):
     store = EaCheckSettingsStore(service.setup_store)
     raw = dict(DEFAULT_SETTINGS)

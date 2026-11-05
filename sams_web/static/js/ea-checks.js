@@ -547,31 +547,12 @@
     }
   };
 
-  // ---- Graph Batch Builder hint ------------------------------------------------
-
-  const installBatchHint = () => {
-    const note = document.querySelector("[data-ea-batch-warning]");
-    const pills = Array.from(document.querySelectorAll("[data-graph-batch-system-pill]"));
-    if (!note || !pills.length) return;
-    const sync = () => {
-      const active = pills.find((pill) => pill.getAttribute("aria-pressed") === "true");
-      const warning = active?.dataset.eaWarning || "";
-      note.hidden = warning === "";
-      note.textContent = warning ? `⚠ ${warning}. Check the EA before graphitizing.` : "";
-    };
-    pills.forEach((pill) => pill.classList.toggle("has-ea-warning", Boolean(pill.dataset.eaWarning)));
-    const observer = new MutationObserver(sync);
-    pills.forEach((pill) => observer.observe(pill, { attributes: true, attributeFilter: ["aria-pressed"] }));
-    sync();
-  };
-
   // ---- Boot -------------------------------------------------------------------------
 
   const boot = () => {
     document.querySelectorAll("[data-ea-card]").forEach(installCard);
     drawChartsIn(document);
     installDialogs();
-    installBatchHint();
     document.querySelector("[data-ea-filter]")?.querySelectorAll("select").forEach((select) => {
       select.addEventListener("change", () => select.form.requestSubmit());
     });

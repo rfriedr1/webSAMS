@@ -337,30 +337,6 @@
 .ea-secondary { margin-left: 0; background: transparent; color: var(--brand); border-color: var(--line-strong); font-weight: 700; }
 .ea-secondary:hover { background: var(--brand-tint); }
 
-/* ---- Graph Batch Builder hint -------------------------------------------- */
-
-.graph-batch-system-pill.has-ea-warning { position: relative; }
-.graph-batch-system-pill.has-ea-warning::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--warm);
-}
-.graph-batch-ea-warning {
-  margin: var(--space-2) 0 0;
-  padding: 0.35rem 0.6rem;
-  border-radius: 8px;
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-line);
-  color: var(--warn-text);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
 /* ---- EA Checks page ------------------------------------------------------- */
 
 .ea-muted { color: var(--muted); font-weight: 500; font-size: var(--text-sm); }

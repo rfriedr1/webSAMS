@@ -681,16 +681,6 @@ class EaCheckLog:
             },
         }
 
-    def system_warnings(self, strip: Mapping[str, Any]) -> dict[str, str]:
-        """Graph systems whose EA has no passing latest attempt today."""
-        warnings: dict[str, str] = {}
-        for card in strip.get("cards") or []:
-            if card["state"] == "passed":
-                continue
-            for system in card["systems"]:
-                warnings[system] = f"{card['label']}: {card['state_label']}"
-        return warnings
-
     def dashboard_tile(self) -> dict[str, Any] | None:
         if not self.settings.instruments:
             return None
