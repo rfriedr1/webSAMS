@@ -336,6 +336,12 @@ class SamsService:
     def submitter_exists(self, user_nr: int) -> bool:
         return self.repo.get_submitter(user_nr) is not None
 
+    def find_submitter_nrs_by_last_name(self, last_name: str) -> list[int]:
+        return self.repo.find_submitter_nrs_by_last_name(last_name)
+
+    def submitter_name_exists(self, last_name: str) -> bool:
+        return bool(self.repo.find_submitter_nrs_by_last_name(last_name))
+
     def get_sample_overview(
         self,
         sample_nr: int,

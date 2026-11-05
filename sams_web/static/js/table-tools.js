@@ -35,7 +35,7 @@
     return directText;
   };
 
-  const { normalizeWhitespace } = window.SAMSUtil;
+  const { normalizeWhitespace, foldForSearch } = window.SAMSUtil;
 
   const normalizeHeaderLabel = (value) => normalizeWhitespace(value).toLowerCase();
 
@@ -509,7 +509,7 @@
       entries.forEach((entry) => {
         const cells = Array.from(entry.row.cells).map((cell) => extractCellValue(cell));
         entry.cells = cells;
-        entry.cellsLower = cells.map((value) => value.toLowerCase());
+        entry.cellsLower = cells.map((value) => foldForSearch(value));
       });
     };
 
@@ -555,7 +555,7 @@
 
     const applyFilter = () => {
       refreshCellCache();
-      const term = searchInput.value.trim().toLowerCase();
+      const term = foldForSearch(searchInput.value.trim());
       const columnIndex = Number(columnSelect.value);
       let visible = 0;
       entries.forEach((entry) => {
@@ -645,6 +645,19 @@
       searchInput.focus();
     });
     downloadButton.addEventListener("click", handleTableDownload);
+
+    // Optional pre-filled search: `data-table-search-initial` sets the term,
+    // `data-table-search-column` (a header label) limits it to one column.
+    // Used by the submitter list when Magic Nav `sub:<name>` matches several.
+    const initialTerm = container.dataset.tableSearchInitial || "";
+    if (initialTerm !== "") {
+      searchInput.value = initialTerm;
+      const wantedColumn = normalizeHeaderLabel(container.dataset.tableSearchColumn || "");
+      const columnIndex = headers.findIndex((header) => normalizeHeaderLabel(header.textContent || "") === wantedColumn);
+      if (wantedColumn !== "" && columnIndex >= 0) {
+        columnSelect.value = String(columnIndex);
+      }
+    }
 
     applySort();
     applyFilter();

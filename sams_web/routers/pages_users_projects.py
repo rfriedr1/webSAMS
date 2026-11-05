@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import traceback
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
@@ -10,6 +11,7 @@ from fastapi.responses import RedirectResponse
 from sams_web.config import get_settings
 from sams_web.dependencies import get_service
 from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
+from sams_web.magic_nav import append_magic_feedback, submitter_name_not_found_message
 from sams_web.routers.pages_shared import logger, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
 from sams_web.viewmodels.detail_sections_user_project import (
@@ -59,6 +61,7 @@ PROJECT_LIST_DEFAULT_LIMIT = 500
 @router.get("/submitters")
 def submitters_page(
     request: Request,
+    q: str = Query(default="", max_length=120),
     service: SamsService = Depends(get_service),
 ):
     """Submitters list — the whole table, always.
@@ -95,8 +98,39 @@ def submitters_page(
             "error": error,
             "error_trace": error_trace,
             "total_count": total_count,
+            # Pre-fills the table's own search box (Last Name column), set
+            # by `/submitters/lookup` when a name matches several records.
+            "q": " ".join(q.split()),
         },
     )
+
+
+@router.get("/submitters/lookup")
+def submitter_name_lookup(
+    name: str = Query(default="", max_length=120),
+    service: SamsService = Depends(get_service),
+):
+    """Magic Nav `sub:<last name>`.
+
+    Never guesses: one matching record opens it, several open the full list
+    filtered to that last name (the same name may be different people, or
+    one person stored with several addresses), none goes back with the
+    usual inline Magic Nav error. Declared before `/submitters/{user_nr}`.
+    """
+    last_name = " ".join(name.split())
+    if not last_name:
+        return RedirectResponse(url="/submitters", status_code=303)
+    user_nrs = service.find_submitter_nrs_by_last_name(last_name)
+    if len(user_nrs) == 1:
+        return RedirectResponse(url=f"/submitters/{user_nrs[0]}", status_code=303)
+    if not user_nrs:
+        return RedirectResponse(
+            url=append_magic_feedback(
+                "/submitters", f"sub:{last_name}", submitter_name_not_found_message(last_name)
+            ),
+            status_code=303,
+        )
+    return RedirectResponse(url=f"/submitters?{urlencode({'q': last_name})}", status_code=303)
 
 
 @router.post("/submitters/new")

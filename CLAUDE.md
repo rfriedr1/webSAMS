@@ -113,8 +113,10 @@
 
 ## Magic Nav Rules
 - Input only digits: treat as `sample_nr` and open sample detail.
+- **One rule for prefixes: prefix, optional separator (`:`, space, or nothing), value.** Digits are a number; a value starting with a letter is a name (only for prefixes in `MAGIC_IDENTIFIER_NAME_PREFIXES`). The UI documents the **colon form** (`pr:456`, `sub:210`, `sub:meier`) and says the colon is optional; `pr456` / `sub210` keep working.
 - Prefix `pr` + digits: treat as `project_nr` and open project detail.
 - Prefix `sub` + digits: treat as `user_nr` and open submitter detail.
+- Prefix `sub` + name (`sub:meier`): last-name lookup via `/submitters/lookup?name=` (`SubmitterNameNav`). **It never guesses**: exactly one record opens it; several (names repeat, and 267 people are stored more than once with different addresses) redirect to `/submitters?q=<name>`, which pre-fills the table search on the Last Name column (`data-table-search-initial` / `data-table-search-column`) and shows town + e-mail to tell them apart; none gives the inline error. Matching (`SamsRepository.find_submitter_nrs_by_last_name`): exact last name first, substring only when there is no exact hit. `user_t.last_name` is `latin1_swedish_ci` (ä ≠ a), so the query converts to `utf8mb4_unicode_ci` to fold case and accents; the table filter folds accents too (`SAMSUtil.foldForSearch`). `subotic` therefore means `sub` + `otic`: write `sub:subotic`.
 - Magic commands:
 - `/prep` opens `Lab/Preparation`
 - `/graph` opens `Lab/Graphitization`
