@@ -44,6 +44,7 @@
               method="get"
               action="/magic/open"
               data-magic-prefix-labels='{{ magic_identifier_prefix_labels | tojson }}'
+              data-magic-name-labels='{{ magic_identifier_name_labels | tojson }}'
               data-magic-sample-label="{{ magic_identifier_sample_label }}"
               data-magic-preparation-label="{{ magic_identifier_preparation_label }}"
               data-magic-target-label="{{ magic_identifier_target_label }}"
@@ -57,7 +58,7 @@
                 type="text"
                 inputmode="text"
                 autocomplete="off"
-                data-magic-placeholder-rotate='["Try: 12345 (sample)","Try: 12345.1 (prep)","Try: 12345.1.1 (target)","Try: pr456 (project)","Try: sub210 (submitter)","Try: /prep","Try: /graph","Try: /ea","Try: /sub","Try: /proj","Try: /import"]'
+                data-magic-placeholder-rotate='["Try: 12345 (sample)","Try: 12345.1 (prep)","Try: 12345.1.1 (target)","Try: pr:456 (project)","Try: sub:210 (submitter)","Try: sub:meier (submitter by name)","Try: /prep","Try: /graph","Try: /ea","Try: /sub","Try: /proj","Try: /import"]'
                 placeholder="Try: 12345 (sample)"
                 aria-label="Magic Nav identifier"
                 value="{{ magic_value }}"
@@ -150,7 +151,7 @@
         <div class="command-palette-head">
           <input
             type="text"
-            placeholder="Type command, page, sample #, pr123, sub210"
+            placeholder="Type command, page, sample #, pr:123, sub:210"
             aria-label="Command search"
             data-command-palette-input
           />

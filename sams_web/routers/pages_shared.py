@@ -14,6 +14,7 @@ from sams_web.config import get_settings
 from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_COMMAND_LABELS,
     MAGIC_IDENTIFIER_COMMAND_ROUTES,
+    MAGIC_IDENTIFIER_NAME_LABELS,
     MAGIC_IDENTIFIER_PREFIX_LABELS,
     MAGIC_IDENTIFIER_PREFIX_ROUTES,
     MAGIC_IDENTIFIER_PREPARATION_LABEL,
@@ -254,6 +255,7 @@ def format_table_cell_value(key: Any, value: Any) -> Any:
 
 
 templates.env.globals["magic_identifier_prefix_labels"] = MAGIC_IDENTIFIER_PREFIX_LABELS
+templates.env.globals["magic_identifier_name_labels"] = MAGIC_IDENTIFIER_NAME_LABELS
 templates.env.globals["magic_identifier_sample_label"] = MAGIC_IDENTIFIER_SAMPLE_LABEL
 templates.env.globals["magic_identifier_preparation_label"] = MAGIC_IDENTIFIER_PREPARATION_LABEL
 templates.env.globals["magic_identifier_target_label"] = MAGIC_IDENTIFIER_TARGET_LABEL
