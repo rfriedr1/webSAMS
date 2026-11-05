@@ -15,7 +15,7 @@
 # this table stores the variables used during data-evaluation of a magazine
   
 - ea_check_t(id, ea, standard, rm_lot, checked_at, weight_mg, conc_c, conc_n, c_ref, c_min, c_max, n_ref, n_min, n_max, passed, operator, comment, voided, void_reason, voided_by, voided_at, created_at)  
-# webSAMS-owned (ADR-0005): one row per measurement of a check standard (acetanilide) on an elemental analyzer; reference values and pass window are snapshotted per row; never updated except to void. weight_mg = standard weighed in (mg, optional). DDL: docs/sql/0005_qc_ea_checks.sql + 0006_ea_check_weight.sql
+# webSAMS-owned (ADR-0005): one row per measurement of a check standard (acetanilide) on an elemental analyzer; reference values and pass window are snapshotted per row; never updated except to void. weight_mg = standard weighed in (mg, optional). DDL: docs/sql/0005_qc_ea_checks.sql
 
 - fraction_t(fraction, indexnr)
 

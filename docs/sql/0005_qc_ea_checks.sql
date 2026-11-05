@@ -39,6 +39,7 @@ CREATE TABLE ea_check_t (
   standard    VARCHAR(30)  NOT NULL,           -- check-standard key from Setup, e.g. 'acetanilide'
   rm_lot      VARCHAR(40)  NULL,               -- lot of that standard (traceability)
   checked_at  DATETIME     NOT NULL,
+  weight_mg   DECIMAL(7,3) NULL,               -- standard weighed in (mg); NULL = not entered
   conc_c      DECIMAL(6,3) NULL,               -- measured C %
   conc_n      DECIMAL(6,3) NULL,               -- measured N %
   c_ref DECIMAL(6,3) NULL, c_min DECIMAL(6,3) NULL, c_max DECIMAL(6,3) NULL,  -- snapshot
