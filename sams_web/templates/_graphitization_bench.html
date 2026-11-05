@@ -322,13 +322,11 @@
                     data-graph-batch-system-pill
                     data-system-value="{{ system_name }}"
                     aria-pressed="false"
-                    {% if ea_system_warnings and system_name in ea_system_warnings %}data-ea-warning="{{ ea_system_warnings[system_name] }}"{% endif %}
                   >{{ system_name }}</button>
                   {% endfor %}
                 </div>
-                {# Filled by ea-checks.js when the selected system's EA has no
-                   passing check today — a hint, never a block. #}
-                <p class="graph-batch-ea-warning" data-ea-batch-warning hidden></p>
+                {# No EA-check hint here on purpose: batches are often built
+                   days ahead and are not tied to a particular EA check. #}
               </div>
               <div class="prep-bench-field" style="margin-top: 0.55rem;">
                 <label for="graph-batch-name">Batch Name</label>

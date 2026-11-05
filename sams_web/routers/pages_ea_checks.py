@@ -52,7 +52,6 @@ def ea_strip_context(service: SamsService, request: Request, return_url: str | N
     strip = log.strip_view()
     return {
         "ea_strip": strip,
-        "ea_system_warnings": log.system_warnings(strip),
         "ea_return_url": return_url or current_return_url(request),
         "ea_check_error": request.query_params.get("ea_check_error", "").strip(),
     }
