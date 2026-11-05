@@ -32,13 +32,28 @@
     return match[1];
   };
 
-  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel, preparationLabel, targetLabel) => {
+  // `sub:meier` / `sub meier` / `submeier`: a name-capable prefix followed
+  // by an optional separator and a letter (mirrors magic_nav._name_pattern).
+  const resolveNameLabel = (normalized, nameLabels) => {
+    for (const [prefix, label] of Object.entries(nameLabels)) {
+      if (normalized.startsWith(prefix) && /^[\s:]*\p{L}/u.test(normalized.slice(prefix.length))) {
+        return label;
+      }
+    }
+    return "";
+  };
+
+  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel, preparationLabel, targetLabel, nameLabels = {}) => {
     const normalized = String(value || "").trim().toLowerCase();
     if (!normalized) {
       return "";
     }
     if (Object.prototype.hasOwnProperty.call(prefixLabels, normalized)) {
       return prefixLabels[normalized];
+    }
+    const nameLabel = resolveNameLabel(normalized, nameLabels);
+    if (nameLabel) {
+      return nameLabel;
     }
     if (/^\d+\.\d+\.\d+$/.test(normalized)) {
       return targetLabel;
@@ -67,6 +82,7 @@
         ...parseMagicPrefixLabels(form.dataset.magicPrefixLabels || ""),
         ...parseMagicPrefixLabels(form.dataset.magicCommandLabels || ""),
       };
+      const nameLabels = parseMagicPrefixLabels(form.dataset.magicNameLabels || "");
       const sampleLabel = String(form.dataset.magicSampleLabel || "sample number");
       const preparationLabel = String(form.dataset.magicPreparationLabel || "preparation");
       const targetLabel = String(form.dataset.magicTargetLabel || "target");
@@ -85,6 +101,7 @@
           sampleLabel,
           preparationLabel,
           targetLabel,
+          nameLabels,
         );
         if (!label) {
           patch.hidden = true;
@@ -162,8 +179,9 @@
             <dt><kbd>12345</kbd></dt><dd>Open sample 12345</dd>
             <dt><kbd>12345.1</kbd></dt><dd>Open preparation 1 of sample 12345</dd>
             <dt><kbd>12345.1.1</kbd></dt><dd>Open target 1 of that preparation</dd>
-            <dt><kbd>pr456</kbd></dt><dd>Open project 456</dd>
-            <dt><kbd>sub210</kbd></dt><dd>Open submitter 210</dd>
+            <dt><kbd>pr:456</kbd></dt><dd>Open project 456</dd>
+            <dt><kbd>sub:210</kbd></dt><dd>Open submitter 210</dd>
+            <dt><kbd>sub:meier</kbd></dt><dd>Find a submitter by last name (one match opens it, several open the filtered list)</dd>
             <dt><kbd>/prep</kbd></dt><dd>Jump to Lab/Preparation</dd>
             <dt><kbd>/graph</kbd></dt><dd>Jump to Lab/Graphitization</dd>
             <dt><kbd>/ana</kbd></dt><dd>Jump to Lab/Analysis</dd>
@@ -172,6 +190,7 @@
             <dt><kbd>/proj</kbd></dt><dd>Jump to Projects</dd>
             <dt><kbd>/import</kbd></dt><dd>Jump to Sample Import</dd>
           </dl>
+          <p class="shortcut-cheatsheet-hint">The colon is optional: <kbd>pr456</kbd>, <kbd>sub210</kbd> and <kbd>sub meier</kbd> work too.</p>
           <p class="shortcut-cheatsheet-hint">Or press <kbd>Ctrl/⌘ K</kbd> to open the full command palette.</p>
         </div>`;
       return overlay;

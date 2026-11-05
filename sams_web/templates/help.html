@@ -31,7 +31,18 @@
           <li><kbd>/sub</kbd> · <kbd>/proj</kbd> · <kbd>/import</kbd> jump to Submitters, Projects, and Sample&nbsp;Import.</li>
           <li>
             A command always starts with <kbd>/</kbd>, so <kbd>/sub</kbd> (the submitter <em>list</em>)
-            and <kbd>sub210</kbd> (submitter&nbsp;210's <em>record</em>) are different things.
+            and <kbd>sub:210</kbd> (submitter&nbsp;210's <em>record</em>) are different things.
+          </li>
+          <li>
+            Prefixes follow one rule: prefix, optional separator, value. Digits are a number, a value
+            starting with a letter is a name — <kbd>sub:210</kbd>, <kbd>sub210</kbd> and <kbd>sub 210</kbd> are the same,
+            as are <kbd>sub:meier</kbd> and <kbd>sub meier</kbd>.
+          </li>
+          <li>
+            A last-name lookup ignores case and accents (<kbd>sub:hack</kbd> finds <em>Häck</em>). Exact last names win over
+            partial ones, so <kbd>sub:roth</kbd> opens the only <em>Roth</em> even when there are <em>Rothe</em> records.
+            When several records match — different people, or one person stored with several addresses — the
+            submitter list opens filtered to that name, with organisation, town and e-mail to tell them apart.
           </li>
         </ul>
       </li>

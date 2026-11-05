@@ -20,12 +20,20 @@
   </div>
   {% endif %}
 
+  {% if q %}
+  <div class="inline-notice">
+    <strong>Several submitters match the last name “{{ q }}”.</strong>
+    <p>They may be different people, or one person stored with several addresses —
+    compare organisation, town and e-mail. Clear the search to see everyone.</p>
+  </div>
+  {% endif %}
+
   <p class="setup-note">
     All <strong>{{ total_count }}</strong> submitters are loaded — the search box
     below filters every one of them.
   </p>
 
-  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Search all {{ total_count }} submitters by name, organisation or institute">
+  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Search all {{ total_count }} submitters by name, organisation, town or e-mail"{% if q %} data-table-search-initial="{{ q }}" data-table-search-column="Last Name"{% endif %}>
     <div class="table-wrap submitters-table-wrap">
       <table data-submitters-table>
         <thead>
@@ -35,6 +43,8 @@
             <th>First Name</th>
             <th>Organisation</th>
             <th>Institute</th>
+            <th>Town</th>
+            <th>E-mail</th>
           </tr>
         </thead>
         <tbody>
@@ -45,10 +55,12 @@
             <td>{{ submitter.first_name or '' }}</td>
             <td>{{ submitter.organisation or '' }}</td>
             <td>{{ submitter.institute or '' }}</td>
+            <td>{{ submitter.town or '' }}</td>
+            <td>{{ submitter.email or '' }}</td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" class="table-empty-row">No submitters found.</td>
+            <td colspan="7" class="table-empty-row">No submitters found.</td>
           </tr>
           {% endfor %}
         </tbody>
