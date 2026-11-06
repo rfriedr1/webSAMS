@@ -248,7 +248,7 @@ EMAIL_SERVER_FIELDS: tuple[EmailField, ...] = (
 
 #: Placeholders available inside a template's subject and body.
 EMAIL_PLACEHOLDERS: tuple[tuple[str, str], ...] = (
-    ("{submitter_name}", "Submitter's name, e.g. “Picin, Andrea”"),
+    ("{submitter_name}", "Submitter's name, e.g. “Andrea Picin”"),
     ("{submitter_first_name}", "Submitter's first name"),
     ("{submitter_last_name}", "Submitter's last name"),
     ("{salutation}", "Salutation from the submitter record"),
