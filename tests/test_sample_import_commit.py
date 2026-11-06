@@ -96,3 +96,24 @@ def test_unsupported_characters_are_rejected_before_any_write():
 
     payload["samples"][0]["values"]["user_desc1"] = "Shulluk3, 00-16"
     assert _validate_payload(payload).rows
+
+
+def test_confirmation_email_addresses_submitter_first_name_first():
+    from types import SimpleNamespace
+
+    from sams_web.import_settings import DEFAULT_TEMPLATES
+    from sams_web.sample_import.mailer import build_confirmation
+
+    def render(first, last):
+        return build_confirmation(
+            template=DEFAULT_TEMPLATES["en"],
+            settings={},
+            submitter=SimpleNamespace(first_name=first, last_name=last, email="a@b.c", salutation=""),
+            project_nr=1,
+            project_name="P",
+            sample_nrs=[10],
+        )
+
+    assert "Dear Andrea Picin," in render("Andrea", "Picin").body
+    assert "Dear Picin," in render("", "Picin").body
+    assert "Dear Sir or Madam," in render("", "").body

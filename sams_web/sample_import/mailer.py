@@ -95,7 +95,7 @@ def build_confirmation(
     """Render the confirmation e-mail for a completed import."""
     first = (getattr(submitter, "first_name", "") or "").strip()
     last = (getattr(submitter, "last_name", "") or "").strip()
-    display = f"{last}, {first}".strip(", ") or last or first or "Sir or Madam"
+    display = f"{first} {last}".strip() or "Sir or Madam"
 
     context = {
         "submitter_name": display,
