@@ -412,6 +412,10 @@ def _resolve_project(
             "free_of_charge": 1 if project_input.get("free_of_charge") else 0,
             "return_to_sender": 1 if project_input.get("return_to_sender") else 0,
             "prep_return_to_sender": 1 if project_input.get("prep_return_to_sender") else 0,
+            # Mapped columns are INSERTed as NULL when unset, overriding the DB
+            # default of 0; the legacy tools expect 0 ("not returned yet").
+            "returned_to_sender": 0,
+            "prep_returned_to_sender": 0,
         }
     )
     session.flush()
@@ -433,6 +437,11 @@ def _build_sample_payload(
         "project_nr": project_nr,
         "editable": DEFAULT_SAMPLE_EDITABLE,
         "not_tobedated": DEFAULT_SAMPLE_NOT_TOBEDATED,
+        # Legacy flags: write 0 explicitly (an unset mapped column is INSERTed
+        # as NULL, which would override the DB default).
+        "s_no_leftover": 0,
+        "c_n_isotop_a": 0,
+        "c_n_isotop_a_moved": 0,
         # The lookup columns are NOT NULL-friendly in the legacy schema and
         # the UI renders "undefined" as an empty dash, so default rather
         # than leave NULL.
