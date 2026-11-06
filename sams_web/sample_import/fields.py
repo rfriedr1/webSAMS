@@ -50,6 +50,10 @@ BLOCKED_TARGET_COLUMNS: frozenset[str] = frozenset(
         "project_nr",
         "editable",
         "not_tobedated",
+        # Extra analyses are set by the operator in the wizard's own step
+        "c_n_isotop_a",
+        "c_n_isotop_a_moved",
+        "dendro_a",
         # BATS-owned / derived results
         "c14_age",
         "c14_age_sig",

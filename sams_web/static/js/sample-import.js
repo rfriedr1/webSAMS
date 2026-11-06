@@ -107,7 +107,7 @@
     if (message) box.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const STEPS = ["upload", "review", "lab", "done"];
+  const STEPS = ["upload", "review", "lab", "extras", "done"];
   const setStep = (step) => {
     const index = STEPS.indexOf(step);
     root.querySelectorAll("[data-stage]").forEach((el) => {
@@ -196,6 +196,15 @@
     if (reviewProblems().length) { renderAlerts(); return; }
     setStep("lab");
     renderLabStage();
+  });
+  $("[data-back-lab]").addEventListener("click", () => {
+    setStep("lab");
+    renderLabStage();
+  });
+  $("[data-goto-extras]").addEventListener("click", () => {
+    if (labProblems().length) { renderLabAlerts(); return; }
+    setStep("extras");
+    renderExtrasStage();
   });
 
   // ------------------------------------------------------------ bootstrap
@@ -1298,9 +1307,89 @@
         .join("");
     }
     $("[data-commit]").disabled = problems.length > 0 || state.committing;
-    $("[data-commit-status]").textContent = problems.length
+    $("[data-goto-extras]").disabled = problems.length > 0;
+    $("[data-lab-status]").textContent = problems.length
       ? "Resolve the items above to continue"
-      : `Ready — ${includedSamples().length} sample(s) will be created`;
+      : `${includedSamples().length} sample(s) ready`;
+  }
+
+  // ------------------------------------------------- step 4: extra analyses
+
+  /** The analyses requested beyond C14 dating; set by hand, not by the sheet. */
+  const EXTRA_FLAGS = [
+    { key: "cn_isotop_a", label: "C/N isotope analysis" },
+    { key: "dendro_a", label: "Dendro analysis" },
+  ];
+
+  function renderExtrasStage() {
+    const rows = includedSamples();
+    $("[data-extras-summary]").textContent =
+      `${rows.length} sample(s) — tick the analyses requested in addition to C14 dating.`;
+
+    const bar = $("[data-extras-bar]");
+    bar.replaceChildren(
+      ...EXTRA_FLAGS.map(({ key, label }) => {
+        const on = rows.filter((r) => r.values[key]).length;
+        const wrap = document.createElement("div");
+        wrap.className = "import-extras-set";
+        const name = document.createElement("strong");
+        name.textContent = label;
+        const count = document.createElement("span");
+        count.className = "import-extras-count";
+        count.textContent = `${on} of ${rows.length}`;
+        const all = document.createElement("button");
+        all.type = "button"; all.className = "import-secondary";
+        all.textContent = "All";
+        all.addEventListener("click", () => setAllFlags(key, true));
+        const none = document.createElement("button");
+        none.type = "button"; none.className = "import-restart";
+        none.textContent = "None";
+        none.addEventListener("click", () => setAllFlags(key, false));
+        wrap.append(name, count, all, none);
+        return wrap;
+      })
+    );
+
+    const head = $("[data-extras-head]");
+    const headRow = document.createElement("tr");
+    ["Row", "Sample label", ...EXTRA_FLAGS.map((f) => f.label)].forEach((text) => {
+      const th = document.createElement("th");
+      th.textContent = text;
+      headRow.append(th);
+    });
+    head.replaceChildren(headRow);
+
+    $("[data-extras-body]").replaceChildren(
+      ...rows.map((sample) => {
+        const tr = document.createElement("tr");
+        const nr = document.createElement("td");
+        nr.textContent = sample.row_number;
+        const label = document.createElement("td");
+        label.textContent = sample.values.user_label || "—";
+        tr.append(nr, label);
+        EXTRA_FLAGS.forEach(({ key, label: flagLabel }) => {
+          const td = document.createElement("td");
+          const box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = !!sample.values[key];
+          box.setAttribute("aria-label", `${flagLabel} for row ${sample.row_number}`);
+          box.addEventListener("change", () => {
+            sample.values[key] = box.checked;
+            renderExtrasStage();
+          });
+          td.append(box);
+          tr.append(td);
+        });
+        return tr;
+      })
+    );
+
+    $("[data-commit-status]").textContent = `Ready — ${rows.length} sample(s) will be created`;
+  }
+
+  function setAllFlags(key, value) {
+    includedSamples().forEach((sample) => { sample.values[key] = value; });
+    renderExtrasStage();
   }
 
   // -------------------------------------------------------------- commit
@@ -1354,6 +1443,7 @@
         STEP_COLUMNS.forEach((col) => {
           if (sample.values[col]) values[col] = sample.values[col];
         });
+        EXTRA_FLAGS.forEach(({ key }) => { values[key] = sample.values[key] ? 1 : 0; });
         return { include: true, row_number: sample.row_number, values };
       }),
     };
@@ -1396,6 +1486,9 @@
       ["Submitter", partySummary("submitter")],
       ...(state.party.invoice.enabled ? [["Invoice to", partySummary("invoice")]] : []),
       ["Project", projectSummary()],
+      ...EXTRA_FLAGS.map(({ key, label }) => [
+        label, `${includedSamples().filter((r) => r.values[key]).length} sample(s)`,
+      ]),
     ];
     const summary = dialog.querySelector("[data-commit-summary]");
     summary.replaceChildren(

@@ -517,7 +517,18 @@ def _build_sample_payload(
         if target_column in ("user_label", "user_label_nr", "user_desc1", "user_desc2"):
             cleaned = _clean(sanitizer.replace_bad_characters(cleaned), max_length=width)
         sample_payload[target_column] = cleaned
+    # Extra analyses come from the wizard's own step, never from a sheet
+    # column, so they are applied last and coerced to the legacy 0/1.
+    sample_payload["c_n_isotop_a"] = _flag(values.get("cn_isotop_a"))
+    sample_payload["dendro_a"] = _flag(values.get("dendro_a"))
     return sample_payload
+
+
+def _flag(raw: Any) -> int:
+    """Wizard checkbox value -> legacy 0/1 flag (anything unclear is 0)."""
+    if isinstance(raw, str):
+        return 1 if raw.strip().lower() in ("1", "true", "yes", "on") else 0
+    return 1 if raw else 0
 
 
 #: `method_t` entry meaning "this sample gets no pretreatment".
