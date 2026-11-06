@@ -383,18 +383,12 @@
     const w = width - m.left - m.right;
     const h = height - m.top - m.bottom;
 
-    // Zoom on the data (points, reference, ±3s) so the scatter is readable;
-    // the pass window is drawn clipped to that range — a band filling the
-    // whole chart simply means every point is far inside the window.
+    // The y-axis spans the allowable range (pass window), widened only as far
+    // as needed to keep every plotted point on the chart — so the band's
+    // limits are always visible and the scatter reads against them.
     const values = points.map((p) => p.v);
-    let lo = Math.min(...values, el.ref, stats.lo3 ?? Infinity);
-    let hi = Math.max(...values, el.ref, stats.hi3 ?? -Infinity);
-    const minSpan = Math.max(el.step * 6, (el.max - el.min) * 0.04);
-    if (hi - lo < minSpan) {
-      const mid = (hi + lo) / 2;
-      lo = mid - minSpan / 2;
-      hi = mid + minSpan / 2;
-    }
+    const lo = Math.min(el.min, el.ref, ...values);
+    const hi = Math.max(el.max, el.ref, ...values);
     const pad = (hi - lo) * 0.08;
     const y0 = lo - pad;
     const y1 = hi + pad;

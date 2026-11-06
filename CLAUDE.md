@@ -268,7 +268,7 @@
 - **QC sign-off is generic** (`qc_signoff.py`): a `SignoffSubject` per kind (`items`, `summarize`, `describe`, `body_context` + `body_template`), registered in `signoff_subjects()`. Routes `POST /qc/signoffs` and the printable `GET /qc/signoffs/{id}` know no subject. **To add OXA2 / blanks / IAEA sign-offs:** one handler + one `templates/qc/_<subject>_signoff_body.html`; no DDL. Items are linked through `qc_signoff_item_t` (unique per item), so BATS-owned rows can be signed without altering their tables.
 - **The Graph Batch Builder does not look at EA checks** — no warning, no block. Batches are often built days before graphitization and are not tied to a particular EA check (removed 2026-11 at the lab's request; it used to dot system pills whose EA had no passing check today).
 - Dashboard: "EA checks today" tile in the Lab Queues cards (`EaCheckLog.dashboard_tile`), incl. overdue sign-off (Setup → EA Checks → reminder days).
-- `style-ea-checks.css` / `js/ea-checks.js` load only on the graphitization, EA Checks and sign-off print pages. The control charts are hand-drawn inline SVG (no chart library); the y-axis zooms on the data and ±3s, with the pass window clipped.
+- `style-ea-checks.css` / `js/ea-checks.js` load only on the graphitization, EA Checks and sign-off print pages. The control charts are hand-drawn inline SVG (no chart library); the y-axis spans the pass window (Setup → EA Checks), widened only to keep every point on the chart.
 - **`data-table-plain`** on a `<table>` opts it out of `table-tools.js` (no search/sort/export/wrap) — for small key/value tables such as the statistics block or a printed record.
 
 ## Current Workflow Notes
