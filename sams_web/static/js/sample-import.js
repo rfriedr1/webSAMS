@@ -51,9 +51,58 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     })[ch]);
 
-  const showError = (message) => {
+  const TECHNICAL_LABELS = {
+    reference: "Reference", time: "Time", stage: "Stage", sheet_row: "Sheet row",
+    sample_label: "Sample label", error_type: "Error type", message: "Message",
+    database_error: "Database error", sql: "SQL statement", location: "Raised in",
+    caused_by: "Caused by", context: "Context",
+  };
+
+  // Plain text of the technical details, for the Copy button and the support mail.
+  const technicalText = (technical) =>
+    Object.entries(technical)
+      .map(([key, value]) => {
+        const label = TECHNICAL_LABELS[key] || key;
+        if (Array.isArray(value)) return `${label}: ${value.join(" <- ")}`;
+        if (value && typeof value === "object") {
+          return `${label}: ` + Object.entries(value).map(([k, v]) => `${k}=${v}`).join(", ");
+        }
+        return `${label}: ${value}`;
+      })
+      .join("\n");
+
+  const showError = (message, technical) => {
     const box = $("[data-import-error]");
-    box.textContent = message;
+    box.textContent = "";
+    const text = document.createElement("span");
+    text.textContent = message;
+    box.append(text);
+    if (message && technical) {
+      const details = document.createElement("details");
+      details.className = "import-error-details";
+      const summary = document.createElement("summary");
+      summary.textContent = `Technical details (ref. ${technical.reference || "n/a"})`;
+      const pre = document.createElement("pre");
+      pre.textContent = technicalText(technical);
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "import-error-copy";
+      copy.textContent = "Copy details";
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pre.textContent);
+          window.SAMSToast?.show("Technical details copied.", "success");
+        } catch (_error) {
+          const range = document.createRange();
+          range.selectNodeContents(pre);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
+      details.append(summary, pre, copy);
+      box.append(details);
+    }
     box.hidden = !message;
     if (message) box.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -105,14 +154,17 @@
       const response = await fetch("/samples/import/parse", { method: "POST", body });
       const payload = await response.json();
       if (!response.ok) {
-        showError(payload.detail || "The workbook could not be read.");
+        showError(payload.detail || "The workbook could not be read.", payload.technical);
         return;
       }
       applyPayload(payload);
       setStep("review");
       window.addEventListener("beforeunload", guardUnload);
-    } catch (_error) {
-      showError("Upload failed. Check your connection and try again.");
+    } catch (error) {
+      showError("Upload failed. Check your connection and try again.", {
+        stage: "Uploading the workbook (browser)", error_type: error?.name || "Error",
+        message: error?.message || String(error), context: { file: file.name, size_bytes: file.size },
+      });
     } finally {
       busy.hidden = true;
       dropzone.classList.remove("is-busy");
@@ -1377,7 +1429,7 @@
       });
       const result = await response.json();
       if (!response.ok) {
-        showError(result.detail || "The import could not be saved.");
+        showError(result.detail || "The import could not be saved.", result.technical);
         return;
       }
       state.result = result;
@@ -1386,8 +1438,12 @@
       setStep("done");
       window.SAMSToast?.show(`Imported ${result.sample_count} sample(s).`, "success");
       loadEmailPreview(result);
-    } catch (_error) {
-      showError("The import request failed. Nothing was saved — please try again.");
+    } catch (error) {
+      showError("The import request failed. Nothing was saved — please try again.", {
+        stage: "Sending the import (browser)", error_type: error?.name || "Error",
+        message: error?.message || String(error),
+        note: "The server answered with something that was not JSON, or did not answer at all; check the server log.",
+      });
     } finally {
       state.committing = false;
       button.disabled = false;

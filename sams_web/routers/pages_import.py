@@ -24,6 +24,7 @@ from sams_web.dependencies import get_service
 from sams_web.import_settings import EmailSettingsStore
 from sams_web.routers.pages_shared import templates
 from sams_web.sample_import.commit import ImportCommitError
+from sams_web.sample_import.diagnostics import describe_failure, format_for_log
 from sams_web.sample_import.mailer import EmailError, build_confirmation, send_email
 from sams_web.sample_import.service import (
     commit_submission,
@@ -82,14 +83,20 @@ async def sample_import_parse(
         )
     except WorkbookError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=400)
-    except Exception:  # noqa: BLE001 - never leak a stack trace to the browser
-        logger.exception("Failed parsing submission workbook %r", file.filename)
+    except Exception as exc:  # noqa: BLE001 - never leak a stack trace to the browser
+        technical = describe_failure(
+            exc,
+            stage="Reading the workbook",
+            context={"file": file.filename, "size_bytes": len(data)},
+        )
+        logger.exception("Failed parsing submission workbook: %s", format_for_log(technical))
         return JSONResponse(
             {
                 "detail": (
                     "The workbook could not be parsed. Check that it is a filled-in "
                     "submission sheet, or contact support if it looks correct."
-                )
+                ),
+                "technical": technical,
             },
             status_code=500,
         )
@@ -111,15 +118,25 @@ async def sample_import_commit(
         result = commit_submission(service, payload)
     except ImportCommitError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=400)
-    except Exception:  # noqa: BLE001
-        logger.exception("Failed committing sample import")
+    except Exception as exc:  # noqa: BLE001
         service.session.rollback()
+        technical = describe_failure(
+            exc,
+            stage="Saving the import (one transaction, rolled back)",
+            context={
+                "project": (payload.get("project") or {}).get("project"),
+                "submitter_nr": (payload.get("submitter") or {}).get("user_nr"),
+                "samples_in_payload": len(payload.get("samples") or []),
+            },
+        )
+        logger.exception("Failed committing sample import: %s", format_for_log(technical))
         return JSONResponse(
             {
                 "detail": (
                     "The import could not be saved and nothing was written. "
                     "Please try again, or contact support if this persists."
-                )
+                ),
+                "technical": technical,
             },
             status_code=500,
         )

@@ -531,35 +531,39 @@ def _create_samples(
 
     sample_nrs: list[int] = []
     sample_labels: list[str] = []
-    for _row_number, values in rows:
-        sample_payload = _build_sample_payload(
-            values,
-            project_nr=project_nr,
-            importable=importable,
-            field_targets=field_targets,
-            field_widths=field_widths,
-            lookup_allowed=lookup_allowed,
-            sanitizer=sanitizer,
-        )
-        sample = repo.create_sample(sample_payload)
-        session.flush()
-        sample_nr = int(sample.sample_nr)
-        sample_labels.append(str(sample_payload.get("user_label") or ""))
-
-        prep = repo.create_blank_prep(sample_nr=sample_nr, prep_nr=1)
-        step_methods: list[str | None] = []
-        for step_field in PREP_STEP_FIELDS:
-            method = _lookup_or_default(values.get(step_field), allowed_methods, default=None)
-            step_methods.append(method)
-            if method:
-                setattr(prep, step_field, method)
-        if needs_no_preparation(step_methods):
-            # Midnight, like the bench's own auto-stamp (`_autostamp_prep_dates`).
-            prep.prep_end = datetime.combine(today, datetime.min.time())
-        if any(step_methods):
+    for row_number, values in rows:
+        try:
+            sample_payload = _build_sample_payload(
+                values,
+                project_nr=project_nr,
+                importable=importable,
+                field_targets=field_targets,
+                field_widths=field_widths,
+                lookup_allowed=lookup_allowed,
+                sanitizer=sanitizer,
+            )
+            sample = repo.create_sample(sample_payload)
             session.flush()
-        repo.create_blank_target(sample_nr=sample_nr, prep_nr=1, target_nr=1)
-        sample_nrs.append(sample_nr)
+            sample_nr = int(sample.sample_nr)
+            sample_labels.append(str(sample_payload.get("user_label") or ""))
+
+            prep = repo.create_blank_prep(sample_nr=sample_nr, prep_nr=1)
+            step_methods: list[str | None] = []
+            for step_field in PREP_STEP_FIELDS:
+                method = _lookup_or_default(values.get(step_field), allowed_methods, default=None)
+                step_methods.append(method)
+                if method:
+                    setattr(prep, step_field, method)
+            if needs_no_preparation(step_methods):
+                # Midnight, like the bench's own auto-stamp (`_autostamp_prep_dates`).
+                prep.prep_end = datetime.combine(today, datetime.min.time())
+            if any(step_methods):
+                session.flush()
+            repo.create_blank_target(sample_nr=sample_nr, prep_nr=1, target_nr=1)
+            sample_nrs.append(sample_nr)
+        except Exception as exc:
+            exc.import_row = (row_number, str(values.get("user_label") or ""))  # type: ignore[attr-defined]
+            raise
     return sample_nrs, sample_labels
 
 
