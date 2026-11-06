@@ -142,6 +142,12 @@
               <h4>Material</h4>
               <p>{{ bench_sample.material or '—' }}</p>
             </article>
+            <article class="detail-item">
+              <h4>CNIsotopA</h4>
+              <p>
+                <input class="detail-boolean-checkbox" type="checkbox" disabled {% if bench_sample.c_n_isotop_a %}checked{% endif %} />
+              </p>
+            </article>
           </div>
         </section>
 
