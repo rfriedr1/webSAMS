@@ -123,9 +123,9 @@
     <h3>Import samples from Excel</h3>
     <p>
       <strong>Samples → Import</strong> takes a filled-in submission workbook (<code>.xlsx</code>)
-      and creates the project and all its samples in one go. Four steps:
-      <strong>Upload → Review &amp; fix → Lab values → Imported</strong>. Nothing is written to the
-      database until you press <em>Import samples</em> at the end of step&nbsp;3.
+      and creates the project and all its samples in one go. Five steps:
+      <strong>Upload → Review &amp; fix → Lab values → Extra analyses → Imported</strong>. Nothing is
+      written to the database until you press <em>Import samples</em> at the end of step&nbsp;4.
     </p>
     <ul>
       <li>
@@ -176,7 +176,13 @@
         can verify them before saving. Leave the password blank to reuse the stored one.
       </li>
       <li>
-        <strong>The confirmation e-mail is never sent by itself.</strong> After the import, step&nbsp;4
+        <strong>Extra analyses are set by hand.</strong> Step&nbsp;4 shows the samples again so you
+        can request <em>C/N isotope analysis</em> and <em>Dendro analysis</em> beyond C14 dating —
+        for all samples at once (<em>All</em> / <em>None</em>) or per sample. Both default to off;
+        the submission sheet does not carry them.
+      </li>
+      <li>
+        <strong>The confirmation e-mail is never sent by itself.</strong> After the import, step&nbsp;5
         shows the finished message — recipient, subject, and the body pairing each new
         <code>MAMS-…</code> number with the customer's own label. Edit it, skip it, or press
         <em>Send</em>. Server settings and the per-language templates live in

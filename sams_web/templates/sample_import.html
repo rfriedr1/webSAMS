@@ -19,8 +19,8 @@
       the importer finds them by their headings.
     </p>
 
-    {# Stepper. JS toggles which stage is visible; steps 1-3 are the
-       import itself, step 4 is the optional confirmation e-mail. #}
+    {# Stepper. JS toggles which stage is visible; steps 1-4 are the
+       import itself, step 5 is the optional confirmation e-mail. #}
     <ol class="import-steps" data-import-steps aria-label="Import progress">
       <li class="import-step is-current" data-step="upload">
         <span class="import-step-mark">1</span><span class="import-step-label">Upload</span>
@@ -31,8 +31,11 @@
       <li class="import-step" data-step="lab">
         <span class="import-step-mark">3</span><span class="import-step-label">Lab values</span>
       </li>
+      <li class="import-step" data-step="extras">
+        <span class="import-step-mark">4</span><span class="import-step-label">Extra analyses</span>
+      </li>
       <li class="import-step" data-step="done">
-        <span class="import-step-mark">4</span><span class="import-step-label">Imported</span>
+        <span class="import-step-mark">5</span><span class="import-step-label">Imported</span>
       </li>
     </ol>
   </div>
@@ -184,6 +187,34 @@
     </section>
 
     <div class="import-actions">
+      <p class="import-actions-status" data-lab-status></p>
+      <button type="button" class="import-primary" data-goto-extras>Continue to extra analyses</button>
+    </div>
+  </div>
+
+  <!-- ============================ STEP 4: EXTRA ANALYSES =============== -->
+  <div class="import-stage" data-stage="extras" hidden>
+    <div class="import-review-head">
+      <p class="import-source" data-extras-summary></p>
+      <button type="button" class="import-restart" data-back-lab>&#8249; Back to lab values</button>
+    </div>
+
+    <section class="card-group">
+      <h4 class="card-group-title">Set for all samples</h4>
+      <div class="import-extras-bar" data-extras-bar></div>
+    </section>
+
+    <section class="card-group">
+      <h4 class="card-group-title">Samples</h4>
+      <div class="table-wrap import-table-wrap">
+        <table class="import-table" data-sample-table-extras data-table-plain>
+          <thead data-extras-head></thead>
+          <tbody data-extras-body></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="import-actions">
       <p class="import-actions-status" data-commit-status></p>
       <button type="button" class="import-primary" data-commit>Import samples</button>
     </div>
@@ -204,7 +235,7 @@
     </dialog>
   </div>
 
-  <!-- ============================ STEP 4: DONE + EMAIL ================= -->
+  <!-- ============================ STEP 5: DONE + EMAIL ================= -->
   <div class="import-stage" data-stage="done" hidden>
     <div class="import-done" data-done></div>
     <section class="card-group import-email" data-email-section hidden>

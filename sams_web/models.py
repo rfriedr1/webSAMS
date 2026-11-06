@@ -132,6 +132,7 @@ class Sample(Base):
     storage: Mapped[str | None] = mapped_column(String(60))
     c_n_isotop_a: Mapped[int | None] = mapped_column("CNIsotopA", Integer)
     c_n_isotop_a_moved: Mapped[int | None] = mapped_column("CNIsotopAMoved", Integer)
+    dendro_a: Mapped[int | None] = mapped_column("DendroA", Integer)
 
     project: Mapped[Project | None] = relationship(back_populates="samples")
     preparations: Mapped[list["Preparation"]] = relationship(back_populates="sample")
