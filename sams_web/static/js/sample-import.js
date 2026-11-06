@@ -1262,7 +1262,62 @@
     };
   }
 
+  /** "Name #nr" of the submitter / invoice recipient the commit will use. */
+  function partySummary(which) {
+    const party = state.party[which];
+    if (party.mode === "existing") {
+      const pool = [
+        ...((which === "submitter" ? state.payload.submitter_candidates : state.payload.invoice_candidates) || []),
+        ...(party.browse || []),
+      ];
+      const hit = pool.find((c) => c.user_nr === party.user_nr);
+      return `${hit ? hit.display_name : "Submitter"} #${party.user_nr} (existing)`;
+    }
+    const v = party.values || {};
+    const name = [v.last_name, v.first_name].filter(Boolean).join(", ");
+    return `${name || "—"} (new record)`;
+  }
+
+  function projectSummary() {
+    const p = state.project;
+    if (p.mode === "existing") {
+      const hit = (p.matches || []).find((m) => m.project_nr === p.existing_project_nr);
+      return `Add to #${p.existing_project_nr}${hit ? ` “${hit.project}”` : ""}`;
+    }
+    return `“${p.values.project || "—"}” (new project)`;
+  }
+
+  /**
+   * Ask before writing: the button is the wizard's last step and saves at
+   * once, which operators did not expect. Resolves true only on "Yes".
+   */
+  function confirmCommit() {
+    const dialog = root.querySelector("[data-commit-dialog]");
+    if (!dialog?.showModal) return Promise.resolve(window.confirm("Import the samples now? This saves them to the database."));
+    const rows = [
+      ["Samples", `${includedSamples().length} of ${state.draft.samples.length} row(s)`],
+      ["Submitter", partySummary("submitter")],
+      ...(state.party.invoice.enabled ? [["Invoice to", partySummary("invoice")]] : []),
+      ["Project", projectSummary()],
+    ];
+    const summary = dialog.querySelector("[data-commit-summary]");
+    summary.replaceChildren(
+      ...rows.flatMap(([label, value]) => {
+        const dt = document.createElement("dt"); dt.textContent = label;
+        const dd = document.createElement("dd"); dd.textContent = value;
+        return [dt, dd];
+      })
+    );
+    dialog.returnValue = "";
+    dialog.showModal();
+    return new Promise((resolve) => {
+      dialog.addEventListener("close", () => resolve(dialog.returnValue === "yes"), { once: true });
+    });
+  }
+
   $("[data-commit]").addEventListener("click", async () => {
+    if (state.committing) return;
+    if (!(await confirmCommit())) return;
     if (state.committing) return;
     state.committing = true;
     showError("");

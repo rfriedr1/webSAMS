@@ -187,6 +187,21 @@
       <p class="import-actions-status" data-commit-status></p>
       <button type="button" class="import-primary" data-commit>Import samples</button>
     </div>
+
+    <!-- Final-step confirmation: "Import samples" writes to the database at
+         once, and operators expected another wizard page before that. -->
+    <dialog class="import-confirm" data-commit-dialog aria-labelledby="import-confirm-title">
+      <form method="dialog">
+        <h3 id="import-confirm-title">Import these samples now?</h3>
+        <p class="import-confirm-lead">This is the <strong>last step</strong>. Clicking <em>Yes, import</em> saves the records to the database straight away — there is no further page to check them.</p>
+        <dl class="import-confirm-summary" data-commit-summary></dl>
+        <p class="import-confirm-note">The confirmation e-mail comes afterwards and is only sent when you click Send.</p>
+        <div class="import-confirm-actions">
+          <button type="submit" value="no" class="import-restart" autofocus>No, go back</button>
+          <button type="submit" value="yes" class="import-primary">Yes, import</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 
   <!-- ============================ STEP 4: DONE + EMAIL ================= -->
