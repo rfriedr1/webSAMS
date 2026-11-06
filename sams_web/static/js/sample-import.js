@@ -37,15 +37,12 @@
     project: { mode: "new", existing_project_nr: null, values: {}, existing: [], matches: [] },
     groups: {},
     selection: new Set(),
-    hiddenColumns: new Set(),
+    // Operator's explicit show/hide per sheet column (field -> bool).
+    // Columns without an entry here follow `hasEntries`.
+    columnVisibility: new Map(),
     committing: false,
     result: null,
   };
-
-  //: Sheet columns the lab-values table hides by default. This step is
-  //: about assigning lab vocabulary, so the wide free-text/measurement
-  //: columns only add noise — they stay one click away via "Columns".
-  const DEFAULT_HIDDEN_COLUMNS = ["weight", "user_desc2"];
 
   // ---------------------------------------------------------------- utils
 
@@ -155,7 +152,7 @@
     state.payload = payload;
     state.draft = payload.draft;
     state.selection = new Set();
-    state.hiddenColumns = new Set(DEFAULT_HIDDEN_COLUMNS);
+    state.columnVisibility = new Map();
     state.result = null;
 
     state.mapping = {};
@@ -441,7 +438,7 @@
         <p class="import-fixups-hint">
           These values will be saved as a new record — check them before importing.
           Salutation, title, language and comment are not in the sheet; fill them in as needed.
-          <em>Language decides which confirmation-e-mail template is used.</em>
+          <em>Language picks the confirmation-e-mail template (blank = German); you can still change it before sending.</em>
         </p>
         <div class="import-field-grid">${body}</div>
       </div>`;
@@ -937,9 +934,27 @@
     return order.filter((f) => used.has(f));
   }
 
+  /** True when at least one row has a value in this sheet column. */
+  function hasEntries(field) {
+    return state.draft.samples.some((sample) => {
+      const value = sample.values[field];
+      return value !== undefined && value !== null && String(value).trim() !== "";
+    });
+  }
+
+  /**
+   * Whether a sheet column is shown: the operator's pill click if there
+   * was one, else shown exactly when it has entries — data is never
+   * hidden by default, empty columns are.
+   */
+  function isColumnShown(field) {
+    const chosen = state.columnVisibility.get(field);
+    return chosen === undefined ? hasEntries(field) : chosen;
+  }
+
   /** The mapped sheet columns the table actually shows. */
   function sheetFields() {
-    return mappedSheetFields().filter((f) => !state.hiddenColumns.has(f));
+    return mappedSheetFields().filter(isColumnShown);
   }
 
   const LAB_COLUMNS = LOOKUP_FIELDS.map((f) => `lab_${f}`);
@@ -952,7 +967,7 @@
     const fields = mappedSheetFields();
     host.innerHTML = fields
       .map((field) => {
-        const shown = !state.hiddenColumns.has(field);
+        const shown = isColumnShown(field);
         return `<button type="button" class="import-column-chip ${shown ? "is-on" : ""}"
                         data-column-toggle="${esc(field)}" aria-pressed="${shown}">
                   ${esc(labels[field] || field)}
@@ -962,8 +977,7 @@
     host.querySelectorAll("[data-column-toggle]").forEach((chip) => {
       chip.addEventListener("click", () => {
         const field = chip.dataset.columnToggle;
-        if (state.hiddenColumns.has(field)) state.hiddenColumns.delete(field);
-        else state.hiddenColumns.add(field);
+        state.columnVisibility.set(field, !isColumnShown(field));
         renderSamples();
       });
     });
@@ -1323,37 +1337,56 @@
    * Render the confirmation e-mail. Nothing is sent here — the operator
    * reviews (and may edit) the text, then explicitly clicks Send.
    */
+  function fetchEmailPreview(result, templateCode) {
+    return fetch("/samples/import/email/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_nr: result.user_nr,
+        project_nr: result.project_nr,
+        project_name: result.project_name,
+        sample_nrs: result.sample_nrs,
+        sample_labels: result.sample_labels,
+        template: templateCode || null,
+      }),
+    });
+  }
+
   async function loadEmailPreview(result) {
     const section = $("[data-email-section]");
     const host = $("[data-email]");
     section.hidden = false;
     host.innerHTML = `<p class="import-fixups-hint"><span class="import-spinner"></span> Preparing the confirmation e-mail…</p>`;
     try {
-      const res = await fetch("/samples/import/email/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_nr: result.user_nr,
-          project_nr: result.project_nr,
-          project_name: result.project_name,
-          sample_nrs: result.sample_nrs,
-          sample_labels: result.sample_labels,
-        }),
-      });
+      const res = await fetchEmailPreview(result, null);
       const data = await res.json();
       if (!res.ok) { host.innerHTML = `<p class="import-empty">${esc(data.detail || "No preview available.")}</p>`; return; }
-      renderEmailForm(data);
+      renderEmailForm(data, result);
     } catch (_e) {
       host.innerHTML = `<p class="import-empty">The e-mail preview could not be loaded. The import itself is complete.</p>`;
     }
   }
 
-  function renderEmailForm(data) {
+  /** One sentence on why this template was picked. */
+  function templateReasonText(data) {
+    const label = (data.templates || []).find((t) => t.code === data.template)?.label || data.template;
+    switch (data.template_reason) {
+      case "language": return `Picked from the submitter's language (${data.language}).`;
+      case "no_language": return `The submitter has no language stored, so ${label} is used by default.`;
+      case "unsupported": return `There is no template for the submitter's language (${data.language}), so ${label} is used.`;
+      default: return "";
+    }
+  }
+
+  function renderEmailForm(data, result) {
     const email = data.email;
     const host = $("[data-email]");
     const blockers = [];
     if (!data.configured) blockers.push("No mail server is configured yet.");
     if (!email.to_address) blockers.push("This submitter has no e-mail address.");
+    const templateOptions = (data.templates || [])
+      .map((t) => `<option value="${esc(t.code)}" ${t.code === data.template ? "selected" : ""}>${esc(t.label)}</option>`)
+      .join("");
 
     host.innerHTML = `
       ${blockers.length
@@ -1361,16 +1394,18 @@
              <a href="/setup?section=email_settings">Open e-mail settings</a></p>`
         : `<p class="import-fixups-hint">
              Review the message below — it is <strong>not sent</strong> until you click Send.
-             ${data.language ? `Template language: <strong>${esc(data.language)}</strong>.` : ""}
            </p>`}
       <div class="import-field-grid import-email-grid">
+        <div class="import-field"><label for="import-email-template">Template</label>
+          <select id="import-email-template" data-email-template data-no-searchable>${templateOptions}</select>
+          <span class="import-field-hint" data-email-template-reason>${esc(templateReasonText(data))}</span></div>
         <div class="import-field"><label>To</label>
           <input type="email" data-email-to value="${esc(email.to_address)}" /></div>
         <div class="import-field"><label>From</label>
           <input type="text" value="${esc(email.from_name ? email.from_name + " <" + email.from_address + ">" : email.from_address)}" disabled /></div>
-        <div class="import-field import-span-2"><label>Subject</label>
+        <div class="import-field"><label>Subject</label>
           <input type="text" data-email-subject value="${esc(email.subject)}" /></div>
-        <div class="import-field import-span-2"><label>Message</label>
+        <div class="import-field import-email-message"><label>Message</label>
           <textarea data-email-body rows="16">${esc(email.body)}</textarea></div>
       </div>
       <div class="import-actions">
@@ -1378,6 +1413,41 @@
         <button type="button" class="import-restart" data-email-skip>Skip — don't send</button>
         <button type="button" class="import-primary" data-email-send ${blockers.length ? "disabled" : ""}>Send e-mail</button>
       </div>`;
+
+    // Switching template re-renders subject and body only; the To field
+    // keeps whatever the operator typed. Edits to the text would be lost,
+    // so ask first.
+    const subjectInput = host.querySelector("[data-email-subject]");
+    const bodyInput = host.querySelector("[data-email-body]");
+    const templateSelect = host.querySelector("[data-email-template]");
+    // Compare against what the fields actually hold, not the server text:
+    // the HTML parser turns the template's CRLFs into LFs, which would
+    // make an untouched message look edited.
+    let rendered = { subject: subjectInput.value, body: bodyInput.value };
+    let currentTemplate = data.template;
+    templateSelect.addEventListener("change", async () => {
+      const edited = subjectInput.value !== rendered.subject || bodyInput.value !== rendered.body;
+      if (edited && !window.confirm("Switching template replaces the subject and message, including your edits. Continue?")) {
+        templateSelect.value = currentTemplate;
+        return;
+      }
+      templateSelect.disabled = true;
+      try {
+        const res = await fetchEmailPreview(result, templateSelect.value);
+        const next = await res.json();
+        if (!res.ok) throw new Error(next.detail || "");
+        currentTemplate = next.template;
+        subjectInput.value = next.email.subject;
+        bodyInput.value = next.email.body;
+        rendered = { subject: subjectInput.value, body: bodyInput.value };
+        host.querySelector("[data-email-template-reason]").textContent = templateReasonText(next);
+      } catch (_e) {
+        templateSelect.value = currentTemplate;
+        window.SAMSToast?.show("That template could not be loaded.", "error");
+      } finally {
+        templateSelect.disabled = false;
+      }
+    });
 
     host.querySelector("[data-email-skip]").addEventListener("click", () => {
       $("[data-email-section]").hidden = true;
