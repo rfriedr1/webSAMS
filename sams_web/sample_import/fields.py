@@ -79,13 +79,25 @@ LOOKUP_BACKED_COLUMNS: dict[str, str] = {
 }
 
 
+#: Value kinds. The commit step converts by kind, so a custom field on an
+#: INT column is written as an int and an unreadable number is rejected
+#: before anything is written, instead of failing the INSERT in strict mode.
+KIND_TEXT = "text"
+KIND_NUMBER = "number"      #: float column (weight, residue)
+KIND_INTEGER = "integer"    #: integer column (ma_nr, left_over)
+KIND_DATE = "date"
+NUMERIC_KINDS: frozenset[str] = frozenset({KIND_NUMBER, KIND_INTEGER})
+
+
 def _kind_for(column: Any) -> str:
     """Coarse value kind used for parsing and for the review editor."""
     if isinstance(column.type, (Date, DateTime)):
-        return "date"
-    if isinstance(column.type, (Float, Integer)):
-        return "number"
-    return "text"
+        return KIND_DATE
+    if isinstance(column.type, Integer):
+        return KIND_INTEGER
+    if isinstance(column.type, Float):
+        return KIND_NUMBER
+    return KIND_TEXT
 
 
 @dataclass(frozen=True)
@@ -136,7 +148,7 @@ class ImportField:
     key: str                 #: canonical name used throughout the wizard
     target: str              #: `sample_t` column it is written to
     label: str
-    kind: str                #: text | number | date
+    kind: str                #: text | number | integer | date (see KIND_*)
     headings: tuple[str, ...]
     builtin: bool
     is_lookup: bool
@@ -210,7 +222,7 @@ def build_registry(custom_fields: list[dict[str, Any]] | None = None,
             key=key,
             target=key,
             label=SAMPLE_FIELD_LABELS.get(key, key.replace("_", " ").title()),
-            kind=target.kind if target else "text",
+            kind=target.kind if target else KIND_TEXT,
             headings=tuple(headings),
             builtin=True,
             is_lookup=key in LOOKUP_BACKED_COLUMNS,
@@ -275,6 +287,7 @@ def available_targets(used: set[str] | None = None) -> list[dict[str, Any]]:
 __all__ = [
     "BLOCKED_TARGET_COLUMNS",
     "LOOKUP_BACKED_COLUMNS",
+    "NUMERIC_KINDS",
     "SAMPLE_TARGET_COLUMNS",
     "FieldRegistry",
     "ImportField",
