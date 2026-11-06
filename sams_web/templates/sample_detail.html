@@ -114,6 +114,26 @@
     </div>
   </section>
 
+  {% set other_analysis_sections = sample_sections|selectattr('title', 'equalto', 'Other Analysis')|list %}
+  {% set meta_sections = sample_sections|rejectattr('title', 'equalto', 'Other Analysis')|list %}
+  {% if other_analysis_sections %}
+  <section class="card-group">
+    <h4 class="card-group-title">Other Analysis</h4>
+    {{ render_detail_sections(
+      other_analysis_sections,
+      entity='sample',
+      css_prefix='sample',
+      form_id=sample_edit_form_id,
+      read_only_fields=sample_read_only_fields,
+      editor_value_overrides=sample_form_values,
+      select_options_by_field=sample_select_options,
+      required_fields=sample_required_fields,
+      field_errors=sample_field_errors,
+      id_prefix='sample-other-analysis'
+    ) }}
+  </section>
+  {% endif %}
+
   {# Filled in by sample-photos.js after the page has rendered: the photos
      live on a network share, which may be slow or offline, and must never
      hold up the record itself. #}
@@ -134,21 +154,22 @@
     </div>
   </section>
 
+  {% if meta_sections %}
   <details class="table-collapsible sample-meta-collapsible">
     <summary class="table-summary">
       <span class="table-summary-title">Additional Sample Metadata</span>
-      <span class="badge table-summary-count">{{ sample_sections|length }} sections</span>
+      <span class="badge table-summary-count">{{ meta_sections|length }} sections</span>
     </summary>
     <div class="sample-meta-body">
-      {% if sample_sections|length > 1 %}
+      {% if meta_sections|length > 1 %}
       <nav class="sample-meta-toc" aria-label="Section navigation">
-        {% for section in sample_sections %}
+        {% for section in meta_sections %}
         <a class="sample-meta-toc-link" href="#sample-section-{{ loop.index }}">{{ section.title }}</a>
         {% endfor %}
       </nav>
       {% endif %}
       {{ render_detail_sections(
-        sample_sections,
+        meta_sections,
         entity='sample',
         css_prefix='sample',
         form_id=sample_edit_form_id,
@@ -161,6 +182,7 @@
       ) }}
     </div>
   </details>
+  {% endif %}
 
   <section class="sample-workspace">
     <div class="panel-head sample-workspace-head">
