@@ -277,12 +277,50 @@ def _party_name(row: Any) -> str:
     return f"{row.last_name or ''}, {row.first_name or ''}".strip(", ") or "(unnamed)"
 
 
+#: The legacy tables are `latin1` (MySQL's cp1252). Anything outside it — Cyrillic,
+#: Greek, CJK, many typographic symbols — makes MySQL refuse the whole INSERT
+#: (error 1366), which used to surface as a bare 500 halfway through the import.
+DB_TEXT_ENCODING = "cp1252"
+
+
+def unsupported_characters(value: Any) -> str:
+    """The characters of `value` the database's text columns cannot store."""
+    if not isinstance(value, str):
+        return ""
+    bad: list[str] = []
+    for ch in value:
+        try:
+            ch.encode(DB_TEXT_ENCODING)
+        except UnicodeEncodeError:
+            if ch not in bad:
+                bad.append(ch)
+    return "".join(bad)
+
+
+def _check_storable(where: str, values: dict[str, Any]) -> None:
+    for key, value in values.items():
+        bad = unsupported_characters(value)
+        if bad:
+            raise ImportCommitError(
+                f"{where}, field '{key}': the database cannot store the character(s) "
+                f"{' '.join(repr(c)[1:-1] for c in bad)} in \"{str(value)[:60]}\" "
+                "(its text columns are Latin-1, so Cyrillic, Greek and similar scripts "
+                "are not possible). Replace them with Latin letters — e.g. a transliteration — "
+                "in the review table, or exclude the row."
+            )
+
+
 def _validate_payload(payload: dict[str, Any]) -> _ImportPlan:
     """Reject anything that would fail part-way; nothing is written yet."""
     project_input = payload.get("project") or {}
     project_name = _clean(project_input.get("project"), max_length=_PROJECT_WIDTHS["project"])
     if not project_name:
         raise ImportCommitError("A project name is required.")
+
+    _check_storable("Project", project_input)
+    _check_storable("Submitter", (payload.get("submitter") or {}).get("values") or {})
+    if (payload.get("invoice") or {}).get("enabled"):
+        _check_storable("Invoice recipient", (payload.get("invoice") or {}).get("values") or {})
 
     all_rows = payload.get("samples") or []
     rows = [r for r in all_rows if r.get("include", True)]
@@ -298,6 +336,7 @@ def _validate_payload(payload: dict[str, Any]) -> _ImportPlan:
                 f"Row {row.get('row_number', '?')} has no sample name. "
                 "Fix or exclude it before importing."
             )
+        _check_storable(f"Row {row.get('row_number', '?')}", values)
         prepared.append((int(row.get("row_number") or 0), values))
 
     skipped = [int(r.get("row_number") or 0) for r in all_rows if not r.get("include", True)]
