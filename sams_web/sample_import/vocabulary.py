@@ -182,10 +182,6 @@ SAMPLE_COLUMN_SYNONYMS: dict[str, tuple[str, ...]] = {
     "sampling_date": ("sampling date", "probenahmedatum", "probennahme datum", "date sampled"),
 }
 
-# Columns the importer will write to `sample_t`. Anything the user maps
-# outside this set is rejected by the commit step.
-IMPORTABLE_SAMPLE_FIELDS: frozenset[str] = frozenset(SAMPLE_COLUMN_SYNONYMS)
-
 # Human labels for the review UI.
 SAMPLE_FIELD_LABELS: dict[str, str] = {
     "user_label": "Sample Label",
@@ -492,7 +488,6 @@ __all__ = [
     "CONTACT_FIELD_LABELS",
     "CONTACT_LABEL_SYNONYMS",
     "EDITABLE_CONTACT_FIELDS",
-    "IMPORTABLE_SAMPLE_FIELDS",
     "INVOICE_SECTION_MARKERS",
     "LANGUAGE_OPTIONS",
     "MULTILINE_CONTACT_FIELDS",

@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sams_web.sample_import.vocabulary import IMPORTABLE_SAMPLE_FIELDS
+from sams_web.sample_import.fields import KIND_DATE, KIND_INTEGER, NUMERIC_KINDS, FieldRegistry
 
 # --- Intake defaults -------------------------------------------------------
 #
@@ -135,11 +135,11 @@ def _clean(value: Any, *, max_length: int | None = None) -> str | None:
     return text
 
 
-# Column widths taken from the live MySQL schema via
-# `information_schema.COLUMNS`, NOT from `models.py` — the ORM
-# over-declares several of these (it says `user_label` is 255 where the
-# table is 100, and `material` 60 where the table is 20). Clamping to
-# the ORM's numbers would let MySQL reject the whole import.
+# Contact column widths taken from the live MySQL schema via
+# `information_schema.COLUMNS`. Sample widths are not listed here: they come
+# from the field registry, i.e. from `models.Sample`, which mirrors the live
+# `sample_t` exactly (the server is in strict mode, so too wide a value fails
+# the INSERT).
 _CONTACT_WIDTHS: dict[str, int] = {
     "salutation": 10,
     "title": 20,
@@ -161,32 +161,14 @@ _CONTACT_WIDTHS: dict[str, int] = {
     "www": 60,
 }
 
-_SAMPLE_WIDTHS: dict[str, int] = {
-    "user_label": 100,
-    "user_label_nr": 40,
-    "user_desc1": 100,
-    "user_desc2": 40,
-    "material": 20,
-    "type": 20,
-    "fraction": 20,
-    "pre_sub_treat": 40,
-}
-
 _PROJECT_WIDTHS: dict[str, int] = {
     "project": 100,
     "price": 20,
     "order_nr": 60,
 }
 
-#: Sample columns backed by a lookup table, and the repo getter that
-#: lists their allowed values. Free text must never reach these columns:
-#: they are a controlled vocabulary that the rest of the app (search
-#: facets, dashboard standards, calibration rules) relies on.
-_LOOKUP_FIELD_GETTERS: dict[str, str] = {
-    "material": "get_materials",
-    "type": "get_sample_types",
-    "fraction": "get_fractions",
-}
+#: Sample columns whose text gets the app's bad-character guard.
+_SANITIZED_SAMPLE_COLUMNS = frozenset({"user_label", "user_label_nr", "user_desc1", "user_desc2"})
 
 
 #: Project columns backed by a lookup table.
@@ -205,6 +187,40 @@ PREP_STEP_FIELDS: tuple[str, ...] = (
     "step4_method",
     "step5_method",
 )
+
+
+def _index_choices(options: Any) -> dict[str, str]:
+    """A lookup list keyed case-insensitively: `"Bone " -> "bone"` style matching."""
+    return {str(o).strip().lower(): str(o) for o in options}
+
+
+def _coerce_number(raw: Any, kind: str) -> tuple[float | int | None, str | None]:
+    """Reviewed value -> number for a numeric column, as `(value, error)`.
+
+    Empty is `None` (no error). A decimal comma is accepted (`"12,5"`).
+    Anything else that does not read as a number is an error, so the
+    operator fixes it in the review table rather than MySQL rejecting the
+    whole import (strict mode) — or the value being dropped silently.
+    """
+    if raw is None:
+        return None, None
+    if isinstance(raw, bool):
+        return int(raw), None
+    if isinstance(raw, (int, float)):
+        number: float = float(raw)
+    else:
+        text = str(raw).strip()
+        if not text:
+            return None, None
+        try:
+            number = float(text.replace(",", "."))
+        except ValueError:
+            return None, f"{text!r} is not a number"
+    if kind == KIND_INTEGER:
+        if not number.is_integer():
+            return None, f"{raw!r} is not a whole number"
+        return int(number), None
+    return number, None
 
 
 def _lookup_or_default(
@@ -310,7 +326,20 @@ def _check_storable(where: str, values: dict[str, Any]) -> None:
             )
 
 
-def _validate_payload(payload: dict[str, Any]) -> _ImportPlan:
+def _check_numbers(where: str, values: dict[str, Any], registry: FieldRegistry) -> None:
+    for key, raw in values.items():
+        field_def = registry.fields.get(key)
+        if field_def is None or field_def.kind not in NUMERIC_KINDS:
+            continue
+        _, error = _coerce_number(raw, field_def.kind)
+        if error:
+            raise ImportCommitError(
+                f"{where}, field '{field_def.label}': {error}. "
+                "Correct it in the review table, or exclude the row."
+            )
+
+
+def _validate_payload(payload: dict[str, Any], registry: FieldRegistry) -> _ImportPlan:
     """Reject anything that would fail part-way; nothing is written yet."""
     project_input = payload.get("project") or {}
     project_name = _clean(project_input.get("project"), max_length=_PROJECT_WIDTHS["project"])
@@ -330,13 +359,11 @@ def _validate_payload(payload: dict[str, Any]) -> _ImportPlan:
     prepared: list[tuple[int, dict[str, Any]]] = []
     for row in rows:
         values = row.get("values") or {}
-        label = _clean(values.get("user_label"), max_length=_SAMPLE_WIDTHS["user_label"])
-        if not label:
-            raise ImportCommitError(
-                f"Row {row.get('row_number', '?')} has no sample name. "
-                "Fix or exclude it before importing."
-            )
-        _check_storable(f"Row {row.get('row_number', '?')}", values)
+        where = f"Row {row.get('row_number', '?')}"
+        if not _clean(values.get("user_label")):
+            raise ImportCommitError(f"{where} has no sample name. Fix or exclude it before importing.")
+        _check_storable(where, values)
+        _check_numbers(where, values, registry)
         prepared.append((int(row.get("row_number") or 0), values))
 
     skipped = [int(r.get("row_number") or 0) for r in all_rows if not r.get("include", True)]
@@ -416,7 +443,7 @@ def _resolve_project(
         return _ProjectRef(int(project.project_nr), project.project or project_name, created=False)
 
     lookups = {
-        field_name: {str(o).strip().lower(): str(o) for o in getattr(repo, getter)()}
+        field_name: _index_choices(getattr(repo, getter)())
         for field_name, getter in _PROJECT_LOOKUP_GETTERS.items()
     }
     in_date = _parse_iso_date(project_input.get("in_date")) or today
@@ -465,13 +492,16 @@ def _build_sample_payload(
     values: dict[str, Any],
     *,
     project_nr: int,
-    importable: Any,
-    field_targets: dict[str, str],
-    field_widths: dict[str, int | None],
+    registry: FieldRegistry,
     lookup_allowed: dict[str, dict[str, str]],
     sanitizer: Any,
 ) -> dict[str, Any]:
-    """One `sample_t` row from the reviewed values, vocabularies enforced."""
+    """One `sample_t` row from the reviewed values, vocabularies enforced.
+
+    Each value is converted by its registry field's kind and clamped to its
+    column width, both taken from `models.Sample`. Numbers were checked by
+    `_validate_payload` already, so an unreadable one cannot reach here.
+    """
     sample_payload: dict[str, Any] = {
         "project_nr": project_nr,
         "editable": DEFAULT_SAMPLE_EDITABLE,
@@ -489,34 +519,34 @@ def _build_sample_payload(
         "fraction": DEFAULT_LOOKUP_VALUE,
     }
     for field_name, raw in values.items():
+        field_def = registry.fields.get(field_name)
         # Prep steps are not sample_t columns; they go on the preparation.
-        if field_name in PREP_STEP_FIELDS or field_name not in importable:
+        # Extra-analysis flags are handled below.
+        if field_def is None or field_name in PREP_STEP_FIELDS:
             continue
         # A custom field may write to a differently-named column.
-        target_column = field_targets.get(field_name, field_name)
-        if target_column == "weight":
-            try:
-                sample_payload["weight"] = float(raw) if raw not in (None, "") else None
-            except (TypeError, ValueError):
-                sample_payload["weight"] = None
+        column = field_def.target
+        if field_def.kind in NUMERIC_KINDS:
+            number, _ = _coerce_number(raw, field_def.kind)
+            if number is not None:
+                sample_payload[column] = number
             continue
-        if target_column == "sampling_date":
+        if field_def.kind == KIND_DATE:
             parsed_date = _parse_iso_date(raw)
             if parsed_date is not None:
-                sample_payload["sampling_date"] = parsed_date
+                sample_payload[column] = parsed_date
             continue
         if field_name in lookup_allowed:
             # Controlled vocabulary: accept only a known entry.
             match = lookup_allowed[field_name].get(str(raw).strip().lower())
-            sample_payload[target_column] = match or DEFAULT_LOOKUP_VALUE
+            sample_payload[column] = match or DEFAULT_LOOKUP_VALUE
             continue
-        width = _SAMPLE_WIDTHS.get(target_column, field_widths.get(field_name))
-        cleaned = _clean(raw, max_length=width)
+        cleaned = _clean(raw, max_length=field_def.max_length)
         if cleaned is None:
             continue
-        if target_column in ("user_label", "user_label_nr", "user_desc1", "user_desc2"):
-            cleaned = _clean(sanitizer.replace_bad_characters(cleaned), max_length=width)
-        sample_payload[target_column] = cleaned
+        if column in _SANITIZED_SAMPLE_COLUMNS:
+            cleaned = _clean(sanitizer.replace_bad_characters(cleaned), max_length=field_def.max_length)
+        sample_payload[column] = cleaned
     # Extra analyses come from the wizard's own step, never from a sheet
     # column, so they are applied last and coerced to the legacy 0/1.
     sample_payload["c_n_isotop_a"] = _flag(values.get("cn_isotop_a"))
@@ -556,7 +586,7 @@ def _create_samples(
     *,
     project_nr: int,
     today: date,
-    registry: Any,
+    registry: FieldRegistry,
     sanitizer: Any,
 ) -> tuple[list[int], list[str]]:
     """One sample per row, each with preparation #1 (carrying the prep
@@ -569,15 +599,11 @@ def _create_samples(
     knows which fields exist and which are lookup-backed, including any
     the operator defined in Setup.
     """
-    importable = registry.importable if registry else IMPORTABLE_SAMPLE_FIELDS
-    field_targets = {k: f.target for k, f in registry.fields.items()} if registry else {}
-    field_widths = {k: f.max_length for k, f in registry.fields.items()} if registry else {}
-    lookup_getters = registry.lookup_fields if registry else _LOOKUP_FIELD_GETTERS
     lookup_allowed = {
-        field_name: {str(o).strip().lower(): str(o) for o in getattr(repo, getter)()}
-        for field_name, getter in lookup_getters.items()
+        field_name: _index_choices(getattr(repo, getter)())
+        for field_name, getter in registry.lookup_fields.items()
     }
-    allowed_methods = {str(o).strip().lower(): str(o) for o in repo.get_methods()}
+    allowed_methods = _index_choices(repo.get_methods())
 
     sample_nrs: list[int] = []
     sample_labels: list[str] = []
@@ -586,9 +612,7 @@ def _create_samples(
             sample_payload = _build_sample_payload(
                 values,
                 project_nr=project_nr,
-                importable=importable,
-                field_targets=field_targets,
-                field_widths=field_widths,
+                registry=registry,
                 lookup_allowed=lookup_allowed,
                 sanitizer=sanitizer,
             )
@@ -621,8 +645,8 @@ def commit_import(
     service: Any,
     payload: dict[str, Any],
     *,
+    registry: FieldRegistry,
     today: date | None = None,
-    registry: Any = None,
 ) -> ImportResult:
     """Create submitter / project / samples from an approved payload.
 
@@ -647,7 +671,7 @@ def commit_import(
     today = today or date.today()
     repo, session = service.repo, service.session
 
-    plan = _validate_payload(payload)
+    plan = _validate_payload(payload, registry)
     submitter = _resolve_submitter(repo, session, payload, TextSanitizer)
     invoice = _resolve_invoice(repo, session, payload, TextSanitizer)
     project = _resolve_project(

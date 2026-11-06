@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -90,25 +91,29 @@ class Project(Base):
 
 
 class Sample(Base):
+    # Types and widths mirror the live `sample_t` (information_schema), not
+    # what looked plausible: the server runs in strict mode, so a value wider
+    # than the real column fails the INSERT/UPDATE. The import clamps to these
+    # widths and the detail editor coerces by these types — keep them exact.
     __tablename__ = "sample_t"
 
     sample_nr: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_nr: Mapped[int | None] = mapped_column(ForeignKey("project_t.project_nr"), index=True)
-    photo: Mapped[str | None] = mapped_column(String(255))
-    type: Mapped[str | None] = mapped_column(String(60), index=True)
-    material: Mapped[str | None] = mapped_column(String(60), index=True)
-    fraction: Mapped[str | None] = mapped_column(String(60))
-    pre_sub_treat: Mapped[str | None] = mapped_column(String(255))
+    photo: Mapped[str | None] = mapped_column(String(120))
+    type: Mapped[str | None] = mapped_column(String(20), index=True)
+    material: Mapped[str | None] = mapped_column(String(20), index=True)
+    fraction: Mapped[str | None] = mapped_column(String(20))
+    pre_sub_treat: Mapped[str | None] = mapped_column(String(40))
     weight: Mapped[float | None] = mapped_column(Float)
-    preparation: Mapped[str | None] = mapped_column(String(255))
+    preparation: Mapped[str | None] = mapped_column(String(100))
     sampling_date: Mapped[date | None] = mapped_column(Date)
     editable: Mapped[int | None] = mapped_column(Integer)
     not_tobedated: Mapped[int | None] = mapped_column(Integer, index=True)
-    user_label: Mapped[str | None] = mapped_column(String(255), index=True)
-    user_label_nr: Mapped[str | None] = mapped_column(String(255))
-    user_desc1: Mapped[str | None] = mapped_column(String(255))
-    user_desc2: Mapped[str | None] = mapped_column(String(255))
-    residue: Mapped[str | None] = mapped_column(String(255))
+    user_label: Mapped[str | None] = mapped_column(String(100), index=True)
+    user_label_nr: Mapped[str | None] = mapped_column(String(40))
+    user_desc1: Mapped[str | None] = mapped_column(String(100))
+    user_desc2: Mapped[str | None] = mapped_column(String(40))
+    residue: Mapped[float | None] = mapped_column(Float)
     c14_age: Mapped[float | None] = mapped_column(Float)
     c14_age_sig: Mapped[float | None] = mapped_column(Float)
     av_fm: Mapped[float | None] = mapped_column(Float)
@@ -120,16 +125,16 @@ class Sample(Base):
     cal2s_min: Mapped[float | None] = mapped_column("cal2sMin", Float)
     cal2s_max: Mapped[float | None] = mapped_column("cal2sMax", Float)
     delta_r: Mapped[float | None] = mapped_column("delta_R", Float)
-    calib: Mapped[str | None] = mapped_column(String(255))
-    user_comment: Mapped[str | None] = mapped_column(Text)
-    old_info: Mapped[str | None] = mapped_column(Text)
+    calib: Mapped[str | None] = mapped_column(String(120))
+    user_comment: Mapped[str | None] = mapped_column(String(100))
+    old_info: Mapped[str | None] = mapped_column(String(70))
     ma_nr: Mapped[int | None] = mapped_column("MA_nr", Integer)
     s_no_leftover: Mapped[int | None] = mapped_column(Integer)
-    s_storage_loc: Mapped[str | None] = mapped_column(String(60))
-    prep_storage_loc: Mapped[str | None] = mapped_column(String(60))
-    lab_comment: Mapped[str | None] = mapped_column(Text)
-    left_over: Mapped[str | None] = mapped_column(String(255))
-    storage: Mapped[str | None] = mapped_column(String(60))
+    s_storage_loc: Mapped[str | None] = mapped_column(String(45))
+    prep_storage_loc: Mapped[str | None] = mapped_column(String(45))
+    lab_comment: Mapped[str | None] = mapped_column(String(120))
+    left_over: Mapped[int | None] = mapped_column(SmallInteger)
+    storage: Mapped[str | None] = mapped_column(String(100))
     c_n_isotop_a: Mapped[int | None] = mapped_column("CNIsotopA", Integer)
     c_n_isotop_a_moved: Mapped[int | None] = mapped_column("CNIsotopAMoved", Integer)
     dendro_a: Mapped[int | None] = mapped_column("DendroA", Integer)

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from sams_web.sample_import.commit import _create_samples, needs_no_preparation
+from sams_web.sample_import.fields import build_registry
 from sams_web.services import TextSanitizer
 
 
@@ -73,7 +74,7 @@ def test_import_closes_preparation_only_for_no_prep_rows():
         rows,
         project_nr=1,
         today=date(2026, 9, 30),
-        registry=None,
+        registry=build_registry(),
         sanitizer=TextSanitizer,
     )
     assert [p.prep_end for p in repo.preps] == [datetime(2026, 9, 30), None, None, None]
@@ -92,10 +93,10 @@ def test_unsupported_characters_are_rejected_before_any_write():
         "samples": [{"row_number": 36, "include": True, "values": {"user_label": "STP001", "user_desc1": "Шуллук3, 00-16"}}],
     }
     with pytest.raises(ImportCommitError, match=r"Row 36, field 'user_desc1'.*Latin-1"):
-        _validate_payload(payload)
+        _validate_payload(payload, build_registry())
 
     payload["samples"][0]["values"]["user_desc1"] = "Shulluk3, 00-16"
-    assert _validate_payload(payload).rows
+    assert _validate_payload(payload, build_registry()).rows
 
 
 def test_confirmation_email_addresses_submitter_first_name_first():
