@@ -331,6 +331,7 @@
     const newChecked = party.mode === "new";
     host.innerHTML = `
       ${toggle}
+      ${renderSheetContact(parsed)}
       ${candidates.length
         ? `<p class="import-fixups-hint">${candidates.length} existing ${PARTY_LABEL[which]}(s) match this sheet.</p>`
         : `<p class="import-fixups-hint">Nothing matched automatically — search below, or create a new record.</p>`}
@@ -409,6 +410,38 @@
         renderAlerts();
       });
     }
+  }
+
+  /**
+   * Read-only block with the contact details exactly as the sheet gave them.
+   *
+   * Always shown, whatever is selected below: a matched record can differ
+   * from the sheet (new address, new e-mail), and the operator can only
+   * spot that with both side by side. Each value carries its cell address.
+   */
+  function renderSheetContact(parsed) {
+    if (!parsed || parsed.is_empty) {
+      return `<p class="import-fixups-hint">The sheet gives no details for this block.</p>`;
+    }
+    const labels = new Map(
+      (state.payload.contact_fields || []).map((f) => [f.key, f.label])
+    );
+    const order = [...labels.keys()];
+    Object.keys(parsed.values).forEach((k) => { if (!labels.has(k)) order.push(k); });
+    const rows = order
+      .filter((k) => String(parsed.values[k] ?? "").trim())
+      .map((k) => {
+        const label = labels.get(k) || k.replace(/_/g, " ");
+        const cell = parsed.sources?.[k];
+        return `<dt>${esc(label)}</dt>
+                <dd>${esc(parsed.values[k])}${cell ? ` <span class="import-cell-ref">${esc(cell)}</span>` : ""}</dd>`;
+      })
+      .join("");
+    return `
+      <div class="import-sheet-contact">
+        <p class="import-sheet-contact-title">From the sheet</p>
+        <dl>${rows}</dl>
+      </div>`;
   }
 
   /** Editable field set shown when creating a NEW submitter/invoice record. */
