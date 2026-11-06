@@ -377,6 +377,19 @@
 
 .import-fixup select { width: 100%; }
 
+/* project-name suggestion when there is no duplicate prompt */
+.import-name-suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.import-name-suggestion strong { color: var(--ink); }
+
 /* submitter / invoice details as parsed from the sheet (always shown) */
 .import-sheet-contact {
   margin-bottom: var(--space-3);

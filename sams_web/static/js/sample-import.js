@@ -603,6 +603,18 @@
             ? `<button type="button" class="import-secondary" data-use-variant>Use the suggested name</button>`
             : ""}
         </div>`;
+    } else if (p.mode === "new") {
+      // No clash to resolve (new submitter, or nothing similar on file):
+      // still offer the lab's `<name>_<Month>_<Year>` convention as a
+      // one-click option — it is never applied on its own.
+      const suggestion = variantName(p.values.project);
+      if (suggestion && suggestion !== String(p.values.project || "").trim()) {
+        duplicateHtml = `
+          <p class="import-name-suggestion">
+            Suggested name: <strong>${esc(suggestion)}</strong>
+            <button type="button" class="import-secondary" data-use-variant>Use the suggested name</button>
+          </p>`;
+      }
     }
     host.innerHTML = duplicateHtml;
 
