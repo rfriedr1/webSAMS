@@ -243,7 +243,7 @@ EMAIL_SERVER_FIELDS: tuple[EmailField, ...] = (
     EmailField("from_address", "From address", "Appears as the sender of confirmation e-mails.", default=""),
     EmailField("from_name", "From name", "Display name shown next to the sender address.", default="CEZA C14 Laboratory"),
     EmailField("reply_to", "Reply-to", "Optional. Where customer replies should go.", default=""),
-    EmailField("bcc", "BCC", "Optional. Copies every confirmation to this address for the lab's records.", default=""),
+    EmailField("bcc", "BCC", "Optional. Copies every confirmation to these addresses for the lab's records — separate several with commas (not semicolons).", default=""),
 )
 
 #: Placeholders available inside a template's subject and body.
@@ -293,6 +293,13 @@ DEFAULT_TEMPLATES: dict[str, dict[str, str]] = {
         ),
     },
 }
+
+
+#: Template used when the submitter has no language stored. Almost every
+#: legacy `user_t` row has none, and most customers write German.
+NO_LANGUAGE_TEMPLATE = "de"
+#: Template used when the submitter's language has no template of its own.
+UNSUPPORTED_LANGUAGE_TEMPLATE = "en"
 
 
 def default_email_settings() -> dict[str, Any]:
@@ -419,16 +426,45 @@ class EmailSettingsStore:
         settings = self.load()
         return bool(settings.get("smtp_host") and settings.get("from_address"))
 
-    def template_for_language(self, language: str | None) -> dict[str, str]:
-        """Pick a template by language code, falling back to English."""
-        settings = self.load()
-        templates: dict[str, Any] = settings.get("templates") or {}
+    def template_choices(self) -> list[dict[str, str]]:
+        """Every configured template as ``{code, label}``, for a picker."""
+        templates: dict[str, Any] = self.load().get("templates") or {}
+        return [
+            {"code": code, "label": str(tpl.get("label") or code)}
+            for code, tpl in templates.items()
+        ]
+
+    def resolve_template_code(
+        self, language: str | None, requested: str | None = None
+    ) -> tuple[str, str]:
+        """Decide which template to use; returns ``(code, reason)``.
+
+        Order: the operator's explicit pick → the submitter's language →
+        German when no language is stored (true of almost every legacy
+        submitter) → English for a language without its own template.
+        ``reason`` is ``chosen | language | no_language | unsupported``.
+        """
+        templates: dict[str, Any] = self.load().get("templates") or {}
+        first = next(iter(templates), "")
+        requested_code = (requested or "").strip().lower()
+        if requested_code and requested_code in templates:
+            return requested_code, "chosen"
         code = (language or "").strip().lower()[:2]
         if code and code in templates:
-            return templates[code]
-        if "en" in templates:
-            return templates["en"]
-        return next(iter(templates.values()), {"subject": "", "body": ""})
+            return code, "language"
+        if not code:
+            fallback = NO_LANGUAGE_TEMPLATE if NO_LANGUAGE_TEMPLATE in templates else first
+            return fallback, "no_language"
+        fallback = UNSUPPORTED_LANGUAGE_TEMPLATE
+        return (fallback if fallback in templates else first), "unsupported"
+
+    def template_for_language(
+        self, language: str | None, requested: str | None = None
+    ) -> dict[str, str]:
+        """The template `resolve_template_code` picks (see there for the order)."""
+        templates: dict[str, Any] = self.load().get("templates") or {}
+        code, _reason = self.resolve_template_code(language, requested)
+        return templates.get(code) or {"subject": "", "body": ""}
 
 
 __all__ = [
@@ -440,6 +476,8 @@ __all__ = [
     "EmailField",
     "EmailSettingsStore",
     "ImportHeadingStore",
+    "NO_LANGUAGE_TEMPLATE",
+    "UNSUPPORTED_LANGUAGE_TEMPLATE",
     "available_targets",
     "default_email_settings",
 ]

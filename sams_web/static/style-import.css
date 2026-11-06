@@ -679,6 +679,9 @@
 }
 
 .import-field textarea { min-height: 3.4rem; resize: vertical; }
+
+/* Quiet one-line note under a field (e.g. why an e-mail template was picked). */
+.import-field-hint { font-size: var(--text-xs); color: var(--muted); }
 .import-field input:disabled,
 .import-field select:disabled,
 .import-field textarea:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -891,7 +894,17 @@
 /* ---- e-mail step ------------------------------------------------------ */
 
 .import-email { margin-top: var(--space-5); }
-.import-email-grid { margin-top: var(--space-2); }
+.import-email-grid {
+  margin-top: var(--space-2);
+  /* Fixed two columns (Template | To, From | Subject) with the message
+     full width; the auto-fill grid squeezed the message into two of
+     four columns on a wide screen. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.import-email-grid .import-email-message { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .import-email-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .import-email-grid textarea { font-family: var(--font-ui); line-height: 1.5; }
 
 .import-actions-status.is-error { color: var(--danger-text); font-weight: 700; }

@@ -163,7 +163,8 @@ async def sample_import_email_preview(
     """Render the confirmation e-mail for a completed import.
 
     Purely a render: nothing is sent here. The operator sees exactly what
-    would go out and decides.
+    would go out and decides. An optional ``template`` code overrides the
+    language-based pick, so the operator can switch template before sending.
     """
     try:
         payload = await request.json()
@@ -177,7 +178,11 @@ async def sample_import_email_preview(
 
     store = EmailSettingsStore(service.setup_store)
     settings = store.load()
-    template = store.template_for_language(getattr(submitter, "language", None))
+    language = getattr(submitter, "language", None)
+    template_code, template_reason = store.resolve_template_code(
+        language, payload.get("template")
+    )
+    template = store.template_for_language(language, template_code)
     message = build_confirmation(
         template=template,
         settings=settings,
@@ -191,7 +196,10 @@ async def sample_import_email_preview(
         {
             "email": message.as_dict(),
             "configured": store.is_configured(),
-            "language": getattr(submitter, "language", "") or "",
+            "language": (language or "").strip(),
+            "template": template_code,
+            "template_reason": template_reason,
+            "templates": store.template_choices(),
         }
     )
 
