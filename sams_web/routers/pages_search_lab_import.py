@@ -87,6 +87,11 @@ def _build_graph_redirect(
 # ---- Search route ---------------------------------------------------------
 
 
+# The search page shows at most this many rows and says so when it hits
+# the cap, so a truncated list is never mistaken for the whole answer.
+SEARCH_RESULT_LIMIT = 200
+
+
 @router.get("/search")
 def search_page(
     request: Request,
@@ -101,7 +106,7 @@ def search_page(
     auto_load = (not global_mode) and context_param_present
     if phrase.strip() or auto_load:
         try:
-            results = service.search(context=context, phrase=phrase.strip())
+            results = service.search(context=context, phrase=phrase.strip(), limit=SEARCH_RESULT_LIMIT)
         except ValueError as exc:
             error = str(exc)
 
@@ -117,6 +122,7 @@ def search_page(
             "error": error,
             "auto_load": auto_load,
             "global_mode": global_mode,
+            "result_limit": SEARCH_RESULT_LIMIT,
         },
     )
 
@@ -378,7 +384,7 @@ def lab_analysis_page(
             "title": "Analysis Workflow",
             "description": "Analysis worklist for samples waiting for measurement and result review.",
             "table_key": "waiting_for_meas",
-            "table_title": "Waiting For Meas",
+            "table_title": "Waiting for measurement",
             "rows": rows,
             "show_on_hold": False,
             "show_on_hold_enabled": False,
