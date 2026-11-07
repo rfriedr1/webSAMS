@@ -1,10 +1,9 @@
 // In-page links into collapsed content: when a `#hash` link points at a
 // closed <details> — the target itself, a <details> that is its direct
 // child, or one it sits inside — open it before the browser scrolls, so the
-// content is visible at once. Used by the dashboard's Queue Tables pills
-// (`#tbl-<queue>` → the panel wrapping that queue's collapsible table).
-// Also applied on load and on `hashchange`, so a shared `/#tbl-planned`
-// link lands on an open table.
+// content is visible at once. Also applied on load and on `hashchange`, so
+// a shared link to an element inside a collapsed block lands on it open.
+// (Links to a tab panel are handled by tab-panels.js instead.)
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
 

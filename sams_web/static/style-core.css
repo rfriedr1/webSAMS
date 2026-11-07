@@ -721,50 +721,6 @@ h6 {
   line-height: 1.15;
 }
 
-/* Dashboard "Standards Ready" row — tighter columns and indicator-tinted
-   borders/backgrounds. */
-.cards-standards {
-  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
-}
-
-.cards-standards article {
-  border-width: 1px;
-  position: relative;
-}
-
-/* Colour-as-signal discipline: only critical (red) and warning (yellow)
-   tint the card so the eye lands on items that actually need action.
-   Good and neutral keep the default surface — same as KPI tiles — so
-   the dashboard reads as "5 KPIs + however many standards need
-   attention" instead of "10 colourful tiles". */
-.cards-standards article.indicator-critical {
-  border-color: var(--danger-line);
-  background: linear-gradient(180deg, var(--danger-bg), var(--danger-bg));
-  box-shadow: 0 1px 0 0 rgba(212, 102, 102, 0.08);
-}
-
-.cards-standards article.indicator-critical::before {
-  content: "⚠";
-  position: absolute;
-  top: 0.45rem;
-  right: 0.55rem;
-  font-size: var(--text-base);
-  color: var(--danger);
-  line-height: 1;
-}
-
-.cards-standards article.indicator-warning {
-  border-color: #d9b87a;
-  background: linear-gradient(180deg, var(--warn-bg), var(--warn-bg));
-}
-
-/* Good and neutral inherit the default `.cards article` surface — no
-   green or grey tint. Removed to cut visual noise on the dashboard. */
-.cards-standards article.indicator-good,
-.cards-standards article.indicator-neutral {
-  /* No-op; default `.cards article` styling applies. */
-}
-
 .panel {
   margin-bottom: 1rem;
   border: 1px solid rgba(207, 217, 223, 0.95);
@@ -926,6 +882,9 @@ button:focus-visible,
 .table-link:focus-visible,
 .record-more-summary:focus-visible,
 .record-action:focus-visible,
+.dash-bar:focus-visible,
+.dash-ea-link:focus-visible,
+.dash-toggle input:focus-visible,
 .sample-photo-download:focus-visible,
 [data-detail-edit-button]:focus-visible,
 [data-history-back]:focus-visible,

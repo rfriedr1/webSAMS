@@ -1,207 +1,171 @@
 {% extends "base.html" %}
 
+{#- Dashboard: two overview panels (lab queues with the EA check status,
+    standards ready) and one panel of queue tables as tabs. Each queue bar
+    links to its table (`#tbl-<queue>`); tab-panels.js selects the tab.
+    All numbers and labels come from `build_dashboard_view` in
+    routers/pages_dashboard_setup_help.py. -#}
+
+{% macro queue_cell(key, row) -%}
+  {%- set key_lower = key|string|lower -%}
+  {%- set display_value = format_table_cell_value(key, row.get(key)) -%}
+  {%- set sample_nr = row.get("sample_nr") -%}
+  {%- set prep_nr = row.get("prep_nr") -%}
+  {%- set target_nr = row.get("target_nr") -%}
+  {%- if key_lower == "sample_nr" and sample_nr is not none -%}
+    <a href="/samples/{{ sample_nr }}" class="table-link">{{ display_value }}</a>
+  {%- elif key_lower == "prep_nr" and sample_nr is not none and prep_nr is not none -%}
+    <a href="/samples/{{ sample_nr }}/preparations/{{ prep_nr }}" class="table-link">{{ display_value }}</a>
+  {%- elif key_lower in ("target_nr", "target_id") and sample_nr is not none and prep_nr is not none and target_nr is not none -%}
+    <a href="/samples/{{ sample_nr }}/preparations/{{ prep_nr }}/targets/{{ target_nr }}" class="table-link">{{ display_value }}</a>
+  {%- elif key_lower == "project" and row.get("project_nr") is not none -%}
+    <a href="/projects/{{ row.get('project_nr') }}" class="table-link">{{ display_value }}</a>
+  {%- elif key_lower == "last_name" and row.get("user_nr") is not none -%}
+    <a href="/submitters/{{ row.get('user_nr') }}" class="table-link">{{ display_value }}</a>
+  {%- else -%}
+    {{ display_value }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% block content %}
-<section class="panel">
-  <div class="panel-head">
-    <h2>Lab Queues</h2>
-    <p>Live operational overview of samples across preparation, graphitization, and measurement.</p>
-  </div>
+<div class="dash-overview">
+  <section class="panel dash-panel" aria-labelledby="dash-queues-title">
+    <div class="dash-panel-head">
+      <h2 id="dash-queues-title" class="dash-panel-title">Lab queues</h2>
+      <form method="get" action="/" class="dash-held-form">
+        <label class="dash-toggle" title="Count and list samples on hold in Planned">
+          <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" />
+          Include held samples
+        </label>
+        <button type="submit" class="dash-icon-button" title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg>
+        </button>
+      </form>
+    </div>
 
-  <form method="get" action="/" class="inline-form">
-    <label>
-      <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} />
-      Include held samples
-    </label>
-    <button type="submit">Refresh</button>
-  </form>
+    <ul class="dash-bars" role="list">
+      {% for bar in queue_bars %}
+      <li>
+        <a class="dash-bar dash-bar-{{ bar.key }}" href="#{{ bar.anchor }}" title="Show the {{ bar.label }} table">
+          <span class="dash-bar-label">{{ bar.label }}</span>
+          <span class="dash-bar-track" aria-hidden="true"><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
+          <span class="dash-bar-value">{{ bar.value }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
 
-  <div class="cards">
-    <article><h3>Planned</h3><p>{{ counts.planned }}</p></article>
-    <article><h3>In Prep</h3><p>{{ counts.in_prep }}</p></article>
-    <article><h3>Waiting for Graph</h3><p>{{ counts.waiting_for_graph }}</p></article>
-    <article><h3>Waiting for Meas</h3><p>{{ counts.waiting_for_meas }}</p></article>
-    <article><h3>Express</h3><p>{{ counts.waiting_express }}</p></article>
     {% if ea_tile %}
-    <article class="ea-check-tile{% if ea_tile.overdue %} is-overdue{% endif %}">
-      <h3><a href="/lab/ea-checks" class="ea-check-tile-link">EA checks today</a></h3>
+    <div class="dash-ea{% if ea_tile.overdue %} is-overdue{% endif %}">
+      <span class="dash-ea-title">EA checks today</span>
       {% if ea_tile.available %}
-      <ul class="ea-check-tile-list">
+      <ul class="dash-ea-list" role="list">
         {% for item in ea_tile["items"] %}
-        <li class="ea-state-{{ item.state }}" title="{{ item.state_label }}">
-          <span class="ea-state-dot" aria-hidden="true"></span>
-          <span class="ea-check-tile-label">{{ item.label }}</span>
-          <span class="sr-only">{{ item.state_label }}</span>
+        <li class="dash-ea-item ea-state-{{ item.state }}">
+          <span class="dash-ea-dot" aria-hidden="true"></span>
+          <strong>{{ item.label }}</strong>
+          <span class="dash-ea-state">{{ item.state_label }}</span>
         </li>
         {% endfor %}
       </ul>
-      {% if ea_tile.overdue %}<p class="ea-check-tile-note">Sign-off overdue</p>{% endif %}
+      {% if ea_tile.overdue %}<span class="dash-ea-overdue">Sign-off overdue</span>{% endif %}
       {% else %}
-      <p class="ea-check-tile-note">Not set up yet</p>
+      <span class="dash-ea-state">Not set up yet</span>
       {% endif %}
-    </article>
-    {% endif %}
-  </div>
-
-  <details class="kpi-chart kpi-collapsible" open>
-    <summary class="kpi-summary">
-      <span class="kpi-summary-title">Queue Distribution</span>
-      <span class="kpi-summary-hint">Show/Hide</span>
-    </summary>
-    <div class="kpi-collapsible-body">
-      {% for item in queue_chart %}
-      <div class="kpi-row">
-        <div class="kpi-meta">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-        </div>
-        <div class="kpi-bar">
-          <div class="kpi-fill kpi-fill-{{ item.key }}" style="width: {{ item.pct }}%;"></div>
-        </div>
-      </div>
-      {% endfor %}
+      <a class="dash-ea-link" href="/lab/ea-checks">Log check</a>
     </div>
-  </details>
-</section>
+    {% endif %}
+  </section>
 
-<section class="panel">
-  <div class="panel-head">
-    <h2>Standards Ready for Analysis</h2>
-    <p>Counts and distribution of pre-evaluated standard targets ready to enter analysis.</p>
-  </div>
+  <section class="panel dash-panel" aria-labelledby="dash-standards-title">
+    <div class="dash-panel-head">
+      <h2 id="dash-standards-title" class="dash-panel-title">Standards ready</h2>
+      <span class="dash-panel-count">{{ standards_total }} targets</span>
+    </div>
 
-  <div class="cards cards-standards">
-    {% for item in standards_cards %}
-    <article
-      class="indicator-{{ item.status }}"
-      {% if item.rule_summary %}title="{{ item.label }} · current {{ item.value }} · {{ item.rule_summary }}"
-      aria-label="{{ item.label }}: {{ item.value }}. {{ item.rule_summary }}"{% endif %}
-    >
-      <h3>{{ item.label }}</h3>
-      <p>{{ item.value }}</p>
-    </article>
+    <ul class="dash-bars" role="list">
+      {% for bar in standard_bars %}
+      <li>
+        <div
+          class="dash-bar dash-bar-standard is-{{ bar.status }}"
+          {% if bar.rule_summary %}title="{{ bar.label }}: {{ bar.value }} · {{ bar.rule_summary }}"{% endif %}
+        >
+          <span class="dash-bar-label">{{ bar.label }}</span>
+          <span class="dash-bar-track" aria-hidden="true"><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
+          <span class="dash-bar-value">{{ bar.value }}</span>
+          {% if bar.tag %}<span class="dash-bar-tag">{{ bar.tag }}</span>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="panel dash-tables" data-tabs data-tabs-key="dashboard-queues" aria-label="Queue tables">
+  <div class="dash-tablist" role="tablist" aria-label="Queue tables">
+    {% for tab in queue_tabs %}
+    <button
+      type="button"
+      role="tab"
+      id="tab-{{ tab.anchor }}"
+      class="dash-tab"
+      aria-controls="{{ tab.anchor }}"
+      aria-selected="{{ 'true' if loop.first else 'false' }}"
+      {% if not loop.first %}tabindex="-1"{% endif %}
+    >{{ tab.label }}<span class="dash-tab-count">{{ tab.rows|length }}</span></button>
     {% endfor %}
   </div>
 
-  <details class="kpi-chart kpi-collapsible" open>
-    <summary class="kpi-summary">
-      <span class="kpi-summary-title">Standard Distribution</span>
-      <span class="kpi-summary-hint">Show/Hide</span>
-    </summary>
-    <div class="kpi-collapsible-body">
-      {% for item in standards_chart %}
-      <div class="kpi-row">
-        <div class="kpi-meta">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-        </div>
-        <div class="kpi-bar">
-          <div class="kpi-fill kpi-fill-threshold-{{ item.status }}" style="width: {{ item.pct }}%;"></div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </details>
-</section>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Queue Tables</h2>
-    <p>Detailed rows by queue. Jump to a table and expand only what you need.</p>
-  </div>
-  <nav class="table-index" aria-label="Queue table index">
-    {% for name, rows in tables.items() %}
-    <a href="#tbl-{{ name|replace('_', '-') }}">
-      {{ name.replace('_', ' ').title() }}
-      <span>{{ rows|length }}</span>
-    </a>
-    {% endfor %}
-  </nav>
-</section>
-
-{% for name, rows in tables.items() %}
-<section class="panel" id="tbl-{{ name|replace('_', '-') }}">
-  <details class="table-collapsible" {% if loop.first %}open{% endif %} data-table-filter>
-  <summary class="table-summary">
-    <span class="table-summary-title">{{ name.replace('_', ' ').title() }}</span>
-    <span class="badge table-summary-count">{{ rows|length }} rows</span>
-  </summary>
-  {% if rows %}
-  {% set ns = namespace(visible_keys=[]) %}
-  {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
-  {% if name == 'waiting_for_meas' %}
-    {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
-  {% endif %}
-  {% for key in rows[0].keys() %}
-    {% if key not in hidden_helper_keys %}
-      {% set _ = ns.visible_keys.append(key) %}
-    {% endif %}
-  {% endfor %}
-  <div class="table-tools">
-    <label class="table-tool-field">
-      Search
-      <input type="search" placeholder="Type to filter rows" data-table-search />
-    </label>
-      <label class="table-tool-field">
-        Column
-        <select data-table-column>
-          <option value="-1">All Columns</option>
-        {% for key in ns.visible_keys %}
+  {% for tab in queue_tabs %}
+  <div
+    class="dash-tabpanel"
+    role="tabpanel"
+    id="{{ tab.anchor }}"
+    aria-labelledby="tab-{{ tab.anchor }}"
+    data-table-filter
+    data-table-download-name="{{ tab.label }}"
+    {% if not loop.first %}hidden{% endif %}
+  >
+    {% if tab.rows %}
+    <div class="table-tools table-tools-compact">
+      <label class="table-filter">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <span class="sr-only">Filter {{ tab.label }} rows</span>
+        <input type="search" placeholder="Filter rows" data-table-search />
+      </label>
+      <label class="sr-only" for="{{ tab.anchor }}-column">Column to filter</label>
+      <select id="{{ tab.anchor }}-column" data-table-column data-no-searchable>
+        <option value="-1">All columns</option>
+        {% for key in tab.columns %}
         <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
         {% endfor %}
-        </select>
-    </label>
-    <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear" aria-label="Clear">×</button>
-    <p class="table-tool-status"><span data-table-visible>{{ rows|length }}</span> / <span data-table-total>{{ rows|length }}</span> shown</p>
-  </div>
-  <div class="table-wrap table-wrap-dashboard">
-    <table>
-      <thead>
-        <tr>
-          {% for key in ns.visible_keys %}
-          <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+      </select>
+      <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear filter" aria-label="Clear filter">×</button>
+      <p class="table-tool-status"><span data-table-visible>{{ tab.rows|length }}</span> of <span data-table-total>{{ tab.rows|length }}</span></p>
+    </div>
+    <div class="table-wrap table-wrap-dashboard">
+      <table>
+        <thead>
+          <tr>
+            {% for key in tab.columns %}
+            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tab.rows %}
+          <tr>
+            {% for key in tab.columns %}<td>{{ queue_cell(key, row) }}</td>{% endfor %}
+          </tr>
           {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-        <tr>
-          {% for key in ns.visible_keys %}
-          {% set key_lower = key|string|lower %}
-          {% set value = row.get(key) %}
-          {% set sample_nr_value = row.get("sample_nr") %}
-          {% set prep_nr_value = row.get("prep_nr") %}
-          {% set target_nr_value = row.get("target_nr") %}
-          {% set project_nr_value = row.get("project_nr") %}
-          {% set user_nr_value = row.get("user_nr") %}
-          {% set display_value = format_table_cell_value(key, value) %}
-          <td>
-            {% if key_lower == "sample_nr" and sample_nr_value is not none %}
-            <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
-            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% elif key_lower == "target_id" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-            <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% elif key_lower == "project" and project_nr_value is not none %}
-            <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% elif key_lower == "last_name" and user_nr_value is not none %}
-            <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
-            {% else %}
-            {{ display_value }}
-            {% endif %}
-          </td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No rows match the filter.</p>
+    {% else %}
+    <p class="table-empty">Nothing in {{ tab.label }} right now.</p>
+    {% endif %}
   </div>
-  <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
-  {% else %}
-  <p class="table-empty">No rows.</p>
-  {% endif %}
-  </details>
+  {% endfor %}
 </section>
-{% endfor %}
 {% endblock %}
