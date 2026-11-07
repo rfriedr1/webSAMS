@@ -1,0 +1,16 @@
+{#- Shared table-cell rendering. Every list table (search, dashboard queue
+    tabs, lab queues, the analysis magazine lookup) renders its cells
+    through `table_cell`, so a value is formatted the same way
+    (`format_table_cell_value`: empty dash, rounding, sentinel dates) and
+    the same columns link to the same records everywhere. The link rule is
+    `search.fk_based_link`, exposed as the `row_link` global; a search
+    context may pass its own `link_for`. -#}
+{% macro table_cell(key, row, link_for=none) -%}
+  {%- set shown = format_table_cell_value(key, row.get(key)) -%}
+  {%- set href = link_for(key, row) if link_for else row_link(key, row) -%}
+  {%- if href -%}
+    <a href="{{ href }}" class="table-link">{{ shown }}</a>
+  {%- else -%}
+    {{ shown }}
+  {%- endif -%}
+{%- endmacro %}

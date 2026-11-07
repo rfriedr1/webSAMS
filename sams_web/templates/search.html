@@ -2,6 +2,7 @@
 
 {#- Search: one row (record type, phrase, Search), the result count in the
     title line, the results table below. Redesigned 2026-11. -#}
+{% from "_table_macros.html" import table_cell %}
 {% block content %}
 {% set context_label = context|replace('_', ' ')|capitalize %}
 <section class="panel">
@@ -63,13 +64,8 @@
         <tbody>
           {% for row in results %}
           <tr>
-            {% for key, value in row.items() %}
-            {% set display_value = format_table_cell_value(key, value) %}
-            {% set link = resolved_context.link_for(key, row) if resolved_context else None %}
-            <td>
-              {% if link %}<a href="{{ link }}">{{ display_value }}</a>
-              {% else %}{{ display_value }}{% endif %}
-            </td>
+            {% for key in row.keys() %}
+            <td>{{ table_cell(key, row, resolved_context.link_for if resolved_context else none) }}</td>
             {% endfor %}
           </tr>
           {% endfor %}

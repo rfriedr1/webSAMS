@@ -17,6 +17,7 @@
 {% endif %}
 {% endblock %}
 
+{% from "_table_macros.html" import table_cell %}
 {% block content %}
 {#- Lab pages carry no page header: the breadcrumb and the Lab sub-nav
     already say where you are. The bench (or the analysis magazine lookup)
@@ -82,29 +83,7 @@
           {% for row in magazine_rows %}
           <tr>
             {% for key in visible_magazine_columns %}
-            {% set key_lower = key|string|lower %}
-            {% set value = row.get(key) %}
-            {% set sample_nr_value = row.get("sample_nr") %}
-            {% set prep_nr_value = row.get("prep_nr") %}
-            {% set target_nr_value = row.get("target_nr") %}
-            {% set project_nr_value = row.get("project_nr") %}
-            {% set user_nr_value = row.get("user_nr") %}
-            {% set display_value = format_table_cell_value(key, value) %}
-            <td>
-              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "project" and project_nr_value is not none %}
-              <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "user_last_name" and user_nr_value is not none %}
-              <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% else %}
-              {{ display_value }}
-              {% endif %}
-            </td>
+            <td>{{ table_cell(key, row) }}</td>
             {% endfor %}
           </tr>
           {% endfor %}
@@ -149,31 +128,7 @@
           {% for row in rows %}
           <tr>
             {% for key in ns.visible_keys %}
-            {% set key_lower = key|string|lower %}
-            {% set value = row.get(key) %}
-            {% set sample_nr_value = row.get("sample_nr") %}
-            {% set prep_nr_value = row.get("prep_nr") %}
-            {% set target_nr_value = row.get("target_nr") %}
-            {% set project_nr_value = row.get("project_nr") %}
-            {% set user_nr_value = row.get("user_nr") %}
-            {% set display_value = format_table_cell_value(key, value) %}
-            <td>
-              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "target_id" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "project" and project_nr_value is not none %}
-              <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% elif key_lower == "last_name" and user_nr_value is not none %}
-              <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
-              {% else %}
-              {{ display_value }}
-              {% endif %}
-            </td>
+            <td>{{ table_cell(key, row) }}</td>
             {% endfor %}
           </tr>
           {% endfor %}

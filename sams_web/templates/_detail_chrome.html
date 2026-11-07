@@ -117,7 +117,7 @@
 {% macro render_detail_quick_nav(entity, current, max_nr, count, prev_url, next_url, jump_action, jump_name) -%}
   <span class="detail-quick-nav" aria-label="{{ entity|title }} navigation">
     {% if prev_url %}
-    <a href="{{ prev_url }}" class="detail-quick-nav-arrow" aria-label="Previous {{ entity }}" title="Previous {{ entity }} ([)">&#x2039;</a>
+    <a href="{{ prev_url }}" class="detail-quick-nav-arrow" data-quick-nav="prev" aria-label="Previous {{ entity }}" title="Previous {{ entity }} ([)">&#x2039;</a>
     {% else %}
     <span class="detail-quick-nav-arrow is-disabled" aria-label="No previous {{ entity }}" title="No previous {{ entity }}">&#x2039;</span>
     {% endif %}
@@ -136,7 +136,7 @@
       <span class="detail-quick-nav-of">/ {{ max_nr if max_nr and max_nr > 0 else count }}</span>
     </form>
     {% if next_url %}
-    <a href="{{ next_url }}" class="detail-quick-nav-arrow" aria-label="Next {{ entity }}" title="Next {{ entity }} (])">&#x203A;</a>
+    <a href="{{ next_url }}" class="detail-quick-nav-arrow" data-quick-nav="next" aria-label="Next {{ entity }}" title="Next {{ entity }} (])">&#x203A;</a>
     {% else %}
     <span class="detail-quick-nav-arrow is-disabled" aria-label="No next {{ entity }}" title="No next {{ entity }}">&#x203A;</span>
     {% endif %}

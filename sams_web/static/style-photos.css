@@ -16,10 +16,6 @@
   margin-bottom: var(--space-2);
 }
 
-.sample-photos-head .card-group-title {
-  margin-bottom: 0;
-}
-
 .sample-photos-count {
   margin-left: var(--space-1);
   padding: 0.05rem 0.4rem;

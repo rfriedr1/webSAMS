@@ -111,13 +111,11 @@ class GraphitizationBench:
                 target_nr_raw = str(bench_entry["target"].target_nr)
 
         return {
-            "title": "Graphitization Workflow",
-            "description": "Graphitization worklist for samples waiting to enter target production.",
+            "title": "Graphitization",
             "table_key": "waiting_for_graph",
             "table_title": "Waiting For Graph",
             "rows": rows,
             "show_on_hold": False,
-            "show_on_hold_enabled": False,
             "graph_bench_entry_enabled": True,
             "graph_bench_entry": bench_entry,
             "graph_sample_nr_query": sample_nr_raw,

@@ -33,27 +33,6 @@
   max-height: 28rem;
 }
 
-.users-panel {
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh - 8.4rem);
-  min-height: 25rem;
-  overflow: hidden;
-}
-
-.users-table-region {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.users-table-wrap {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
-}
-
 .table-collapsible {
   border-radius: 12px;
 }
@@ -366,8 +345,7 @@ tbody tr:hover {
   color: var(--brand-deep);
 }
 
-.table-link,
-.user-row-link {
+.table-link {
   color: var(--brand-deep);
   font-weight: 700;
   text-decoration-line: underline;
@@ -375,15 +353,12 @@ tbody tr:hover {
   text-underline-offset: 0.12em;
 }
 
-.table-link:visited,
-.user-row-link:visited {
+.table-link:visited {
   color: var(--brand-deep);
 }
 
 .table-link:hover,
-.table-link:focus-visible,
-.user-row-link:hover,
-.user-row-link:focus-visible {
+.table-link:focus-visible {
   color: var(--brand-deep);
 }
 
@@ -401,31 +376,14 @@ a:hover {
   gap: 1rem;
 }
 
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1rem;
-}
-
-.user-detail-head {
-  margin-bottom: 0.95rem;
-}
-
-.user-detail-subtitle {
-  margin: 0.2rem 0 0;
-  color: var(--ink-soft);
-}
-
-.page-actions,
-.user-detail-actions {
+.page-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin: 0.55rem 0 0;
 }
 
-.page-actions a,
-.user-detail-actions a {
+.page-actions a {
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--line);
@@ -436,60 +394,6 @@ a:hover {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--brand-deep);
-}
-
-.page-actions-forms {
-  margin-top: 0.2rem;
-}
-
-.page-actions-forms .inline-form {
-  margin: 0;
-}
-
-.page-actions-target-form {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 0.35rem;
-  padding: 0.12rem 0.18rem;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: linear-gradient(180deg, var(--surface-tint), var(--surface-tint));
-}
-
-.page-actions-target-form label {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  color: var(--ink-soft);
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.page-actions-target-form select {
-  min-height: 1.86rem;
-  min-width: 4.8rem;
-  border-radius: 999px;
-  padding: 0.18rem 0.45rem;
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.page-actions-forms button {
-  min-height: 1.86rem;
-  border-radius: 999px;
-  padding: 0.18rem 0.6rem;
-  border-color: var(--line-strong);
-  background: var(--surface-solid);
-  color: var(--brand-deep);
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.page-actions-forms button:hover,
-.page-actions-forms button:focus-visible {
-  background: var(--surface-tint);
-  border-color: var(--line-strong);
 }
 
 /* "Showing first N" banner for server-side truncated list views. */
@@ -565,24 +469,6 @@ a:hover {
      started; the dirty count is the relevant message in that state. */
   display: none;
 }
-
-.sample-head-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.6rem;
-  /* The action toolbar (Edit / Save / Cancel) now lives in this row,
-     right-aligned next to the h2 — modern apps put the primary action
-     on the title line, not under it. */
-  flex-wrap: wrap;
-  margin-bottom: var(--space-2);
-}
-
-.sample-head-row > .detail-edit-toolbar {
-  margin-top: 0;
-  flex-shrink: 0;
-}
-
 
 /* Back chip — uses the chevron + label pattern, matches the chip
    vocabulary used elsewhere (pin chip, quick-nav pill). */
@@ -682,110 +568,6 @@ a:hover {
 .detail-quick-nav-of {
   color: var(--muted);
   font-weight: 600;
-}
-
-.sample-head-row h2 {
-  margin-bottom: 0.18rem;
-}
-
-.sample-quick-nav {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.42rem;
-}
-
-.sample-quick-nav-link,
-.sample-quick-nav-disabled,
-.sample-quick-nav-current {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 1.86rem;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  padding: 0.2rem 0.62rem;
-  background: var(--surface-tint);
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.sample-quick-nav-link {
-  color: var(--brand-deep);
-  text-decoration: none;
-}
-
-.sample-quick-nav-link:hover,
-.sample-quick-nav-link:focus-visible {
-  color: #18485b;
-  border-color: var(--line-strong);
-  background: var(--brand-tint);
-}
-
-.sample-quick-nav-current {
-  color: var(--brand);
-  border-color: var(--line-strong);
-  background: var(--brand-tint);
-}
-
-.sample-quick-nav-disabled {
-  color: var(--ink-soft);
-  border-color: var(--line-soft);
-  background: var(--surface-tint);
-}
-
-.sample-quick-nav-arrow {
-  min-width: 1.9rem;
-  padding: 0.12rem 0.42rem;
-  font-size: var(--text-md);
-  line-height: 1;
-  font-weight: 800;
-}
-
-.sample-quick-nav-jump {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  padding: 0.16rem 0.26rem;
-  background: var(--brand-tint);
-}
-
-.sample-quick-nav-jump input {
-  min-height: 1.5rem;
-  width: 4.6rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.14rem 0.4rem;
-  text-align: center;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  background: var(--surface-solid);
-}
-
-.sample-quick-nav-jump button {
-  min-height: 1.5rem;
-  border-radius: 999px;
-  padding: 0.12rem 0.56rem;
-  font-size: var(--text-xs);
-  line-height: 1;
-}
-
-.sample-quick-nav-jump-total {
-  color: #2b5c70;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  line-height: 1;
-  min-width: 2.3rem;
-  text-align: center;
-}
-
-.sample-quick-nav-error {
-  margin: 0.36rem 0 0;
-  color: var(--danger-text);
-  font-size: var(--text-sm);
-  font-weight: 700;
 }
 
 /* ---- list-page server-side search -------------------------------------

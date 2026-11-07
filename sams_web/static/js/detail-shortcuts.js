@@ -40,22 +40,19 @@
     return false;
   };
 
-  const clickPrevArrow = () => {
-    const prev = document.querySelector(".sample-quick-nav-link.sample-quick-nav-arrow:first-of-type");
-    if (prev && prev.tagName === "A") {
-      window.location.assign(prev.href);
+  // The record header's ‹ › arrows carry `data-quick-nav="prev|next"`
+  // (`render_detail_quick_nav` in _detail_chrome.html). A data hook, not a
+  // class: the arrows were renamed in the 2026-11 redesign and a class
+  // selector here silently stopped matching.
+  const followQuickNav = (direction) => {
+    const link = document.querySelector(`a[data-quick-nav="${direction}"]`);
+    if (link) {
+      window.location.assign(link.href);
     }
   };
 
-  const clickNextArrow = () => {
-    const links = document.querySelectorAll(".sample-quick-nav-link.sample-quick-nav-arrow");
-    if (links.length >= 2) {
-      const next = links[links.length - 1];
-      if (next && next.tagName === "A") {
-        window.location.assign(next.href);
-      }
-    }
-  };
+  const clickPrevArrow = () => followQuickNav("prev");
+  const clickNextArrow = () => followQuickNav("next");
 
   const toggleEditMode = () => {
     const scope = editScope();

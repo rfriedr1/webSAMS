@@ -208,12 +208,6 @@ body.has-command-palette {
   }
 }
 
-.detail-edit-hint {
-  color: var(--ink-soft);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
 .user-field-list,
 .project-field-list,
 .sample-field-list {
@@ -552,25 +546,6 @@ body.has-command-palette {
 /* Labelled group of cards (`<section class="card-group">` + small
    uppercase title). Detail pages no longer use it (they render a fact
    sheet); the import wizard still does. */
-.card-group {
-  margin-top: 0.55rem;
-}
-
-.card-group:first-of-type {
-  margin-top: 0.4rem;
-}
-
-.card-group-title {
-  margin: 0 0 var(--space-2) var(--space-1);
-  color: var(--brand);
-  /* Bumped from 0.74rem so the group label reads as a signpost, not
-     decoration. Keeping uppercase + tracked-out for the spreadsheet-y
-     "section header" feel, but at a size the eye actually catches. */
-  font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 
 .card-warning-icon {
   font-size: var(--text-base);
@@ -737,36 +712,6 @@ body.has-command-palette {
 
 .user-projects-table-wrap {
   max-height: min(58dvh, 34rem);
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.58rem;
-  margin-bottom: 1rem;
-}
-
-.detail-item {
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--surface-solid), var(--surface-tint));
-  padding: 0.58rem 0.66rem;
-}
-
-.detail-item h4 {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.detail-item p {
-  margin: 0.4rem 0 0;
-  color: var(--ink-strong);
-  font-size: var(--text-base);
-  overflow-wrap: break-word;
 }
 
 .detail-empty {
@@ -1144,7 +1089,6 @@ body.has-command-palette {
   border: 1px solid var(--success-line);
   background: linear-gradient(180deg, var(--brand-tint), var(--success-bg));
 }
-
 
 /* =====================================================================
    Record pages: header + fact sheet
