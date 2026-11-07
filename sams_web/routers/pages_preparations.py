@@ -18,8 +18,8 @@ def _preparation_extra_keys(data: dict[str, object]) -> dict[str, object]:
     # The preparation template historically uses `prep_nr`-suffixed nav keys
     # (previous_prep_nr / next_prep_nr / max_prep_nr) while the rest of the
     # detail-page state uses the full `preparation_` prefix. Rather than
-    # rename the template, alias the nav keys here. Headline display values
-    # come from `PREPARATION_DETAIL_PAGE.headline_builder`.
+    # rename the template, alias the nav keys here. Field values come from
+    # `PREPARATION_DETAIL_PAGE.sections_builder`.
     return {
         "sample": data["sample"],
         "project": data["project"],

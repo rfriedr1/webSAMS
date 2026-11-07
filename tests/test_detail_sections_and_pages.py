@@ -111,5 +111,7 @@ def test_target_results_rounding_and_no_other_section():
     assert values["fm"] == "1.2346"
     assert values["fm_sig"] == "0.9877"
     assert values["dc13"] == "-21.9877"
-    assert values["c14_age"] == 1235
-    assert values["c14_age_sig"] == 35
+    # The age pair is lifted out of the rows into the one-figure readout.
+    assert "c14_age" not in values
+    assert results["readout"]["value"] == 1235
+    assert results["readout"]["sigma"] == 35

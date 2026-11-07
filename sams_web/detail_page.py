@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 
 SectionsBuilder = Callable[[Any], list[dict[str, Any]]]
 SelectOptionsGetter = Callable[["SamsService"], dict[str, list[str]]]
-HeadlineBuilder = Callable[[Any], dict[str, Any]]
 WarningsBuilder = Callable[[Any, dict[str, Any]], dict[str, Any]]
 
 
@@ -43,12 +42,10 @@ class DetailPageConfig:
     write-side rules; the page builder derives the template's `read_only_fields`
     and `required_fields` from it so the view and the write path agree.
 
-    `headline_builder` (optional) returns a flat dict of formatted display
-    values keyed by short name (e.g. `c14_age`, `fm`). Exposed in template
-    context as `{name}_headline` (a dict, accessed as `target_headline.fm`).
-    Replaces the previous pattern of routers manually computing each
-    `{entity}_{field}_display` key — adds robustness because the headline
-    keys live next to the format functions, not scattered across routers.
+    Every value the page shows comes from `sections_builder`: the fact
+    sheet at the top and the collapsed "More details" block are both
+    sections (see `arrange_sections`). There is no separate headline dict
+    any more — it duplicated half the fields.
 
     `warnings_builder` (optional) takes the entity plus the lab-warning
     threshold dict and returns a per-warning outcome dict. Exposed as
@@ -60,7 +57,6 @@ class DetailPageConfig:
     edit_form_id: str
     sections_builder: SectionsBuilder
     select_options_getter: SelectOptionsGetter | None = None
-    headline_builder: HeadlineBuilder | None = None
     warnings_builder: WarningsBuilder | None = None
 
 
@@ -138,16 +134,14 @@ def build_detail_page_context(
     select_options: dict[str, list[str]] = (
         config.select_options_getter(service) if config.select_options_getter else {}
     )
-    headline = config.headline_builder(entity) if config.headline_builder else {}
     warnings = (
         config.warnings_builder(entity, lab_warning_thresholds or {})
         if config.warnings_builder
         else {}
     )
-    # Index warnings by the section-grid row key they pertain to, so the
-    # field-row macro can decorate the row with the same red/⚠ treatment
-    # the headline card uses. The original `warnings` dict (threshold-key
-    # → outcome) stays available for the headline cards.
+    # Index warnings by the row key they pertain to, so the field-row macro
+    # can decorate that row red with its ⚠ hint. The threshold-keyed
+    # `warnings` dict stays in the context for anything that wants it.
     warnings_by_field = {
         outcome.field_key: outcome
         for outcome in warnings.values()
@@ -169,7 +163,6 @@ def build_detail_page_context(
         f"{name}_save_error": edit_state.save_error,
         f"{name}_saved": edit_state.saved,
         f"{name}_edit_initial_mode": edit_state.edit_initial_mode,
-        f"{name}_headline": headline,
         f"{name}_warnings": warnings,
         f"{name}_warnings_by_field": warnings_by_field,
         f"previous_{name}_nr": cursor.previous_nr,

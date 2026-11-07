@@ -457,12 +457,6 @@
     max-height: 62dvh;
   }
 
-  .user-section-grid,
-  .project-section-grid,
-  .sample-section-grid {
-    grid-template-columns: 1fr;
-  }
-
   .user-field-row,
   .project-field-row,
   .sample-field-row {

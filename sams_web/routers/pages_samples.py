@@ -20,8 +20,8 @@ router = APIRouter()
 
 def _sample_extra_keys(overview: dict[str, object], creation_notice: str | None) -> dict[str, object]:
     """Page-specific extras for the sample detail page (related entities,
-    table joins, optional creation notice). Headline display values come
-    from `SAMPLE_DETAIL_PAGE.headline_builder`, not from this dict."""
+    table joins, optional creation notice). Field values come from
+    `SAMPLE_DETAIL_PAGE.sections_builder`, not from this dict."""
     preparations = overview["preparations"]
     return {
         "project": overview["project"],

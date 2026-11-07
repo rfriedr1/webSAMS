@@ -278,7 +278,7 @@ templates.env.globals["app_subtitle"] = f"{APP_SUBTITLE_BASE} ({get_settings().d
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261106-11"
+templates.env.globals["css_v"] = "20261107-4"
 
 
 def has_non_empty_value(row: dict[str, Any], keys: tuple[str, ...]) -> bool:

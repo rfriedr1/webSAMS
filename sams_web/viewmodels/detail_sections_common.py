@@ -152,6 +152,65 @@ def build_sections(
     return sections
 
 
+def arrange_sections(
+    sections: list[dict[str, Any]],
+    *,
+    order: tuple[str, ...] = (),
+    wide: frozenset[str] | set[str] = frozenset(),
+    more: frozenset[str] | set[str] = frozenset(),
+) -> list[dict[str, Any]]:
+    """Attach the fact-sheet layout hints the detail templates render by.
+
+    Every section gets `layout` ("column" — one column of the fact sheet —
+    or "wide", a full-width band such as Comments) and `placement`
+    ("primary", shown on the page, or "more", folded into the collapsed
+    additional-details block). Sections named in `order` come first, in
+    that order; the rest keep their build order behind them.
+    """
+    rank = {title: index for index, title in enumerate(order)}
+    for section in sections:
+        title = section.get("title", "")
+        section["layout"] = "wide" if title in wide else "column"
+        section["placement"] = "more" if title in more else "primary"
+    return sorted(
+        sections,
+        key=lambda section: rank.get(section.get("title", ""), len(rank)),
+    )
+
+
+def attach_readout(
+    sections: list[dict[str, Any]],
+    *,
+    section_title: str,
+    value_key: str,
+    sigma_key: str,
+    label: str,
+    unit: str = "BP",
+) -> None:
+    """Lift a value ± sigma pair out of a section's rows into a readout.
+
+    A radiocarbon age is read and quoted as one figure (`5923 ± 25 BP`),
+    so the fact sheet shows it that way instead of as two rows. Only for
+    read-only result pairs: the rows are removed, so nothing that could be
+    edited may go through here.
+    """
+    for section in sections:
+        if section.get("title") != section_title:
+            continue
+        rows = section.get("rows", [])
+        by_key = {row.get("key"): row for row in rows}
+        if value_key not in by_key:
+            return
+        section["readout"] = {
+            "label": label,
+            "unit": unit,
+            "value": by_key[value_key].get("value"),
+            "sigma": by_key.get(sigma_key, {}).get("value"),
+        }
+        section["rows"] = [row for row in rows if row.get("key") not in {value_key, sigma_key}]
+        return
+
+
 def format_c14_integer(value: Any) -> Any:
     if value is None:
         return None

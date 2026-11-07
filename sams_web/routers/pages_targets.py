@@ -21,8 +21,8 @@ def _target_extra_keys(
     data: dict[str, object],
 ) -> dict[str, object]:
     """Page-specific extras: related entities and prep-options for the
-    +Target form. Headline display values + warnings come from
-    `TARGET_DETAIL_PAGE.headline_builder` / `.warnings_builder`."""
+    +Target form. Field values and warnings come from
+    `TARGET_DETAIL_PAGE.sections_builder` / `.warnings_builder`."""
     return {
         "sample": data["sample"],
         "project": data["project"],

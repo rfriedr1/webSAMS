@@ -683,9 +683,8 @@ h6 {
   font-weight: 600;
 }
 
-/* Base `.cards` grid — used everywhere KPI tiles or headline cards
-   appear (dashboard, samples landing, every detail page's headline
-   block). Moved out of style-benches.css when bench CSS was made
+/* Base `.cards` grid — used wherever KPI tiles appear (dashboard,
+   samples landing). Moved out of style-benches.css when bench CSS was made
    page-specific, since these rules are needed on the 95 % of pages
    that aren't the bench. */
 .cards {
@@ -925,7 +924,8 @@ button:focus-visible,
 .quick-pin-toggle:focus-visible,
 .nav-back:focus-visible,
 .table-link:focus-visible,
-.sample-meta-toc-link:focus-visible,
+.record-more-summary:focus-visible,
+.record-action:focus-visible,
 .sample-photo-download:focus-visible,
 [data-detail-edit-button]:focus-visible,
 [data-history-back]:focus-visible,
@@ -956,13 +956,6 @@ button:focus-visible,
    most expensive horizontal blocks so iPads, split-screens, and narrow
    laptop windows stop overflowing. */
 @media (max-width: 1024px) {
-  /* Section grids drop one column earlier on tablet. */
-  .user-section-grid,
-  .project-section-grid,
-  .sample-section-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-
   /* Topbar: brand + magic-nav + actions wrap into 2 rows so the long
      Magic Nav placeholder doesn't crowd the Search & jump trigger. */
   .topbar-row {
@@ -1060,10 +1053,7 @@ button:focus-visible,
   }
 
   /* Single-column cards in narrow viewports. */
-  .cards,
-  .sample-identity-cards,
-  .sample-summary-cards,
-  .sample-comments-cards {
+  .cards {
     grid-template-columns: 1fr !important;
   }
 }
