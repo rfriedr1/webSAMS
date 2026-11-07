@@ -83,6 +83,18 @@ def _contact_field_specs() -> list[dict[str, Any]]:
     ]
 
 
+def _record_values(row: Any) -> dict[str, str]:
+    """A stored submitter's contact fields, for the review step's sheet vs
+    record comparison. Same keys as the sheet's contact block."""
+    values: dict[str, str] = {}
+    for key in EDITABLE_CONTACT_FIELDS:
+        value = getattr(row, key, None)
+        text = "" if value is None else str(value).strip()
+        if text:
+            values[key] = text
+    return values
+
+
 def _submitter_row_summary(row: Any) -> dict[str, Any]:
     """Compact shape used by the browse-and-pick submitter list."""
     last = (row.last_name or "").strip()
@@ -95,6 +107,7 @@ def _submitter_row_summary(row: Any) -> dict[str, Any]:
         "email": (row.email or "").strip(),
         "town": (row.town or "").strip(),
         "country": (row.country or "").strip(),
+        "record": _record_values(row),
     }
 
 
@@ -111,7 +124,10 @@ def _candidates_for(service: Any, parsed: dict[str, str]) -> list[dict[str, Any]
     for term in candidate_search_terms(parsed):
         for row in repo.list_submitters(query=term, limit=CANDIDATE_QUERY_LIMIT):
             rows[int(row.user_nr)] = row
-    return [c.as_dict() for c in find_submitter_candidates(parsed, list(rows.values()))]
+    return [
+        {**c.as_dict(), "record": _record_values(rows[c.user_nr])}
+        for c in find_submitter_candidates(parsed, list(rows.values()))
+    ]
 
 
 def search_submitters(service: Any, query: str, limit: int = 40) -> list[dict[str, Any]]:
