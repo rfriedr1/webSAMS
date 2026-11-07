@@ -147,22 +147,6 @@
     {% if not loop.first %}hidden{% endif %}
   >
     {% if tab.rows %}
-    <div class="table-tools table-tools-compact">
-      <label class="table-filter">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        <span class="sr-only">Filter {{ tab.label }} rows</span>
-        <input type="search" placeholder="Filter rows" data-table-search />
-      </label>
-      <label class="sr-only" for="{{ tab.anchor }}-column">Column to filter</label>
-      <select id="{{ tab.anchor }}-column" data-table-column data-no-searchable>
-        <option value="-1">All columns</option>
-        {% for key in tab.columns %}
-        <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
-        {% endfor %}
-      </select>
-      <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear filter" aria-label="Clear filter">×</button>
-      <p class="table-tool-status"><span data-table-visible>{{ tab.rows|length }}</span> of <span data-table-total>{{ tab.rows|length }}</span></p>
-    </div>
     <div class="table-wrap table-wrap-dashboard">
       <table>
         <thead>

@@ -65,23 +65,6 @@
         {% set _ = ns.visible_keys.append(key) %}
       {% endif %}
     {% endfor %}
-    <div class="table-tools">
-      <label class="table-tool-field">
-        Search
-        <input type="search" placeholder="Type to filter rows" data-table-search />
-      </label>
-        <label class="table-tool-field">
-          Column
-          <select data-table-column>
-          <option value="-1">All Columns</option>
-          {% for key in ns.visible_keys %}
-          <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
-          {% endfor %}
-          </select>
-        </label>
-      <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear" aria-label="Clear">×</button>
-      <p class="table-tool-status"><span data-table-visible>{{ rows|length }}</span> / <span data-table-total>{{ rows|length }}</span> shown</p>
-    </div>
     <div class="table-wrap table-wrap-dashboard">
       <table>
         <thead>
@@ -197,23 +180,6 @@
     {% if not magazine_error and magazine_query and magazine_rows %}
     {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
     <section data-table-filter style="margin-top: 0.7rem;">
-      <div class="table-tools">
-        <label class="table-tool-field">
-          Search
-          <input type="search" placeholder="Type to filter rows" data-table-search />
-        </label>
-        <label class="table-tool-field">
-          Column
-          <select data-table-column>
-            <option value="-1">All Columns</option>
-            {% for key in visible_magazine_columns %}
-            <option value="{{ loop.index0 }}">{{ format_table_header_label(key) }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear" aria-label="Clear">×</button>
-        <p class="table-tool-status"><span data-table-visible>{{ magazine_rows|length }}</span> / <span data-table-total>{{ magazine_rows|length }}</span> shown</p>
-      </div>
       <div class="table-wrap table-wrap-horizontal">
         <table>
           <thead>

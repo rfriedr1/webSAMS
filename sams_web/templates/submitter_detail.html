@@ -42,25 +42,6 @@
   <section data-table-filter>
     <h3 class="record-related-title">Projects <span class="record-related-count">{{ projects|length }}</span></h3>
     {% if projects %}
-    <div class="table-tools">
-      <label class="table-tool-field">
-        Search
-        <input type="search" placeholder="Type to filter projects" data-table-search />
-      </label>
-      <label class="table-tool-field">
-        Column
-        <select data-table-column>
-          <option value="-1">All columns</option>
-          <option value="0">Project #</option>
-          <option value="1">Name</option>
-          <option value="2">Status</option>
-          <option value="3">In Date</option>
-          <option value="4">Out Date</option>
-        </select>
-      </label>
-      <button type="button" class="table-tool-icon table-tool-clear" data-table-clear title="Clear" aria-label="Clear">×</button>
-      <p class="table-tool-status"><span data-table-visible>{{ projects|length }}</span> / <span data-table-total>{{ projects|length }}</span> shown</p>
-    </div>
 
     <div class="table-wrap user-projects-table-wrap">
       <table data-user-projects-table>
