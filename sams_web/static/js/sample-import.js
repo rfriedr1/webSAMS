@@ -1143,7 +1143,6 @@
       "<tr>" +
       `<th class="import-col-check"><input type="checkbox" data-select-all aria-label="Select all rows" ${allSelected ? "checked" : ""} /></th>` +
       '<th class="import-col-include">Import</th>' +
-      '<th class="import-col-row">Row</th>' +
       sheet.map((f) => `<th>${esc(labels[f] || f)}</th>`).join("") +
       LOOKUP_FIELDS.map((f) => `<th class="import-col-lab">Lab ${esc((labels[f] || f).toLowerCase())}</th>`).join("") +
       STEP_COLUMNS.map((_, i) => `<th class="import-col-step">Prep ${i + 1}</th>`).join("") +
@@ -1191,9 +1190,10 @@
               </select></td>`
         ).join("");
         const errors = (sample.issues || []).filter((i) => i.severity === "error");
+        const noLabel = sample.include && !String(sample.values.user_label || "").trim();
         const selected = state.selection.has(index);
         return `
-          <tr class="${sample.include ? "" : "is-excluded"} ${errors.length ? "has-error" : ""} ${selected ? "is-selected-row" : ""}">
+          <tr class="${sample.include ? "" : "is-excluded"} ${errors.length || noLabel ? "has-error" : ""} ${selected ? "is-selected-row" : ""}">
             <td class="import-col-check">
               <input type="checkbox" data-select-row="${index}" ${selected ? "checked" : ""}
                      aria-label="Select row ${sample.row_number}" />
@@ -1203,7 +1203,6 @@
                      ${sample.include ? "checked" : ""} aria-label="Import row ${sample.row_number}"
                      title="${sample.include ? "Imported; click to leave this row out" : "Left out; click to import this row"}" />
             </td>
-            <td class="import-col-row">${sample.row_number}</td>
             ${sheetCells}${labCells}${stepCells}
           </tr>`;
       })
@@ -1309,11 +1308,14 @@
       problems.push("Map one column to “Sample Label”.");
     }
     if (!includedSamples().length) problems.push("Select at least one sample row.");
-    includedSamples().forEach((s) => {
-      if (!String(s.values.user_label || "").trim()) {
-        problems.push(`Row ${s.row_number} has no sample name — fix it or untick the row.`);
-      }
-    });
+    // The table shows no sheet row numbers, so these rows are marked red
+    // there instead of being named by number.
+    const unnamed = includedSamples().filter((s) => !String(s.values.user_label || "").trim()).length;
+    if (unnamed) {
+      problems.push(
+        `${unnamed === 1 ? "One row has" : `${unnamed} rows have`} no sample label (marked red below): fill it in or switch the row off.`
+      );
+    }
     return problems;
   }
 
