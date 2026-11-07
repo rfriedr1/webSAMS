@@ -2,9 +2,9 @@
 
 Each `evaluate_*_warnings` function returns a `dict[str, WarningOutcome]`
 keyed by the threshold key (e.g. `"target_total_c_ug_min"`). Templates
-read it as `{name}_warnings.get('target_total_c_ug_min')` and pass the
-outcome straight to `render_detail_display_card(..., warning=...)`,
-which paints the card red and shows the inline message when triggered.
+get them indexed by row key as `{name}_warnings_by_field`; the field-row
+macro paints the outcome's row (`field_key`) red and shows the inline
+message when triggered.
 
 Keeping this layer pure (no DB, no service, no request) makes warnings
 easy to unit-test and easy to extend — adding a new threshold is a
@@ -33,11 +33,10 @@ class WarningOutcome:
     bound, and so future tooling (e.g. an audit log) can inspect the
     numbers without re-evaluating.
 
-    `field_key` is the section-grid row key the warning attaches to —
+    `field_key` is the fact-sheet row key the warning attaches to —
     e.g. `"total_c_ug"`. Used by `build_detail_page_context` to derive
-    a `{name}_warnings_by_field` lookup so the section-grid macro can
-    show the same red/⚠ treatment the headline card uses, instead of
-    the warning living only on the headline.
+    a `{name}_warnings_by_field` lookup so `render_detail_sections` can
+    give that row the red/⚠ treatment.
     """
 
     triggered: bool

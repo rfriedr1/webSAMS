@@ -1,60 +1,53 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row, render_detail_sections %}
-{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_fields.html" import render_detail_sections %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ target_edit_initial_mode or 'view' }}">
   {% set target_back_url = '/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr %}
+  {% set target_base_url = target_back_url ~ '/targets/' %}
+  {% set nav %}{{ render_detail_quick_nav(
+    entity='target',
+    current=target.target_nr,
+    max_nr=max_target_nr,
+    count=target_count,
+    prev_url=(target_base_url ~ previous_target_nr) if previous_target_nr else None,
+    next_url=(target_base_url ~ next_target_nr) if next_target_nr else None,
+    jump_action=target_base_url ~ target.target_nr,
+    jump_name='jump_target',
+  ) }}{% endset %}
+  {% set actions %}
+  <form
+    method="post"
+    action="/samples/{{ sample.sample_nr }}/add-target"
+    class="record-action-form"
+    onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
+  >
+    <input type="hidden" name="return_to" value="target" />
+    <label class="sr-only" for="target-add-prep">Preparation for the new target</label>
+    <select id="target-add-prep" name="prep_nr" required title="Preparation for the new target" data-no-searchable>
+      {% for prep_option in target_prep_options %}
+      <option value="{{ prep_option.prep_nr }}" {% if prep_option.prep_nr == preparation.prep_nr %}selected{% endif %}>Prep {{ prep_option.prep_nr }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="record-action" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
+  </form>
+  {% endset %}
   <div class="panel-head">
-    <div class="sample-head-row">
-      <h2>Target {{ target.target_nr }} <span class="detail-h2-context">(Prep {{ target.prep_nr }}, Sample {{ target.sample_nr }})</span></h2>
-      {{ render_detail_action_toolbar(target_edit_form_id) }}
-    </div>
-    <div class="detail-context-strip">
-      <p class="detail-breadcrumb-line">
-        <a href="{{ target_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ target_back_url }}" aria-label="Back to preparation" title="Back to preparation">&#x2039; Preparation {{ preparation.prep_nr }}</a>
-        <span class="detail-breadcrumb-sep">·</span>
-        Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} – {{ sample.user_label or 'Unnamed Sample' }}</a>
-        {% if project %}
-        <span class="detail-breadcrumb-sep">·</span>
-        Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
-        {% endif %}
-        {% if user %}
-        <span class="detail-breadcrumb-sep">·</span>
-        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
-        {% endif %}
-      </p>
-      {{ render_detail_quick_nav(
-        entity='target',
-        current=target.target_nr,
-        max_nr=max_target_nr,
-        count=target_count,
-        prev_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ previous_target_nr) if previous_target_nr else None,
-        next_url=('/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ next_target_nr) if next_target_nr else None,
-        jump_action='/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr ~ '/targets/' ~ target.target_nr,
-        jump_name='jump_target',
-      ) }}
-    </div>
+    {% call render_record_head('Target ' ~ target.target_nr, 'Sample ' ~ sample.sample_nr ~ ' · Prep ' ~ preparation.prep_nr, target_edit_form_id, quick_nav=nav, actions=actions) %}
+      <a href="{{ target_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ target_back_url }}" aria-label="Back to preparation" title="Back to preparation">&#x2039; Preparation {{ preparation.prep_nr }}</a>
+      <span class="record-context-item">Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} – {{ sample.user_label or 'Unnamed Sample' }}</a></span>
+      {% if project %}
+      <span class="record-context-item">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a></span>
+      {% endif %}
+      {% if user %}
+      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
+      {% endif %}
+      {% if target.target_id %}
+      <span class="record-context-item">Target ID <strong>{{ target.target_id }}</strong></span>
+      {% endif %}
+    {% endcall %}
     {{ render_detail_notice_block(target_saved, target_save_error, "Target details were saved.", field_errors=target_field_errors, entity="target") }}
-    <div class="page-actions page-actions-forms">
-      <form
-        method="post"
-        action="/samples/{{ sample.sample_nr }}/add-target"
-        class="inline-form page-actions-target-form"
-        onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
-      >
-        <input type="hidden" name="return_to" value="target" />
-        <label>
-          Prep #
-          <select name="prep_nr" required>
-            {% for prep_option in target_prep_options %}
-            <option value="{{ prep_option.prep_nr }}" {% if prep_option.prep_nr == preparation.prep_nr %}selected{% endif %}>{{ prep_option.prep_nr }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <button type="submit" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
-      </form>
-    </div>
     <form
       id="{{ target_edit_form_id }}"
       method="post"
@@ -62,49 +55,6 @@
       data-detail-edit-form
     ></form>
   </div>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Graphitization</h4>
-    <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('Graph Batch', target_headline.graph_batch) }}
-      {{ render_detail_display_card('Graphitized', target_headline.graphitized) }}
-      {{ render_detail_display_card('Magazine', target_headline.magazine) }}
-      {{ render_detail_display_card('Discarded', target_headline.stop, kind='boolean') }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Elemental Analysis</h4>
-    <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('C (%)', target_headline.conc_c) }}
-      {{ render_detail_display_card('N (%)', target_headline.conc_n) }}
-      {{ render_detail_display_card('C/N Ratio', target_headline.cn_ratio) }}
-      {{ render_detail_display_card('Total C (µg)', target_headline.total_c_ug, warning=target_warnings.get('target_total_c_ug_min')) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Measurement Results</h4>
-    <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('C14 Age', target_headline.c14_age) }}
-      {{ render_detail_display_card('C14 Age Sigma', target_headline.c14_age_sig) }}
-      {{ render_detail_display_card('FM', target_headline.fm) }}
-      {{ render_detail_display_card('FM Sigma', target_headline.fm_sig) }}
-      {{ render_detail_display_card('d13C', target_headline.dc13) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Comments</h4>
-    <div class="cards detail-comments-cards">
-      {{ render_detail_card(
-        'target', 'target_comment', 'Target Comment',
-        raw_value=target.target_comment, display_value=target_headline.comment,
-        kind='multiline', rows=4,
-        form_id=target_edit_form_id, form_values=target_form_values, field_errors=target_field_errors
-      ) }}
-    </div>
-  </section>
 
   {{ render_detail_sections(
     target_sections,

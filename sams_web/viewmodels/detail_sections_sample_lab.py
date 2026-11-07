@@ -18,6 +18,8 @@ from sams_web.viewmodels.lab_warnings import (
 from sams_web.viewmodels.detail_sections_common import (
     Row,
     SectionSpec,
+    arrange_sections,
+    attach_readout,
     build_sections,
     format_c14_integer,
     format_cn_ratio,
@@ -75,18 +77,28 @@ SAMPLE_FIELD_LABELS = {
     "c_n_isotop_a_moved": "CN Isotop A Moved",
 }
 
+# One list of sections per entity: the first ones form the fact sheet at
+# the top of the page, the rest fold into "More details" (see
+# SAMPLE_MORE_SECTIONS). The sample number and project are in the page
+# title and context line, so they are not repeated as rows.
 SAMPLE_SECTION_SPECS: tuple[SectionSpec, ...] = (
-    ("Main Info", "Primary sample identity and core submission fields.", ("sample_nr", "project_nr", "photo", "type", "material", "fraction", "editable", "ma_nr")),
-    ("Dates", "Submission context and project timeline.", ("sampling_date",)),
-    ("Lab Workflow", "Preparation and laboratory workflow metadata.", ("not_tobedated", "pre_sub_treat", "preparation", "residue")),
-    ("Measurements", "Measured values and calculated signal fields.", ("weight", "c14_age", "c14_age_sig", "av_fm", "av_fm_sig", "av_dc13", "av_dc13_sig", "delta_r", "calib")),
-    ("Calibration", "Calibration ranges and limits.", ("cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max")),
-    ("Storage", "Current location and leftovers.", ("s_no_leftover", "s_storage_loc", "prep_storage_loc")),
+    ("Identity", "", ("user_label", "user_label_nr", "user_desc1", "user_desc2")),
+    ("Classification", "", ("type", "material", "fraction", "weight")),
+    ("Results", "", ("c14_age", "c14_age_sig", "av_fm", "av_fm_sig", "av_dc13", "av_dc13_sig")),
+    ("Comments", "", ("user_comment", "lab_comment")),
+    ("Record", "", ("photo", "editable", "ma_nr")),
+    ("Dates", "", ("sampling_date",)),
+    ("Lab Workflow", "", ("not_tobedated", "pre_sub_treat", "preparation", "residue")),
+    ("Calibration", "", ("delta_r", "calib", "cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max")),
+    ("Storage", "", ("s_no_leftover", "s_storage_loc", "prep_storage_loc")),
 )
+SAMPLE_SECTION_ORDER = ("Identity", "Classification", "Other Analysis", "Results", "Comments")
+SAMPLE_WIDE_SECTIONS = frozenset({"Comments"})
+SAMPLE_MORE_SECTIONS = frozenset({"Record", "Dates", "Lab Workflow", "Calibration", "Storage"})
 
 SAMPLE_PROJECT_SUBMISSION_KEYS: tuple[str, ...] = ("in_date", "desired_date", "out_date")
 SAMPLE_BOOLEAN_FIELDS = {"editable", "not_tobedated", "s_no_leftover", "c_n_isotop_a", "c_n_isotop_a_moved"}
-SAMPLE_EXCLUDED_FIELDS = {"old_info", "storage", "left_over", "user_comment", "lab_comment", "user_label", "user_label_nr", "user_desc1", "user_desc2"}
+SAMPLE_EXCLUDED_FIELDS = {"old_info", "storage", "left_over", "sample_nr", "project_nr"}
 
 
 def sample_field_kind(key: str) -> str:
@@ -142,7 +154,7 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
             for project_key in SAMPLE_PROJECT_SUBMISSION_KEYS
         ]
 
-    return build_sections(
+    sections = build_sections(
         sample,
         field_labels=SAMPLE_FIELD_LABELS,
         section_specs=SAMPLE_SECTION_SPECS,
@@ -150,10 +162,19 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
         value_formatter=format_sample_value,
         include_other=True,
         other_title="Other Analysis",
-        other_description="Additional fields available in this sample record.",
+        other_description="",
         other_excluded_keys=SAMPLE_EXCLUDED_FIELDS,
         extra_rows_by_section=extra_rows,
         drop_all_empty_sections=True,
+    )
+    attach_readout(
+        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label="C14 age"
+    )
+    return arrange_sections(
+        sections,
+        order=SAMPLE_SECTION_ORDER,
+        wide=SAMPLE_WIDE_SECTIONS,
+        more=SAMPLE_MORE_SECTIONS,
     )
 
 
@@ -193,15 +214,16 @@ PREPARATION_FIELD_LABELS = {
 }
 
 PREPARATION_SECTION_SPECS: tuple[SectionSpec, ...] = (
-    ("Main Info", "Preparation identity and current batch context.", ("sample_nr", "prep_nr", "batch", "stop", "p_no_leftover")),
-    ("Weights and Methods", "Weight progression paired with step methods.", ("weight_start", "prep_start", "step1_method", "step2_method", "step3_method", "step4_method", "step5_method", "weight_medium", "weight_medium_2", "weight_end", "prep_end")),
-    ("Step Timeline", "Start and end timestamps for each preparation step.", ("step1_start", "step1_end", "step2_start", "step2_end", "step3_start", "step3_end", "step4_start", "step4_end", "step5_start", "step5_end")),
-    ("EA Data", "Elemental analyzer values and derived indicators.", ("c_percent", "n_percent", "cn_ratio")),
-    ("Comments", "Preparation comments and legacy notes.", ("prep_comment", "old_info")),
+    ("Batch & Timeline", "", ("batch", "prep_start", "prep_end", "stop", "p_no_leftover")),
+    ("Weights and Methods", "", ("weight_start", "step1_method", "step2_method", "step3_method", "step4_method", "step5_method", "weight_medium", "weight_medium_2", "weight_end")),
+    ("Step Timeline", "", ("step1_start", "step1_end", "step2_start", "step2_end", "step3_start", "step3_end", "step4_start", "step4_end", "step5_start", "step5_end")),
+    ("EA Data", "", ("c_percent", "n_percent", "cn_ratio")),
+    ("Comments", "", ("prep_comment", "old_info")),
 )
+PREPARATION_WIDE_SECTIONS = frozenset({"Comments"})
 
 PREPARATION_BOOLEAN_FIELDS = {"stop", "p_no_leftover"}
-PREPARATION_EXCLUDED_FIELDS = {"left_over"}
+PREPARATION_EXCLUDED_FIELDS = {"left_over", "sample_nr", "prep_nr"}
 
 
 def preparation_field_kind(key: str) -> str:
@@ -277,7 +299,7 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
         value_formatter=format_preparation_value,
         include_other=True,
         other_title="Other",
-        other_description="Additional fields available in this preparation record.",
+        other_description="",
         other_excluded_keys=PREPARATION_EXCLUDED_FIELDS,
         extra_rows_by_section=extra_rows,
     )
@@ -298,7 +320,7 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
             if yield_index < insert_at:
                 insert_at -= 1
             section["rows"].insert(insert_at, yield_row)
-    return sections
+    return arrange_sections(sections, wide=PREPARATION_WIDE_SECTIONS)
 
 
 TARGET_FIELD_LABELS = {
@@ -343,14 +365,16 @@ TARGET_FIELD_LABELS = {
     "he_curr": "HE Current",
 }
 
+# Sample / prep / target numbers and the target ID are in the page title
+# and context line, so the old "Main Info" section is gone.
 TARGET_SECTION_SPECS: tuple[SectionSpec, ...] = (
-    ("Main Info", "Target identity and assignment context.", ("sample_nr", "prep_nr", "target_nr", "target_id", "stop")),
-    ("Graphitisation", "Graphitisation setup and execution metadata.", ("weight_combustion", "graph_batch", "reactor_nr", "co2_init", "co2_final", "hydro_init", "hydro_final", "react_time", "temp", "graphitized", "target_pressed")),
-    ("Results", "Final radiocarbon and stable isotope results.", ("magazine", "position", "le_curr", "he_curr", "calcset", "fm", "fm_sig", "dc13", "dc13_sig", "c14_age", "c14_age_sig")),
-    ("Calibration", "Calibration threshold windows and acceptance bands.", ("cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max")),
-    ("Elemental Analyzer", "EA concentrations and current values.", ("conc_c", "conc_n")),
-    ("Comments", "Target and measurement comments plus legacy notes.", ("target_comment", "meas_comment")),
+    ("Graphitization", "", ("graph_batch", "reactor_nr", "co2_init", "co2_final", "hydro_init", "hydro_final", "react_time", "temp", "graphitized", "target_pressed", "stop")),
+    ("Elemental Analysis", "", ("weight_combustion", "conc_c", "conc_n")),
+    ("Results", "", ("c14_age", "c14_age_sig", "fm", "fm_sig", "dc13", "dc13_sig", "magazine", "position", "calcset", "le_curr", "he_curr")),
+    ("Calibration", "", ("cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max")),
+    ("Comments", "", ("target_comment", "meas_comment")),
 )
+TARGET_WIDE_SECTIONS = frozenset({"Comments"})
 
 TARGET_BOOLEAN_FIELDS = {"stop"}
 
@@ -409,7 +433,7 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
     values_by_key = mapped_values(target)
 
     def extra_rows(section_title: str) -> Iterable[Row]:
-        if section_title != "Elemental Analyzer":
+        if section_title != "Elemental Analysis":
             return []
         ratio = format_cn_ratio_from_conc(values_by_key.get("conc_c"), values_by_key.get("conc_n"))
         total_c_ug = format_total_c_ug(
@@ -445,18 +469,18 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
     )
     for section in sections:
         title = section.get("title")
-        if title == "Graphitisation":
+        if title == "Graphitization":
             for row in section.get("rows", []):
-                key = row.get("key")
-                if key == "reactor_nr":
-                    row["divider_before"] = True
-                elif key == "graphitized":
+                if row.get("key") in {"reactor_nr", "graphitized"}:
                     row["divider_before"] = True
         elif title == "Results":
             for row in section.get("rows", []):
-                if row.get("key") == "fm":
+                if row.get("key") == "magazine":
                     row["divider_before"] = True
-    return sections
+    attach_readout(
+        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label="C14 age"
+    )
+    return arrange_sections(sections, wide=TARGET_WIDE_SECTIONS)
 
 
 # ---- Detail-update configs ------------------------------------------------
@@ -569,69 +593,12 @@ def _decorate_target_sections_with_magazine_links(target: Any) -> list[dict[str,
     return sections
 
 
-def build_sample_headline(sample: Any) -> dict[str, Any]:
-    """Every value a headline card displays MUST come from here (routed
-    through `format_sample_value`) — never from the raw ORM attribute.
-    The formatter is what maps legacy sentinels ("undefined", "null",
-    pre-1950 dates) to None so the template renders the standard `—`.
-    Passing `sample.type` directly leaked the literal string
-    "undefined" into the Classification cards."""
-    return {
-        "user_label": format_sample_value("user_label", sample.user_label),
-        "user_label_nr": format_sample_value("user_label_nr", sample.user_label_nr),
-        "user_desc1": format_sample_value("user_desc1", sample.user_desc1),
-        "user_desc2": format_sample_value("user_desc2", sample.user_desc2),
-        "type": format_sample_value("type", sample.type),
-        "material": format_sample_value("material", sample.material),
-        "fraction": format_sample_value("fraction", sample.fraction),
-        "weight": format_sample_value("weight", sample.weight),
-        "c14_age": format_sample_value("c14_age", sample.c14_age),
-        "c14_age_sig": format_sample_value("c14_age_sig", sample.c14_age_sig),
-        "user_comment": format_sample_value("user_comment", sample.user_comment),
-        "lab_comment": format_sample_value("lab_comment", sample.lab_comment),
-    }
-
-
-def build_preparation_headline(preparation: Any) -> dict[str, Any]:
-    return {
-        "batch": format_preparation_value("batch", preparation.batch),
-        "prep_start": format_preparation_value("prep_start", preparation.prep_start),
-        "prep_end": format_preparation_value("prep_end", preparation.prep_end),
-        "yield_percent": calculate_preparation_yield(
-            preparation.weight_start, preparation.weight_end
-        ),
-        "stop": format_preparation_value("stop", preparation.stop),
-        "no_leftover": format_preparation_value("p_no_leftover", preparation.p_no_leftover),
-        "comment": format_preparation_value("prep_comment", preparation.prep_comment),
-    }
-
-
-def build_target_headline(target: Any) -> dict[str, Any]:
-    return {
-        "graph_batch": format_target_value("graph_batch", target.graph_batch),
-        "graphitized": format_target_value("graphitized", target.graphitized),
-        "magazine": format_target_value("magazine", target.magazine),
-        "fm": format_target_indicator("fm", target.fm),
-        "fm_sig": format_target_indicator("fm_sig", target.fm_sig),
-        "dc13": format_target_indicator("dc13", target.dc13),
-        "c14_age": format_target_indicator("c14_age", target.c14_age),
-        "c14_age_sig": format_target_indicator("c14_age_sig", target.c14_age_sig),
-        "conc_c": format_target_value("conc_c", target.conc_c),
-        "conc_n": format_target_value("conc_n", target.conc_n),
-        "cn_ratio": format_cn_ratio_from_conc(target.conc_c, target.conc_n),
-        "total_c_ug": format_total_c_ug(target.weight_combustion, target.conc_c),
-        "stop": format_target_value("stop", target.stop),
-        "comment": format_target_value("target_comment", target.target_comment),
-    }
-
-
 SAMPLE_DETAIL_PAGE = DetailPageConfig(
     name="sample",
     update_config=SAMPLE_DETAIL,
     edit_form_id="sample-detail-edit-form",
     sections_builder=build_sample_sections,
     select_options_getter=lambda service: service.get_sample_edit_select_options(),
-    headline_builder=build_sample_headline,
 )
 
 
@@ -641,7 +608,6 @@ PREPARATION_DETAIL_PAGE = DetailPageConfig(
     edit_form_id="preparation-detail-edit-form",
     sections_builder=build_preparation_sections,
     select_options_getter=lambda service: service.get_preparation_edit_select_options(),
-    headline_builder=build_preparation_headline,
     warnings_builder=evaluate_preparation_warnings,
 )
 
@@ -651,6 +617,5 @@ TARGET_DETAIL_PAGE = DetailPageConfig(
     update_config=TARGET_DETAIL,
     edit_form_id="target-detail-edit-form",
     sections_builder=_decorate_target_sections_with_magazine_links,
-    headline_builder=build_target_headline,
     warnings_builder=evaluate_target_warnings,
 )

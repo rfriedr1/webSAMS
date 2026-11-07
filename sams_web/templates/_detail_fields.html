@@ -1,99 +1,16 @@
 {#- ---------------------------------------------------------------------
-    Headline-card macros for detail pages.
+    Detail-page field macros.
 
-    `render_detail_card` renders an in-place editable card (text or
-    multiline) that participates in the page's edit-mode toggle via the
-    standard `.detail-field-shell-card` shell. Use for identity / name /
-    comment fields at the top of a detail page.
+    `render_detail_field_row` renders one label/value row that switches in
+    place between display and editor (edit mode, quick edit).
 
-    `render_detail_display_card` renders a read-only summary card with
-    KPI-style typography. Supports `kind="boolean"` for checkbox badge
-    rendering, and an optional `warning` object (`{triggered, message}`)
-    that turns the card red and appends an inline warning hint.
-
-    Both replace ~30 lines of repeated HTML per field that the templates
-    used to inline.
+    `render_detail_sections` renders a list of sections as a fact sheet:
+    "column" sections side by side, separated by one rule, then "wide"
+    sections (Comments) as full-width bands. Layout hints come from
+    `viewmodels.detail_sections_common.arrange_sections`. There is no box
+    per field and no card per section — structure comes from the column
+    rules and the small group titles.
     --------------------------------------------------------------------- -#}
-
-{% macro render_detail_card(
-  entity,
-  field_key,
-  label,
-  raw_value,
-  form_id='',
-  form_values=None,
-  field_errors=None,
-  kind='text',
-  rows=4,
-  card_class='',
-  display_value=None
-) -%}
-{% set field_name = entity ~ '__' ~ field_key %}
-{% set field_error = field_errors.get(field_name) if field_errors is not none else none %}
-{% set editor_value = form_values.get(field_name, raw_value or '') if form_values is not none else (raw_value or '') %}
-{% set display_text = display_value if display_value is not none else raw_value %}
-<article id="field-{{ entity }}-{{ field_key }}"{% if card_class %} class="{{ card_class }}"{% endif %}>
-  <h3>{{ label }}</h3>
-  <div class="detail-field-shell detail-field-shell-card{% if field_error %} has-error{% endif %}" data-detail-entity="{{ entity }}" data-field-key="{{ field_key }}" data-field-kind="{{ kind }}">
-    <div class="detail-field-display{% if kind == 'multiline' %} is-multiline{% endif %}" data-field-display>{% if display_text is none or (display_text is string and display_text|trim == '') %}<span class="detail-empty">—</span>{% else %}{{ display_text }}{% endif %}</div>
-    <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
-      {% if kind == 'multiline' %}
-      <textarea
-        name="{{ field_name }}"
-        {% if form_id %}form="{{ form_id }}"{% endif %}
-        rows="{{ rows }}"
-        {% if field_error %}aria-invalid="true"{% endif %}
-        disabled
-      >{{ editor_value }}</textarea>
-      {% else %}
-      <input
-        type="text"
-        name="{{ field_name }}"
-        {% if form_id %}form="{{ form_id }}"{% endif %}
-        value="{{ editor_value }}"
-        {% if field_error %}aria-invalid="true"{% endif %}
-        disabled
-      />
-      {% endif %}
-    </div>
-    {% if field_error %}
-    <p class="detail-field-error error">{{ field_error }}</p>
-    {% endif %}
-  </div>
-</article>
-{%- endmacro %}
-
-
-{% macro render_detail_display_card(
-  label,
-  value,
-  kind='text',
-  card_class='',
-  warning=None
-) -%}
-{% set warning_active = warning is not none and warning.triggered %}
-<article class="{% if warning_active %}is-warning-critical{% endif %}{% if card_class %}{% if warning_active %} {% endif %}{{ card_class }}{% endif %}">
-  <h3>{{ label }}</h3>
-  {% if kind == 'boolean' %}
-  <p>
-    {% if value is none %}
-    <span class="detail-empty">—</span>
-    {% else %}
-    <span class="detail-boolean-check"><input class="detail-boolean-checkbox" type="checkbox" disabled aria-label="{{ label }}"{% if value == 'Yes' or value is sameas true %} checked{% endif %} /></span>
-    {% endif %}
-  </p>
-  {% else %}
-  <p>{% if value is none or (value is string and value|trim == '') %}<span class="detail-empty">—</span>{% else %}{{ value }}{% endif %}</p>
-  {% endif %}
-  {% if warning_active %}
-  <p class="card-warning-hint" role="alert">
-    <span class="card-warning-icon" aria-hidden="true">⚠</span>
-    {{ warning.message }}
-  </p>
-  {% endif %}
-</article>
-{%- endmacro %}
-
 
 {% macro render_detail_field_row(
   row,
@@ -302,13 +219,47 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) -%}
+{% for row in section.rows %}
+{{ render_detail_field_row(
+  row,
+  entity=entity,
+  row_class=css_prefix ~ '-field-row',
+  form_id=form_id,
+  read_only_fields=read_only_fields,
+  editor_value_overrides=editor_value_overrides,
+  select_options_by_field=select_options_by_field,
+  required_fields=required_fields,
+  field_errors=field_errors,
+  field_warnings=field_warnings
+) }}
+{% endfor %}
+{%- endmacro %}
+
+{#- A value ± sigma result read as one figure (`5923 ± 25 BP`), lifted out
+    of the rows by `attach_readout`. -#}
+{% macro _render_readout(readout) -%}
+<div class="fact-readout">
+  {%- if readout.value is none -%}
+  <span class="fact-readout-value"><span class="detail-empty">—</span></span>
+  {%- else -%}
+  <span class="fact-readout-value">{{ readout.value }}</span>
+  {%- if readout.sigma is not none -%}<span class="fact-readout-pm">±</span><span class="fact-readout-sigma">{{ readout.sigma }}</span>{%- endif -%}
+  <span class="fact-readout-unit">{{ readout.unit }}</span>
+  {%- endif -%}
+  <span class="fact-readout-label">{{ readout.label }}</span>
+</div>
+{%- endmacro %}
+
 {#- ---------------------------------------------------------------------
-    Secondary section grid: the cards below the headline block on every
-    detail page. Five templates used to hand-write this identical loop;
-    a change to the row call (empty-row flag, warnings, label styling)
-    had to be understood in five places. `css_prefix` selects the card
-    family (`sample` / `project` / `user`); `id_prefix` gives each card an
-    id so an in-page TOC can jump to it.
+    The fact sheet every detail page renders its fields through — the
+    primary block at the top and the collapsed "More details" block alike.
+    Never hand-write the section loop in a page template.
+
+    `css_prefix` (`sample` / `project` / `user`) names the row and list
+    classes detail-empty-fields.js hooks into; `id_prefix` gives each
+    group an id so an in-page TOC can jump to it. Column count follows the
+    number of column sections: up to 4 side by side, 5–6 as two rows of 3.
     --------------------------------------------------------------------- -#}
 {% macro render_detail_sections(
   sections,
@@ -323,30 +274,33 @@
   field_warnings=None,
   id_prefix=None
 ) -%}
-<div class="{{ css_prefix }}-section-grid">
-  {% for section in sections %}
-  <article class="{{ css_prefix }}-section-card"{% if id_prefix %} id="{{ id_prefix }}-{{ loop.index }}"{% endif %}>
-    <header class="{{ css_prefix }}-section-head">
-      <h3>{{ section.title }}</h3>
-      <p>{{ section.description }}</p>
-    </header>
-    <dl class="{{ css_prefix }}-field-list">
-      {% for row in section.rows %}
-      {{ render_detail_field_row(
-        row,
-        entity=entity,
-        row_class=css_prefix ~ '-field-row',
-        form_id=form_id,
-        read_only_fields=read_only_fields,
-        editor_value_overrides=editor_value_overrides,
-        select_options_by_field=select_options_by_field,
-        required_fields=required_fields,
-        field_errors=field_errors,
-        field_warnings=field_warnings
-      ) }}
-      {% endfor %}
+{% set columns = sections | rejectattr('layout', 'equalto', 'wide') | list %}
+{% set bands = sections | selectattr('layout', 'equalto', 'wide') | list %}
+{% set n = columns | length %}
+{% set cols = n if n <= 4 else (3 if n <= 6 else 4) %}
+<div class="fact-sheet">
+  {% if columns %}
+  <div class="fact-columns" style="--fact-cols: {{ [cols, 1] | max }};">
+    {% for section in columns %}
+    <section class="fact-group"{% if id_prefix %} id="{{ id_prefix }}-{{ section.title | lower | replace(' & ', '-') | replace(' ', '-') }}"{% endif %}>
+      <h3 class="fact-group-title">{{ section.title }}</h3>
+      {% if section.readout is defined and section.readout %}{{ _render_readout(section.readout) }}{% endif %}
+      {% if section.rows %}
+      <dl class="fact-list {{ css_prefix }}-field-list">
+        {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) }}
+      </dl>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% for section in bands %}
+  <section class="fact-group fact-band"{% if id_prefix %} id="{{ id_prefix }}-{{ section.title | lower | replace(' & ', '-') | replace(' ', '-') }}"{% endif %}>
+    <h3 class="fact-group-title">{{ section.title }}</h3>
+    <dl class="fact-list fact-list-band {{ css_prefix }}-field-list">
+      {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) }}
     </dl>
-  </article>
+  </section>
   {% endfor %}
 </div>
 {%- endmacro %}

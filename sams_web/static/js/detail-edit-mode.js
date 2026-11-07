@@ -481,7 +481,7 @@
       };
 
       validRows.forEach((item) => {
-        // Only headline cards and section rows that are editable should
+        // Only fact-sheet rows that are editable should
         // listen. `data-readonly="1"` on the input means the field is
         // server-side read-only — no quick-edit there either.
         const controls = item.editor.querySelectorAll("input, select, textarea");

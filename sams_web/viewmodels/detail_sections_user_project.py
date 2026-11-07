@@ -13,6 +13,7 @@ from sams_web.detail_update import (
 from sams_web.models import Project, Submitter
 from sams_web.viewmodels.detail_sections_common import (
     SectionSpec,
+    arrange_sections,
     build_sections,
     is_empty_display_value,
 )
@@ -43,12 +44,13 @@ USER_FIELD_LABELS = {
 }
 
 USER_SECTION_SPECS: tuple[SectionSpec, ...] = (
-    ("Identity", "Personal and language details.", ("user_nr", "title", "salutation", "first_name", "last_name", "language")),
-    ("Organisation", "Institution and billing settings.", ("organisation", "institute", "account", "invoice", "correspondance")),
-    ("Contact", "Direct communication channels.", ("email", "phone_1", "phone_2", "fax", "www")),
-    ("Address", "Postal address information.", ("address_1", "address_2", "town", "postcode", "country")),
-    ("Notes", "Additional comments from the submitter record.", ("user_comment",)),
+    ("Identity", "", ("title", "salutation", "first_name", "last_name", "language")),
+    ("Organisation", "", ("organisation", "institute", "account", "invoice", "correspondance")),
+    ("Contact", "", ("email", "phone_1", "phone_2", "fax", "www")),
+    ("Address", "", ("address_1", "address_2", "town", "postcode", "country")),
+    ("Notes", "", ("user_comment",)),
 )
+USER_WIDE_SECTIONS = frozenset({"Notes"})
 
 
 def user_field_kind(key: str) -> str:
@@ -80,7 +82,7 @@ def format_user_value(key: str, value: Any) -> Any:
 
 
 def build_user_sections(user: Any) -> list[dict[str, Any]]:
-    return build_sections(
+    sections = build_sections(
         user,
         field_labels=USER_FIELD_LABELS,
         section_specs=USER_SECTION_SPECS,
@@ -88,8 +90,10 @@ def build_user_sections(user: Any) -> list[dict[str, Any]]:
         value_formatter=format_user_value,
         include_other=True,
         other_title="Other",
-        other_description="Additional fields available in the user record.",
+        other_description="",
+        other_excluded_keys={"user_nr"},
     )
+    return arrange_sections(sections, wide=USER_WIDE_SECTIONS)
 
 
 PROJECT_FIELD_LABELS = {
@@ -124,13 +128,15 @@ PROJECT_FIELD_LABELS = {
 }
 
 PROJECT_SECTION_SPECS: tuple[SectionSpec, ...] = (
-    ("Core", "Core project identity and classification.", ("project_nr", "project", "status", "priority", "project_type", "research", "report_type")),
-    ("Submitter", "Assigned submitter and responsible staff.", ("user_nr", "invoice_nr", "advisor", "supervisor")),
-    ("Timeline", "Planning and delivery dates.", ("in_date", "desired_date", "out_date", "invoice_date")),
-    ("Commercial", "Billing and order metadata.", ("price", "invoice", "free_of_charge", "auftrags_nr", "order_nr", "letter")),
-    ("Logistics", "Storage and return logistics.", ("sample_storage_loc", "return_to_sender", "returned_to_sender", "prep_return_to_sender", "prep_returned_to_sender")),
-    ("Reporting", "Output and notes tied to the project.", ("report",)),
+    ("Core", "", ("project", "status", "priority", "project_type", "research", "report_type")),
+    ("Timeline", "", ("in_date", "desired_date", "out_date", "invoice_date")),
+    ("Submitter", "", ("user_nr", "invoice_nr", "advisor", "supervisor")),
+    ("Commercial", "", ("price", "invoice", "free_of_charge", "auftrags_nr", "order_nr", "letter")),
+    ("Logistics", "", ("sample_storage_loc", "return_to_sender", "returned_to_sender", "prep_return_to_sender", "prep_returned_to_sender")),
+    ("Reporting", "", ("report",)),
+    ("Comments", "", ("project_comment",)),
 )
+PROJECT_WIDE_SECTIONS = frozenset({"Comments"})
 
 PROJECT_BOOLEAN_FIELDS = {
     "invoice",
@@ -171,16 +177,15 @@ def format_project_value(key: str, value: Any) -> Any:
 
 
 def build_project_sections(project: Any) -> list[dict[str, Any]]:
-    return build_sections(
+    sections = build_sections(
         project,
         field_labels=PROJECT_FIELD_LABELS,
         section_specs=PROJECT_SECTION_SPECS,
         kind_resolver=project_field_kind,
         value_formatter=format_project_value,
         include_other=False,
-        other_title="Other",
-        other_description="Additional fields available in this project record.",
     )
+    return arrange_sections(sections, wide=PROJECT_WIDE_SECTIONS)
 
 
 # ---- Detail-update configs ------------------------------------------------
@@ -267,37 +272,11 @@ PROJECT_DETAIL = DetailUpdateConfig(
 # ---- Detail-page configs (read side) -------------------------------------
 
 
-def build_project_headline(project: Any) -> dict[str, Any]:
-    """Pre-formatted headline values for the project detail page.
-
-    Templates access via `project_headline.in_date`, etc. Centralising here
-    means the router no longer has to remember to add a `*_display` key for
-    every new headline field — the template + this builder are the only
-    places that need to change.
-    """
-    return {
-        "project": format_project_value("project", project.project),
-        "in_date": format_project_value("in_date", project.in_date),
-        "desired_date": format_project_value("desired_date", project.desired_date),
-        "out_date": format_project_value("out_date", project.out_date),
-        "comment": format_project_value("project_comment", project.project_comment),
-    }
-
-
-def build_submitter_headline(submitter: Any) -> dict[str, Any]:
-    return {
-        "salutation": format_user_value("salutation", submitter.salutation),
-        "first_name": format_user_value("first_name", submitter.first_name),
-        "last_name": format_user_value("last_name", submitter.last_name),
-    }
-
-
 SUBMITTER_DETAIL_PAGE = DetailPageConfig(
     name="submitter",
     update_config=SUBMITTER_DETAIL,
     edit_form_id="submitter-detail-edit-form",
     sections_builder=build_user_sections,
-    headline_builder=build_submitter_headline,
 )
 
 
@@ -307,5 +286,4 @@ PROJECT_DETAIL_PAGE = DetailPageConfig(
     edit_form_id="project-detail-edit-form",
     sections_builder=build_project_sections,
     select_options_getter=lambda service: service.get_project_edit_select_options(),
-    headline_builder=build_project_headline,
 )

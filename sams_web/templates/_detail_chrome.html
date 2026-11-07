@@ -14,6 +14,32 @@
       → the "‹ N / max ›" prev/jump/next pill on the breadcrumb line.
 -#}
 
+{#- Record header shared by every detail page: title (+ lighter
+    subtitle), the context line passed as the call body (back link,
+    parent records, status), and on the right any page actions, the
+    quick-nav pill and the Edit toolbar.
+
+      {% call render_record_head('Sample 48211', 'EIL R-EVA 3521', form_id, quick_nav=nav) %}
+        <a …>‹ Back</a> · Project <a …>…</a>
+      {% endcall %}
+
+    `quick_nav` / `actions` are pre-rendered HTML (`{% set nav %}…{% endset %}`).
+-#}
+{% macro render_record_head(title, subtitle, form_id, quick_nav='', actions='') -%}
+<div class="record-head">
+  <div class="record-head-main">
+    <h2 class="record-title">{{ title }}{% if subtitle %} <span class="record-title-sub">{{ subtitle }}</span>{% endif %}</h2>
+    <p class="record-context">{{ caller() }}</p>
+  </div>
+  <div class="record-head-tools">
+    {{ actions }}
+    {{ quick_nav }}
+    {{ render_detail_action_toolbar(form_id) }}
+  </div>
+</div>
+{%- endmacro %}
+
+
 {% macro render_detail_action_toolbar(form_id) -%}
   <div class="detail-edit-toolbar">
     {# Aggregated dirty-state / saved-just-now status. JS toggles `hidden`

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row, render_detail_sections %}
-{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_fields.html" import render_detail_sections %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/style-photos.css?v={{ css_v }}" />
@@ -11,140 +11,64 @@
 {% endblock %}
 
 {% block content %}
+{% set primary_sections = sample_sections | rejectattr('placement', 'equalto', 'more') | list %}
+{% set meta_sections = sample_sections | selectattr('placement', 'equalto', 'more') | list %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ sample_edit_initial_mode or 'view' }}">
+  {% set sample_back_url = '/search' %}
+  {% if project %}{% set sample_back_url = '/projects/' ~ project.project_nr %}{% endif %}
+  {% set nav %}{{ render_detail_quick_nav(
+    entity='sample',
+    current=sample.sample_nr,
+    max_nr=max_sample_nr,
+    count=sample_count,
+    prev_url=('/samples/' ~ previous_sample_nr) if previous_sample_nr is not none else None,
+    next_url=('/samples/' ~ next_sample_nr) if next_sample_nr is not none else None,
+    jump_action='/samples/' ~ sample.sample_nr,
+    jump_name='jump_sample',
+  ) }}{% endset %}
   <div class="panel-head">
-    <div class="sample-head-row">
-      <h2>Sample {{ sample.sample_nr }}: {{ sample.user_label or 'Unnamed Sample' }}</h2>
-      {{ render_detail_action_toolbar(sample_edit_form_id) }}
-    </div>
-    {% set sample_back_url = '/search' %}
-    {% if project %}{% set sample_back_url = '/projects/' ~ project.project_nr %}{% endif %}
-    <div class="detail-context-strip">
-      <p class="detail-breadcrumb-line">
-        <a href="{{ sample_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ sample_back_url }}" aria-label="Back" title="Back">&#x2039; Back</a>
-        {% if project %}
-        <span class="detail-breadcrumb-sep">·</span>
-        Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
-        {% if project.status %}
-        {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-        <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
-        {% endif %}
-        {% endif %}
-        {% if user %}
-        <span class="detail-breadcrumb-sep">·</span>
-        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a>
-        {% endif %}
-      </p>
-      {{ render_detail_quick_nav(
-        entity='sample',
-        current=sample.sample_nr,
-        max_nr=max_sample_nr,
-        count=sample_count,
-        prev_url=('/samples/' ~ previous_sample_nr) if previous_sample_nr is not none else None,
-        next_url=('/samples/' ~ next_sample_nr) if next_sample_nr is not none else None,
-        jump_action='/samples/' ~ sample.sample_nr,
-        jump_name='jump_sample',
-      ) }}
-    </div>
+    {% call render_record_head('Sample ' ~ sample.sample_nr, sample.user_label or 'Unnamed sample', sample_edit_form_id, quick_nav=nav) %}
+      <a href="{{ sample_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ sample_back_url }}" aria-label="Back" title="Back">&#x2039; Back</a>
+      {% if project %}
+      <span class="record-context-item">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
+      {% if project.status %}
+      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
+      {% endif %}
+      </span>
+      {% endif %}
+      {% if user %}
+      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
+      {% endif %}
+    {% endcall %}
     {{ render_detail_notice_block(sample_saved, sample_save_error, "Sample details were saved.", field_errors=sample_field_errors, entity="sample") }}
     <form id="{{ sample_edit_form_id }}" method="post" action="/samples/{{ sample.sample_nr }}/save" data-detail-edit-form></form>
   </div>
 
-  <section class="card-group">
-    <h4 class="card-group-title">Identity</h4>
-    <div class="cards sample-identity-cards">
-      {{ render_detail_card(
-        'sample', 'user_label', 'Sample Label',
-        raw_value=sample.user_label, display_value=sample_headline.user_label,
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-      {{ render_detail_card(
-        'sample', 'user_label_nr', 'Sample Label #',
-        raw_value=sample.user_label_nr, display_value=sample_headline.user_label_nr,
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-      {{ render_detail_card(
-        'sample', 'user_desc1', 'Description 1',
-        raw_value=sample.user_desc1, display_value=sample_headline.user_desc1, kind='multiline', rows=3,
-        card_class='sample-identity-description',
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-      {{ render_detail_card(
-        'sample', 'user_desc2', 'Description 2',
-        raw_value=sample.user_desc2, display_value=sample_headline.user_desc2, kind='multiline', rows=3,
-        card_class='sample-identity-description',
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Classification</h4>
-    <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('Type', sample_headline.type) }}
-      {{ render_detail_display_card('Material', sample_headline.material) }}
-      {{ render_detail_display_card('Fraction', sample_headline.fraction) }}
-      {{ render_detail_display_card('Weight', sample_headline.weight) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Measurement Results</h4>
-    <div class="cards sample-summary-cards">
-      {{ render_detail_display_card('C14 Age', sample_headline.c14_age) }}
-      {{ render_detail_display_card('C14 Age Sigma', sample_headline.c14_age_sig) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Comments</h4>
-    <div class="cards sample-comments-cards">
-      {{ render_detail_card(
-        'sample', 'user_comment', 'Submitter Comment',
-        raw_value=sample.user_comment, display_value=sample_headline.user_comment,
-        kind='multiline', rows=4,
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-      {{ render_detail_card(
-        'sample', 'lab_comment', 'Lab Comment',
-        raw_value=sample.lab_comment, display_value=sample_headline.lab_comment,
-        kind='multiline', rows=4,
-        form_id=sample_edit_form_id, form_values=sample_form_values, field_errors=sample_field_errors
-      ) }}
-    </div>
-  </section>
-
-  {% set other_analysis_sections = sample_sections|selectattr('title', 'equalto', 'Other Analysis')|list %}
-  {% set meta_sections = sample_sections|rejectattr('title', 'equalto', 'Other Analysis')|list %}
-  {% if other_analysis_sections %}
-  <section class="card-group">
-    <h4 class="card-group-title">Other Analysis</h4>
-    {{ render_detail_sections(
-      other_analysis_sections,
-      entity='sample',
-      css_prefix='sample',
-      form_id=sample_edit_form_id,
-      read_only_fields=sample_read_only_fields,
-      editor_value_overrides=sample_form_values,
-      select_options_by_field=sample_select_options,
-      required_fields=sample_required_fields,
-      field_errors=sample_field_errors,
-      id_prefix='sample-other-analysis'
-    ) }}
-  </section>
-  {% endif %}
+  {{ render_detail_sections(
+    primary_sections,
+    entity='sample',
+    css_prefix='sample',
+    form_id=sample_edit_form_id,
+    read_only_fields=sample_read_only_fields,
+    editor_value_overrides=sample_form_values,
+    select_options_by_field=sample_select_options,
+    required_fields=sample_required_fields,
+    field_errors=sample_field_errors,
+    id_prefix='sample-section'
+  ) }}
 
   {# Filled in by sample-photos.js after the page has rendered: the photos
      live on a network share, which may be slow or offline, and must never
      hold up the record itself. #}
   <section
-    class="card-group sample-photos"
+    class="record-strip sample-photos"
     data-sample-photos
     data-sample-nr="{{ sample.sample_nr }}"
     data-photos-url="/api/samples/{{ sample.sample_nr }}/photos"
   >
     <div class="sample-photos-head">
-      <h4 class="card-group-title">Photos <span class="sample-photos-count" data-photos-count hidden></span></h4>
+      <h3 class="fact-group-title">Photos <span class="sample-photos-count" data-photos-count hidden></span></h3>
       <button type="button" class="photo-icon-button" data-photos-refresh title="Rescan the photo folder" aria-label="Rescan the photo folder">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
       </button>
@@ -155,19 +79,12 @@
   </section>
 
   {% if meta_sections %}
-  <details class="table-collapsible sample-meta-collapsible">
-    <summary class="table-summary">
-      <span class="table-summary-title">Additional Sample Metadata</span>
-      <span class="badge table-summary-count">{{ meta_sections|length }} sections</span>
+  <details class="record-more">
+    <summary class="record-more-summary">
+      <span class="record-more-title">More details</span>
+      <span class="record-more-count">{{ meta_sections | map(attribute='title') | join(' · ') }}</span>
     </summary>
-    <div class="sample-meta-body">
-      {% if meta_sections|length > 1 %}
-      <nav class="sample-meta-toc" aria-label="Section navigation">
-        {% for section in meta_sections %}
-        <a class="sample-meta-toc-link" href="#sample-section-{{ loop.index }}">{{ section.title }}</a>
-        {% endfor %}
-      </nav>
-      {% endif %}
+    <div class="record-more-body">
       {{ render_detail_sections(
         meta_sections,
         entity='sample',
@@ -183,133 +100,107 @@
     </div>
   </details>
   {% endif %}
+</section>
 
-  <section class="sample-workspace">
-    <div class="panel-head sample-workspace-head">
-      <h3>Preparation and Target Navigation</h3>
-      <p class="sample-workspace-path">Open preparation and target records in dedicated pages.</p>
+{#- Preparations and their targets as one tree: each prep row, then its
+    targets indented under it. Two side-by-side tables, each with its own
+    toolbar for one or two rows, hid that a target belongs to a prep. A
+    tree cannot be re-sorted, so the table opts out of table-tools. -#}
+<section class="panel record-related" id="sample-workspace">
+  <div class="record-related-head">
+    <h3 class="record-related-title">Preparations &amp; targets
+      <span class="record-related-count">{{ preparations|length }} prep{{ '' if preparations|length == 1 else 's' }} · {{ sample_targets_total }} target{{ '' if sample_targets_total == 1 else 's' }}</span>
+    </h3>
+    <div class="record-related-actions">
+      <form
+        method="post"
+        action="/samples/{{ sample.sample_nr }}/add-preparation"
+        class="record-action-form"
+        onsubmit="return window.confirm('Create one more preparation number for this sample and seed target #1?');"
+      >
+        <button type="submit" class="record-action">+ Prep</button>
+      </form>
+      <form
+        method="post"
+        action="/samples/{{ sample.sample_nr }}/add-target"
+        class="record-action-form sample-add-target-form"
+        onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
+      >
+        <label class="sr-only" for="sample-add-target-prep">Preparation for the new target</label>
+        <select id="sample-add-target-prep" name="prep_nr" required title="Preparation for the new target" data-no-searchable {% if not preparations %}disabled{% endif %}>
+          {% for prep_row in preparations %}
+          <option value="{{ prep_row.prep_nr }}" {% if sample_default_target_prep_nr is not none and prep_row.prep_nr == sample_default_target_prep_nr %}selected{% endif %}>Prep {{ prep_row.prep_nr }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="record-action" {% if not preparations %}disabled{% endif %}>+ Target</button>
+      </form>
     </div>
+  </div>
 
-    {% if sample_creation_notice %}
-    <div class="inline-notice">
-      <strong>{{ sample_creation_notice }}</strong>
-    </div>
-    {% endif %}
+  {% if sample_creation_notice %}
+  <div class="inline-notice">
+    <strong>{{ sample_creation_notice }}</strong>
+  </div>
+  {% endif %}
 
-    <div class="sample-workspace-grid">
-      <section data-table-filter id="sample-preparations">
-        <div class="sample-workspace-section-head">
-          <h3>Preparations ({{ preparations|length }})</h3>
-          <div class="sample-workspace-section-actions">
-            <form
-              method="post"
-              action="/samples/{{ sample.sample_nr }}/add-preparation"
-              class="inline-form"
-              onsubmit="return window.confirm('Create one more preparation number for this sample and seed target #1?');"
-            >
-              <button type="submit">+ Prep</button>
-            </form>
-          </div>
-        </div>
-        <div class="table-wrap sample-detail-table-wrap">
-          <table data-sample-preparations-table>
-            <thead>
-              <tr>
-                <th>Prep #</th>
-                <th>Batch</th>
-                <th>Prep Start</th>
-                <th>Prep End</th>
-                <th>Stop</th>
-                <th>Targets</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for prep_row in preparations %}
-              <tr>
-                <td><a href="/samples/{{ sample.sample_nr }}/preparations/{{ prep_row.prep_nr }}">{{ prep_row.prep_nr }}</a></td>
-                <td>{{ prep_row.batch or '' }}</td>
-                <td>{{ prep_row.prep_start or '' }}</td>
-                <td>{{ prep_row.prep_end or '' }}</td>
-                <td>{{ prep_row.stop if prep_row.stop is not none else '' }}</td>
-                <td>{{ targets_by_prep.get(prep_row.prep_nr, 0) }}</td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="6" class="table-empty-row">
-                  No preparations yet for this sample. Use <strong>+ Prep</strong> above to create one and seed target #1.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section data-table-filter id="sample-targets">
-        <div class="sample-workspace-section-head">
-          <h3>Targets ({{ sample_targets_total }})</h3>
-          <div class="sample-workspace-section-actions">
-            <form
-              method="post"
-              action="/samples/{{ sample.sample_nr }}/add-target"
-              class="inline-form sample-add-target-form"
-              onsubmit="return window.confirm('Create one more target number for the selected preparation?');"
-            >
-              <label>
-                Prep #
-                <select name="prep_nr" required>
-                  {% for prep_row in preparations %}
-                  <option value="{{ prep_row.prep_nr }}" {% if sample_default_target_prep_nr is not none and prep_row.prep_nr == sample_default_target_prep_nr %}selected{% endif %}>{{ prep_row.prep_nr }}</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <button type="submit" {% if not preparations %}disabled{% endif %}>+ Target</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="table-wrap sample-detail-table-wrap">
-          <table data-sample-targets-table>
-            <thead>
-              <tr>
-                <th>Prep #</th>
-                <th>Target #</th>
-                <th>Target ID</th>
-                <th>Graph Batch</th>
-                <th>Graphitized</th>
-                <th>FM</th>
-                <th>d13C</th>
-                <th>C14 Age</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for target in targets %}
-              <tr>
-                <td><a href="/samples/{{ sample.sample_nr }}/preparations/{{ target.prep_nr }}">{{ target.prep_nr }}</a></td>
-                <td>
-                  <a href="/samples/{{ sample.sample_nr }}/preparations/{{ target.prep_nr }}/targets/{{ target.target_nr }}">
-                    {{ target.target_nr }}
-                  </a>
-                </td>
-                <td>{{ target.target_id or '' }}</td>
-                <td>{{ target.graph_batch or '' }}</td>
-                <td>{{ target.graphitized or '' }}</td>
-                <td>{{ "%.4f"|format(target.fm) if target.fm is not none else '' }}</td>
-                <td>{{ "%.4f"|format(target.dc13) if target.dc13 is not none else '' }}</td>
-                <td>{{ format_c14_integer(target.c14_age) if target.c14_age is not none else '' }}</td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="8" class="table-empty-row">
-                  No targets yet. Use <strong>+ Target</strong> above to create the first one for the selected preparation.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  </section>
+  {% set sample_url = '/samples/' ~ sample.sample_nr %}
+  {% set prep_nrs = preparations | map(attribute='prep_nr') | list %}
+  {% set orphan_targets = targets | rejectattr('prep_nr', 'in', prep_nrs) | list %}
+  {% macro target_row(target, sample_url) -%}
+  <tr class="record-tree-child">
+    <td><span class="record-tree-branch" aria-hidden="true">└</span><span class="record-tree-kind">Target</span><a href="{{ sample_url }}/preparations/{{ target.prep_nr }}/targets/{{ target.target_nr }}">{{ target.prep_nr }}.{{ target.target_nr }}</a></td>
+    <td></td><td></td><td></td>
+    <td>{{ target.graph_batch or '' }}</td>
+    <td>{{ target.graphitized or '' }}</td>
+    <td>{{ target.magazine or '' }}</td>
+    <td class="is-num">{{ "%.4f"|format(target.fm) if target.fm is not none else '' }}</td>
+    <td class="is-num">{{ "%.4f"|format(target.dc13) if target.dc13 is not none else '' }}</td>
+    <td class="is-num">{% if target.c14_age is not none %}{{ format_c14_integer(target.c14_age) }}{% if target.c14_age_sig is not none %} ± {{ format_c14_integer(target.c14_age_sig) }}{% endif %}{% endif %}</td>
+    <td><span class="detail-boolean-check"><input class="detail-boolean-checkbox" type="checkbox" disabled aria-label="Target discarded"{% if target.stop == 1 %} checked{% endif %} /></span></td>
+  </tr>
+  {%- endmacro %}
+  <div class="table-wrap sample-detail-table-wrap">
+    <table class="record-tree" data-table-plain data-sample-tree-table>
+      <thead>
+        <tr>
+          <th>Record</th>
+          <th>Batch</th>
+          <th>Prep start</th>
+          <th>Prep end</th>
+          <th>Graph batch</th>
+          <th>Graphitized</th>
+          <th>Magazine</th>
+          <th class="is-num">FM</th>
+          <th class="is-num">d13C</th>
+          <th class="is-num">C14 age</th>
+          <th>Discarded</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prep_row in preparations %}
+        <tr class="record-tree-parent">
+          <td><span class="record-tree-kind">Prep</span><a href="{{ sample_url }}/preparations/{{ prep_row.prep_nr }}">{{ prep_row.prep_nr }}</a></td>
+          <td>{{ prep_row.batch or '' }}</td>
+          <td>{{ prep_row.prep_start or '' }}</td>
+          <td>{{ prep_row.prep_end or '' }}</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td>
+          <td><span class="detail-boolean-check"><input class="detail-boolean-checkbox" type="checkbox" disabled aria-label="Preparation discarded"{% if prep_row.stop == 1 %} checked{% endif %} /></span></td>
+        </tr>
+        {% for target in targets if target.prep_nr == prep_row.prep_nr %}
+        {{ target_row(target, sample_url) }}
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="11" class="table-empty-row">
+            No preparations yet for this sample. Use <strong>+ Prep</strong> above to create one and seed target #1.
+          </td>
+        </tr>
+        {% endfor %}
+        {% for target in orphan_targets %}
+        {{ target_row(target, sample_url) }}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}

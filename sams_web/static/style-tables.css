@@ -609,52 +609,6 @@ a:hover {
   flex-shrink: 0;
 }
 
-.sample-head-row .detail-h2-context {
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.72em;
-  letter-spacing: 0;
-}
-
-/* Single-line context strip: breadcrumb on the left, quick-nav pill on
-   the right. Replaces the previous three-line stack of breadcrumb +
-   Back link + nav row. */
-.detail-context-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin: var(--space-2) 0 var(--space-3);
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--line);
-}
-
-.detail-breadcrumb-line {
-  margin: 0 !important;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.detail-breadcrumb-line a:not(.nav-back-arrow) {
-  color: var(--brand);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.detail-breadcrumb-line a:not(.nav-back-arrow):hover,
-.detail-breadcrumb-line a:not(.nav-back-arrow):focus-visible {
-  text-decoration: underline;
-}
-
-.detail-breadcrumb-sep {
-  color: var(--line-strong);
-  font-size: 0.85em;
-}
 
 /* Back chip — uses the chevron + label pattern, matches the chip
    vocabulary used elsewhere (pin chip, quick-nav pill). */

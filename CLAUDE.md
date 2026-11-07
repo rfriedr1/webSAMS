@@ -42,7 +42,7 @@
 - `sams_web/routers/pages.py` and the per-area `pages_*.py`: server-rendered web routes (thin dispatchers).
 - `sams_web/routers/api.py`: JSON API routes
 - `sams_web/viewmodels/detail_sections*.py`: detail-page field grouping/formatting + per-entity configs (`SUBMITTER_DETAIL`, `PROJECT_DETAIL`, etc. for write; `*_DETAIL_PAGE` for read).
-- `sams_web/templates/*`: Jinja templates. `_detail_fields.html` holds the detail-page macros: headline cards, `render_detail_field_row`, and **`render_detail_sections`** — the secondary section grid every detail page renders through (never hand-write that loop again; it was copied five times before). `lab_queue.html` owns the lab queue tables and *includes* `_preparation_bench.html` / `_graphitization_bench.html`, matching the `preparation_bench.py` / `graphitization_bench.py` split.
+- `sams_web/templates/*`: Jinja templates. `_detail_fields.html` holds the detail-page macros: `render_detail_field_row` and **`render_detail_sections`** — the fact sheet every detail page renders through (never hand-write that loop again; it was copied five times before). `_detail_chrome.html` holds `render_record_head` (the shared record header), the edit toolbar, notices and quick-nav. `lab_queue.html` owns the lab queue tables and *includes* `_preparation_bench.html` / `_graphitization_bench.html`, matching the `preparation_bench.py` / `graphitization_bench.py` split.
 - `sams_web/static/app.js`: shared table-tools etc.
 - `sams_web/static/js/*.js`: per-feature modules (toast, page-progress, detail-shortcuts, searchable-select, navigation-ui, magic-nav-ui, history-back, table-tools, detail-edit-mode, anchor-details, prep/graph bench UIs).
 - `sams_web/static/style*.css`: split per concern (`style-core`, `style-detail-pages`, `style-tables`, `style-benches`, `style-settings-kpi`); `style.css` is the entrypoint that imports them.
@@ -89,7 +89,7 @@
 - **Detail rows whose value is longer than 24 characters stack**: label on its own line, value full-width and left-aligned (`.detail-field-row.is-long-value`, set in `_detail_fields.html` from the value's length). A side-by-side label/value pair only reads well while the value is short; institution names, addresses and e-mails otherwise wrap into ribbons. The rule is length-driven, not field-name-driven, so it holds for every entity.
 - In detail cards/views, do not use per-field hairlines; use subtle divider lines only at explicit group transitions.
 - **The field box (`.detail-field-shell`) is an editing affordance, not decoration.** In view mode it is drawn with a transparent border and no fill, so a section reads as a plain label/value list; the box appears on hover of an editable row, in edit mode, quick-edit, dirty, error and warning states. Keep the border 1px transparent rather than removing it, so switching modes never shifts layout. (Before this, ~40 outlined boxes per detail page — most holding only `—` — were the largest source of visual noise.)
-- **Field labels are sentence case** (`var(--text-sm)`, weight 600, muted). Uppercase tracked text is reserved for `.card-group-title` and section heads, so structure outranks fields.
+- **Field labels are sentence case** (`var(--text-sm)`, weight 600, muted). Uppercase tracked text is reserved for `.fact-group-title` / `.card-group-title` and section heads, so structure outranks fields.
 - **Empty rows collapse per section.** The row macro adds `.is-empty-value` when `row.value is none`; `detail-empty-fields.js` hides those rows (`.is-empty-hidden`) behind a per-section "N empty fields hidden" toggle whose state persists for the session. Edit mode overrides the hiding through CSS so every field stays fillable, and the toggle itself is hidden while editing. Uses a dedicated class, not `hidden`, precisely so the edit-mode override can win without `!important`.
 - In detail pages, edit mode should be in-place: the same field box switches from display to editor (no duplicated display+editor stacked layout).
 - Minimize layout shift in edit mode (stable row/card height where possible); multiline/comment fields may expand when needed.
@@ -102,7 +102,7 @@
 - `thead th` never wraps, so a column is always at least as wide as its own label.
 - Date columns are detected from cell content by `table-tools.js` and tagged `.table-col-atomic` (nowrap + tabular numerals) — a hyphen is a legal break opportunity, so `2026-01-28` otherwise wraps to `2026-` / `01-28`.
 - **Empty values render as a muted italic em-dash (`—`)**, never `Not set` or `null` or `N/A`. The dash uses `.detail-empty` styling (italic, low contrast). The detection helper is `viewmodels.detail_sections_common.is_empty_display_value(value)` — it returns True for `None`, blank/whitespace strings, sentinel string tokens (`"undefined"`, `"null"`, `"n/a"`, `"none"`), and **sentinel dates with year < 1950** (legacy null stand-ins like `1899-12-30`). All `format_*_value` formatters route through this helper. New value formatters should call it; new templates should render the `—` via `<span class="detail-empty">—</span>`.
-- **Long detail-page metadata sections collapse by default.** Use `<details>` (no `open` attribute) for "Additional Metadata" blocks. When the block holds 2+ sections, render an in-page TOC chip row at the top so operators can jump.
+- **Secondary detail sections collapse by default.** Sections with `placement == "more"` (sample: Record, Dates, Lab Workflow, Calibration, Storage) render inside one closed `<details class="record-more">` whose summary lists their titles.
 - **Sections whose every row is empty are dropped at build time.** Pass `drop_all_empty_sections=True` to `build_sections(...)` for verbose detail pages (sample currently uses this — preparation/target/project don't, by choice).
 - **Header column labels live in `routers.pages_shared.TABLE_HEADER_LABELS`.** When adding a new column to a search context, dashboard table, or any other list, register a human label there. Unknown columns fall back to `snake_case → Title Case`.
 - **Empty-state table rows** (`<td class="table-empty-row">`) use centred italic muted text and call out the relevant CTA (e.g. "Use **+ Prep** above to create one"). Don't ship the bare "No rows found" sentence.
@@ -139,38 +139,19 @@
 - Guard invalid jump input values and keep user on current record when invalid.
 
 ## Detail Page field hierarchy
-- The fields listed below are the *headline fields* that carry the main information about each entity. They render at the top of the detail page as `<article>` cards inside a `.cards` grid, organized into labelled **groups** — each group is a `<section class="card-group">` with a small uppercase title. Less important fields stay in the collapsible/section-grid below.
-- Group labels stay short and noun-form (e.g. `Identity`, `Classification`, `Measurement Results`). When adding a new headline field, place it in the group whose label best describes its meaning rather than spinning up a new group.
-- Numeric/categorical headline cards are display-only; identity-text and comment cards are editable in-place via the `.detail-field-shell-card` pattern so they participate in the page's edit-mode toggle.
-- Empty values render as the muted italic `—` per the standard empty-value rule. Boolean fields render as the disabled-checkbox badge (`.detail-boolean-check`) so the value is visible at a glance.
-- Generic CSS hooks: `.card-group` / `.card-group-title` (group container + label), `.detail-headline-cards` and `.detail-comments-cards` (variant card rows). Comment cards are full-width single-column; metric cards inherit the dashboard `.cards` auto-fit grid.
-
-	### Submitter
-	- **Identity** — Salutation · First Name · Last Name (editable)
-
-	### Project
-	- **Identity** — Project Name (editable, spans 2 cols) · Status (badge)
-	- **Timeline** — In Date · Desired Date · Out Date
-	- **Comments** — Project Comment (editable, full-width)
-
-	### Sample
-	- **Identity** — Sample Label · Sample Label # · Description 1 · Description 2 (all editable)
-	- **Classification** — Type · Material · Fraction · Weight
-	- **Measurement Results** — C14 Age · C14 Age Sigma
-	- **Comments** — Submitter Comment · Lab Comment (both editable, two-column)
-	- **Photos** — thumbnail strip, loaded after the page (see "Sample Photos")
-
-	### Preparation
-	- **Batch & Timeline** — Batch · Prep Start · Prep End
-	- **Outcome** — Yield (%) · Discarded · No Leftover · Targets (count)
-	- **Comments** — Preparation Comment (editable, full-width)
-
-	### Target
-	- **Graphitization** — Graph Batch · Graphitized · Magazine · Discarded
-	- **Elemental Analysis** — C (%) · N (%) · C/N Ratio · Total C (µg) *(calculated from `Weight Combustion` × `C (%)`; warning highlight when below the configured Lab Warning Threshold)*
-	- **Measurement Results** — C14 Age · C14 Age Sigma · FM · FM Sigma · d13C
-	- **Comments** — Target Comment (editable, full-width)
-
+- **Detail pages are fact sheets, not card stacks** (redesigned 2026-11 because the cards made the UI feel overwhelming; mockups in `docs/design/ui-review/`, kept local and untracked because they show real customer data). Every value appears **once**. There are no headline cards and no headline builders any more: everything comes from the entity's sections (`build_*_sections` → `{name}_sections`).
+- **Record header** (`render_record_head` in `_detail_chrome.html`): title + lighter subtitle (`Sample 48211  EIL R-EVA 3521`), a context line passed as the call body (back link, parent records, status pill), and on the right the page actions (`+ Prep`, `+ Target` as compact `.record-action` buttons), quick-nav and the Edit toolbar.
+- **Fact sheet** (`render_detail_sections`): sections with `layout == "column"` sit side by side as columns (`--fact-cols`: up to 4, 2 at ≤1024px, 1 at ≤640px), separated by one vertical rule, titled by a small uppercase `.fact-group-title`. Sections with `layout == "wide"` (Comments, Notes) are full-width bands below the columns. No boxes: the field shell only appears on hover / in edit mode, where it *is* the input box (the control inside has no border of its own).
+- **Layout hints come from the viewmodel**, not the template: `arrange_sections(sections, order=…, wide=…, more=…)` in `detail_sections_common.py` sets `layout` / `placement` and the order. `attach_readout(...)` lifts a read-only value ± sigma pair into `section["readout"]`, rendered as one figure (`5923 ± 25 BP`, `.fact-readout`) — used for the C14 age on sample and target. Never route an editable field through it: its rows are removed.
+- Section titles stay short and noun-form. When adding a field, put it in the section whose title best describes it rather than adding a section; the most important section goes first in the spec / `order`.
+- Related records live in their own panel below the fact sheet (`.record-related`, title + count chip): the sample page shows preparations with their targets as one tree table (`.record-tree`, `data-table-plain`, prep rows with target rows under them), the preparation page its targets, the project its samples, the submitter its projects.
+- Current groups:
+	- **Submitter** — Identity · Organisation · Contact · Address | Notes (wide)
+	- **Project** — Core · Timeline · Submitter · Commercial · Logistics · Reporting | Comments (wide)
+	- **Sample** — Identity · Classification · Other Analysis · Results (C14 age readout) | Comments (wide) | Photos strip | More details: Record · Dates · Lab Workflow · Calibration · Storage
+	- **Preparation** — Batch & Timeline · Weights and Methods (incl. Yield) · Step Timeline · EA Data | Comments (wide)
+	- **Target** — Graphitization · Elemental Analysis (incl. C/N Ratio and Total C (µg), warning when below the Lab Warning Threshold) · Results (C14 age readout, FM, d13C, magazine/position) · Calibration | Comments (wide)
+- Empty values render as the muted italic `—` per the standard empty-value rule. Boolean fields render as the disabled-checkbox badge (`.detail-boolean-check`).
 
 ## Data Formatting Rules
 - `C14 Age` and `C14 Age Sigma`: round/display as integers.
@@ -183,7 +164,7 @@
 - Empty / sentinel values: render as muted italic `—` (see UX/UI Invariants for the full empty-value rule).
 
 ## Frontend Modules and Shared Behaviours
-- **Headline values come from the headline builders, never raw ORM attributes.** Every value a detail-page card displays must route through the entity's `build_*_headline` (which calls `format_*_value`) — templates read `{name}_headline.<key>`. Passing `sample.type` directly leaks legacy sentinel strings like `"undefined"` and sentinel dates into the UI. Editable cards pass `display_value={name}_headline.<key>` alongside `raw_value`.
+- **Detail values come from the section rows, never raw ORM attributes.** Every displayed value routes through `format_*_value` via `build_sections`. Passing `sample.type` straight into a template leaks legacy sentinel strings like `"undefined"` and sentinel dates into the UI (the context line of the record header is the one place that reads parent records directly — keep it to names and numbers).
 - **Global asset bundles**: `base.html` loads `/static/bundle.css` + `/static/bundle.js` (concatenated + minified in `main.py`, cached per process, `Cache-Control: immutable`). **Bump the `css_v` global in `routers/pages_shared.py` whenever any static asset changes** — it's the cache-bust signal. Bench CSS/JS load only on the bench page via `extra_styles`/`extra_scripts` blocks.
 - **Page-specific JS registers into `window.SAMSAppInstallers`; `app.js` dispatches the list.** `app.js` ships inside `bundle.js`, which is the *first* deferred script, so its dispatch must wait for `DOMContentLoaded` — `document.readyState === "interactive"` is already true while later deferred scripts (the bench modules) are still pending. Running on `interactive` silently no-opped `installers.installGraphitizationBench?.()` and killed both bench UIs. Only `readyState === "complete"` may run immediately.
 - **Never put data into `innerHTML` unescaped.** Build cells with `textContent`, or pass every interpolated value through an escape helper (`esc()` in `sample-import.js`). Sample labels come from customers' Excel sheets: the graphitization bench's staged-batch table interpolated `user_label` raw, and a label like `<img src=x onerror=…>` ran script for whoever staged that target (verified, fixed 2026-10).

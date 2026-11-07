@@ -1,89 +1,31 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_card, render_detail_display_card, render_detail_field_row, render_detail_sections %}
-{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_fields.html" import render_detail_sections %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel" data-edit-scope data-edit-initial-mode="{{ project_edit_initial_mode or 'view' }}">
+  {% set nav %}{{ render_detail_quick_nav(
+    entity='project',
+    current=project.project_nr,
+    max_nr=max_project_nr,
+    count=project_count,
+    prev_url=('/projects/' ~ previous_project_nr) if previous_project_nr is not none else None,
+    next_url=('/projects/' ~ next_project_nr) if next_project_nr is not none else None,
+    jump_action='/projects/' ~ project.project_nr,
+    jump_name='jump_project',
+  ) }}{% endset %}
   <div class="panel-head">
-    <div class="sample-head-row">
-      <h2>Project {{ project.project_nr }}: {{ project.project or 'Untitled Project' }}</h2>
-      {{ render_detail_action_toolbar(project_edit_form_id) }}
-    </div>
-    <div class="detail-context-strip">
-      <p class="detail-breadcrumb-line">
-        <a href="/projects" class="nav-back-arrow" data-history-back data-fallback="/projects" aria-label="Back to projects" title="Back to projects">&#x2039; Projects</a>
-        <span class="detail-breadcrumb-sep">·</span>
-        {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-        <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
-        {% if user %}
-        <span class="detail-breadcrumb-sep">·</span>
-        Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a>
-        {% endif %}
-      </p>
-      {{ render_detail_quick_nav(
-        entity='project',
-        current=project.project_nr,
-        max_nr=max_project_nr,
-        count=project_count,
-        prev_url=('/projects/' ~ previous_project_nr) if previous_project_nr is not none else None,
-        next_url=('/projects/' ~ next_project_nr) if next_project_nr is not none else None,
-        jump_action='/projects/' ~ project.project_nr,
-        jump_name='jump_project',
-      ) }}
-    </div>
+    {% call render_record_head('Project ' ~ project.project_nr, project.project or 'Untitled project', project_edit_form_id, quick_nav=nav) %}
+      <a href="/projects" class="nav-back-arrow" data-history-back data-fallback="/projects" aria-label="Back to projects" title="Back to projects">&#x2039; Projects</a>
+      {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
+      <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
+      {% if user %}
+      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name or '' }}, {{ user.first_name or '' }}</a></span>
+      {% endif %}
+    {% endcall %}
     {{ render_detail_notice_block(project_saved, project_save_error, "Project details were saved.", field_errors=project_field_errors, entity="project") }}
     <form id="{{ project_edit_form_id }}" method="post" action="/projects/{{ project.project_nr }}/save" data-detail-edit-form></form>
   </div>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Identity</h4>
-    <div class="cards detail-headline-cards project-headline-cards">
-      {{ render_detail_card(
-        'project',
-        'project',
-        'Project Name',
-        raw_value=project.project,
-        display_value=project_headline.project,
-        form_id=project_edit_form_id,
-        form_values=project_form_values,
-        field_errors=project_field_errors,
-        card_class='project-headline-name'
-      ) }}
-      <article>
-        <h3>Status</h3>
-        <p>
-          {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-          <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
-        </p>
-      </article>
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Timeline</h4>
-    <div class="cards detail-headline-cards project-headline-cards">
-      {{ render_detail_display_card('In Date', project_headline.in_date) }}
-      {{ render_detail_display_card('Desired Date', project_headline.desired_date) }}
-      {{ render_detail_display_card('Out Date', project_headline.out_date) }}
-    </div>
-  </section>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Comments</h4>
-    <div class="cards detail-comments-cards">
-      {{ render_detail_card(
-        'project',
-        'project_comment',
-        'Project Comment',
-        raw_value=project.project_comment,
-        display_value=project_headline.comment,
-        form_id=project_edit_form_id,
-        form_values=project_form_values,
-        field_errors=project_field_errors,
-        kind='multiline'
-      ) }}
-    </div>
-  </section>
 
   {{ render_detail_sections(
     project_sections,
@@ -96,9 +38,11 @@
     required_fields=project_required_fields,
     field_errors=project_field_errors
   ) }}
+</section>
 
+<section class="panel record-related">
   <section data-table-filter id="project-samples">
-    <h3>Samples ({{ samples|length }})</h3>
+    <h3 class="record-related-title">Samples <span class="record-related-count">{{ samples|length }}</span></h3>
     <div class="table-wrap">
       <table data-project-samples-table>
         <thead>

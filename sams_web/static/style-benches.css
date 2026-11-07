@@ -559,6 +559,6 @@
 }
 
 /* Base `.cards` styles moved to style-core.css so they're available on
-   every page (dashboard KPI cards, sample/project/target headline cards,
+   every page (dashboard KPI cards, samples landing,
    etc.). Only bench-page-specific rules remain in this file. */
 

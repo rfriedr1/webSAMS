@@ -1,55 +1,29 @@
 {% extends "base.html" %}
-{% from "_detail_fields.html" import render_detail_card, render_detail_field_row, render_detail_sections %}
-{% from "_detail_chrome.html" import render_detail_action_toolbar, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_fields.html" import render_detail_sections %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
 <section class="panel submitter-detail-panel" data-edit-scope data-edit-initial-mode="{{ submitter_edit_initial_mode or 'view' }}">
+  {% set nav %}{{ render_detail_quick_nav(
+    entity='submitter',
+    current=submitter.user_nr,
+    max_nr=max_submitter_nr,
+    count=submitter_count,
+    prev_url=('/submitters/' ~ previous_submitter_nr) if previous_submitter_nr is not none else None,
+    next_url=('/submitters/' ~ next_submitter_nr) if next_submitter_nr is not none else None,
+    jump_action='/submitters/' ~ submitter.user_nr,
+    jump_name='jump_submitter',
+  ) }}{% endset %}
+  {% set submitter_name = [submitter.last_name, submitter.first_name] | select | join(', ') %}
   <div class="panel-head submitter-detail-head">
-    <div class="sample-head-row">
-      <h2>Submitter {{ submitter.user_nr }}: {{ submitter.last_name }}, {{ submitter.first_name }}</h2>
-      {{ render_detail_action_toolbar(submitter_edit_form_id) }}
-    </div>
-    <div class="detail-context-strip">
-      <p class="detail-breadcrumb-line">
-        <a href="/submitters" class="nav-back-arrow" data-history-back data-fallback="/submitters" aria-label="Back to submitters" title="Back to submitters">&#x2039; Submitters</a>
-        {% if submitter.organisation or submitter.institute %}
-        <span class="detail-breadcrumb-sep">·</span>
-        {% if submitter.organisation %}{{ submitter.organisation }}{% else %}No organisation{% endif %}
-        {% if submitter.institute %}<span class="detail-breadcrumb-sep">·</span>{{ submitter.institute }}{% endif %}
-        {% endif %}
-      </p>
-      {{ render_detail_quick_nav(
-        entity='submitter',
-        current=submitter.user_nr,
-        max_nr=max_submitter_nr,
-        count=submitter_count,
-        prev_url=('/submitters/' ~ previous_submitter_nr) if previous_submitter_nr is not none else None,
-        next_url=('/submitters/' ~ next_submitter_nr) if next_submitter_nr is not none else None,
-        jump_action='/submitters/' ~ submitter.user_nr,
-        jump_name='jump_submitter',
-      ) }}
-    </div>
+    {% call render_record_head('Submitter ' ~ submitter.user_nr, submitter_name, submitter_edit_form_id, quick_nav=nav) %}
+      <a href="/submitters" class="nav-back-arrow" data-history-back data-fallback="/submitters" aria-label="Back to submitters" title="Back to submitters">&#x2039; Submitters</a>
+      {% if submitter.organisation %}<span class="record-context-item">{{ submitter.organisation }}</span>{% endif %}
+      {% if submitter.institute %}<span class="record-context-item">{{ submitter.institute }}</span>{% endif %}
+    {% endcall %}
     {{ render_detail_notice_block(submitter_saved, submitter_save_error, "Submitter details were saved.", field_errors=submitter_field_errors, entity="user") }}
     <form id="{{ submitter_edit_form_id }}" method="post" action="/submitters/{{ submitter.user_nr }}/save" data-detail-edit-form></form>
   </div>
-
-  <section class="card-group">
-    <h4 class="card-group-title">Identity</h4>
-    <div class="cards detail-headline-cards submitter-headline-cards">
-      {% for field_key, field_label in [('salutation', 'Salutation'), ('first_name', 'First Name'), ('last_name', 'Last Name')] %}
-      {{ render_detail_card(
-        'user',
-        field_key,
-        field_label,
-        raw_value=submitter[field_key],
-        display_value=submitter_headline[field_key],
-        form_id=submitter_edit_form_id,
-        form_values=submitter_form_values,
-        field_errors=submitter_field_errors
-      ) }}
-      {% endfor %}
-    </div>
-  </section>
 
   {{ render_detail_sections(
     submitter_sections,
@@ -62,9 +36,11 @@
     required_fields=submitter_required_fields,
     field_errors=submitter_field_errors
   ) }}
+</section>
 
+<section class="panel record-related">
   <section data-table-filter>
-    <h3>Projects</h3>
+    <h3 class="record-related-title">Projects <span class="record-related-count">{{ projects|length }}</span></h3>
     {% if projects %}
     <div class="table-tools">
       <label class="table-tool-field">
