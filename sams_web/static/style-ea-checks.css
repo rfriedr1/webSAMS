@@ -16,6 +16,58 @@
 .ea-strip-link:hover { text-decoration: underline; }
 .ea-strip-error { margin: 0 0 var(--space-3); }
 
+/* Compact strip: one line, one status per EA; a card opens below it. */
+.ea-strip.is-compact { padding-block: var(--space-3); }
+.ea-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+.ea-line-title { margin: 0; font-size: var(--text-md); }
+.ea-line-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ea-line-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.ea-line-item strong { color: var(--ink-strong); }
+.ea-line-item .ea-pill { padding: 0.12rem 0.55rem; font-size: var(--text-xs); }
+.ea-line-overdue {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--danger-text);
+}
+.ea-line-open {
+  min-height: 0;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  box-shadow: none;
+  color: var(--brand-deep);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.ea-line-open:hover { background: var(--brand-tint); transform: none; }
+.ea-line-open.is-open { background: var(--brand-tint); border-color: var(--brand-accent); }
+.ea-line .ea-strip-link { margin-left: auto; }
+/* An opened card keeps half the width instead of stretching across. */
+.ea-strip.is-compact .ea-strip-cards {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr));
+}
+.ea-strip.is-compact .ea-strip-error,
+.ea-strip.is-compact .ea-strip-cards:has(> .ea-card:not([hidden])) { margin-top: var(--space-3); }
+
 .ea-setup-notice {
   padding: var(--space-3) var(--space-4);
   border: 1px dashed var(--warn-line);

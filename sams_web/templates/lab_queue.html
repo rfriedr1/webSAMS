@@ -18,7 +18,9 @@
 {% endblock %}
 
 {% block content %}
-{% if not bench_entry_enabled %}
+{#- The benches carry no page header: the breadcrumb and the Lab sub-nav
+    already say where you are, and the bench is what the page is for. -#}
+{% if not bench_entry_enabled and not graph_bench_entry_enabled %}
 <section class="panel">
   <div class="panel-head">
     <h2>{{ title }}</h2>
@@ -42,7 +44,7 @@
 {% endif %}
 
 {% if graph_bench_entry_enabled %}
-{% if ea_strip %}{% include "_ea_check_strip.html" %}{% endif %}
+{% if ea_strip %}{% with ea_strip_compact = true %}{% include "_ea_check_strip.html" %}{% endwith %}{% endif %}
 {% include "_graphitization_bench.html" %}
 {% endif %}
 

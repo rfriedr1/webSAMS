@@ -33,7 +33,7 @@
       return "value" in control ? String(control.value ?? "") : "";
     };
 
-    const wrapperFor = (control) => control.closest(".prep-bench-field, .prep-bench-checkbox-row");
+    const wrapperFor = (control) => control.closest(".bench-field, .bench-flag");
 
     controls.forEach((control) => {
       control.dataset.benchInitialValue = readCurrent(control);

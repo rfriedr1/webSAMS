@@ -77,7 +77,7 @@
           const start = asNumber(weightStart.value);
           const end = asNumber(weightEnd.value);
           if (!Number.isFinite(start) || !Number.isFinite(end) || start === 0) {
-            yieldDisplay.textContent = "Not set";
+            yieldDisplay.textContent = "—";
             if (yieldHidden) {
               yieldHidden.value = "";
             }

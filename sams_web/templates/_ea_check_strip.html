@@ -4,13 +4,38 @@
     `ea_return_url` and optionally `ea_check_error` (see
     routers/pages_ea_checks.ea_strip_context). -#}
 {% from "_ea_check_macros.html" import element_field %}
-<section class="panel ea-strip" id="ea-check-strip" data-ea-strip>
+{#- `ea_strip_compact` (the graphitization bench): the strip is one line,
+    one status per EA, and an EA's card (summary + entry form) opens below
+    it from its button (ea-checks.js, `data-ea-open`). Every card is open
+    when a check was just rejected, so the error sits next to its form. -#}
+{% set compact = ea_strip_compact is defined and ea_strip_compact and ea_strip.available and ea_strip.cards %}
+<section class="panel ea-strip{% if compact %} is-compact{% endif %}" id="ea-check-strip" data-ea-strip>
+  {% if compact %}
+  <div class="ea-line">
+    <h2 class="ea-line-title">EA checks today</h2>
+    <ul class="ea-line-list" role="list">
+      {% for card in ea_strip.cards %}
+      <li class="ea-line-item ea-state-{{ card.state }}">
+        <strong>{{ card.label }}</strong>
+        <span class="ea-pill" role="status">
+          <span class="ea-pill-icon" aria-hidden="true">{% if card.state == "passed" %}✓{% elif card.state == "failed" %}✗{% else %}◷{% endif %}</span>
+          {{ card.state_label }}
+        </span>
+        {% if card.overdue %}<span class="ea-line-overdue">Sign-off overdue</span>{% endif %}
+        <button type="button" class="ea-line-open" data-ea-open aria-controls="ea-card-{{ card.key }}" aria-expanded="{{ 'true' if ea_check_error else 'false' }}">{% if card.state == "passed" %}Details{% else %}Log check{% endif %}</button>
+      </li>
+      {% endfor %}
+    </ul>
+    <a class="ea-strip-link" href="/lab/ea-checks">Statistics &amp; sign-off</a>
+  </div>
+  {% else %}
   <div class="ea-strip-head">
     <h2>EA checks today</h2>
     {% if request.url.path != "/lab/ea-checks" %}
     <a class="ea-strip-link" href="/lab/ea-checks">Statistics &amp; sign-off <span aria-hidden="true">→</span></a>
     {% endif %}
   </div>
+  {% endif %}
 
   {% if not ea_strip.available %}
   <div class="ea-setup-notice">
@@ -27,7 +52,7 @@
   <div class="ea-strip-cards">
     {% for card in ea_strip.cards %}
     {% set cfg = card.config %}
-    <article class="ea-card ea-state-{{ card.state }}" data-ea-card data-ea-key="{{ card.key }}">
+    <article class="ea-card ea-state-{{ card.state }}" id="ea-card-{{ card.key }}" data-ea-card data-ea-key="{{ card.key }}"{% if compact and not ea_check_error %} hidden{% endif %}>
       <header class="ea-card-head">
         <div class="ea-card-title">
           <h3>{{ card.label }}</h3>

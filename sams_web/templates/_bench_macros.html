@@ -1,5 +1,8 @@
 {#- Shared bench-entry macros, imported by _preparation_bench.html and
-    _graphitization_bench.html. -#}
+    _graphitization_bench.html. Both benches are built from the same pieces
+    (lookup row, one line of sample facts, a field grid, flag chips, an
+    action bar), so they look and behave alike. bench-common.js marks a
+    changed `.bench-field` / `.bench-flag` with `.is-dirty`. -#}
 
 {#- The up/down pair that sits inside a `.prep-bench-stepper`. Every lookup
     field (Sample #, Prep #, Target #) renders it, so the three look alike
@@ -23,4 +26,59 @@
     aria-label="Previous {{ noun }}"
   >&#9660;</button>
 </span>
+{% endmacro %}
+
+{#- One fact in the sample context line: muted label, value, optional link.
+    Values go through format_table_cell_value so legacy sentinels
+    ("undefined", 1899 dates) render as the empty dash. -#}
+{% macro ctx_item(label, key, value, href=none) %}
+{%- set shown = format_table_cell_value(key, value) -%}
+<span class="bench-ctx-item">
+  <span class="bench-ctx-label">{{ label }}</span>
+  {%- if shown is none or shown|string|trim == "" %}<span class="detail-empty">—</span>
+  {%- elif href %}<a href="{{ href }}" class="bench-ctx-link">{{ shown }}</a>
+  {%- else %}<span class="bench-ctx-value">{{ shown }}</span>
+  {%- endif %}
+</span>
+{% endmacro %}
+
+{#- A labelled input. The posted value wins over the stored one, so a
+    rejected save refills what the operator typed. `kind` is number | date |
+    text. Anything passed as a call body (warnings) renders under the input. -#}
+{% macro bench_input(id, name, label, values, fallback, errors, kind="number", hook="", placeholder="") %}
+{%- set value = values[name] if name in values else ("" if fallback is none else fallback) -%}
+<div class="bench-field{% if errors.get(name) %} has-error{% endif %}">
+  <label for="{{ id }}">{{ label }}</label>
+  <input
+    id="{{ id }}"
+    type="{{ kind }}"
+    name="{{ name }}"
+    value="{{ value }}"
+    {% if kind == "number" %}step="any" inputmode="decimal"{% endif %}
+    {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+    {% if hook %}{{ hook }}{% endif %}
+  />
+  {% if errors.get(name) %}<p class="bench-field-error">{{ errors[name] }}</p>{% endif %}
+  {%- if caller is defined %}{{ caller() }}{% endif %}
+</div>
+{% endmacro %}
+
+{#- An editable flag chip. The hidden 0 is posted when the box is unticked. -#}
+{% macro bench_flag(name, label, values, fallback, errors, hook="") %}
+{%- set raw = (values.get(name) if name in values else fallback)|string -%}
+<label class="bench-flag{% if errors.get(name) %} has-error{% endif %}">
+  <input type="hidden" name="{{ name }}" value="0" />
+  <input type="checkbox" name="{{ name }}" value="1" {% if hook %}{{ hook }}{% endif %} {% if raw in ['1', 'true', 'True', 'on', 'yes'] %}checked{% endif %} />
+  <span>{{ label }}</span>
+  {% if errors.get(name) %}<span class="bench-flag-error">{{ errors[name] }}</span>{% endif %}
+</label>
+{% endmacro %}
+
+{#- A read-only flag chip: derived from another value (storage location →
+    archived) or owned by the project. Never posted. -#}
+{% macro bench_flag_readonly(label, checked, hook="", title="") %}
+<label class="bench-flag is-readonly"{% if title %} title="{{ title }}"{% endif %}>
+  <input type="checkbox" disabled {% if hook %}{{ hook }}{% endif %} {% if checked %}checked{% endif %} />
+  <span>{{ label }}</span>
+</label>
 {% endmacro %}
