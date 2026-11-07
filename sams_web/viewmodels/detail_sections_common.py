@@ -158,20 +158,30 @@ def arrange_sections(
     order: tuple[str, ...] = (),
     wide: frozenset[str] | set[str] = frozenset(),
     more: frozenset[str] | set[str] = frozenset(),
+    stacked: frozenset[str] | set[str] = frozenset(),
 ) -> list[dict[str, Any]]:
     """Attach the fact-sheet layout hints the detail templates render by.
 
     Every section gets `layout` ("column" — one column of the fact sheet —
     or "wide", a full-width band such as Comments) and `placement`
-    ("primary", shown on the page, or "more", folded into the collapsed
-    additional-details block). Sections named in `order` come first, in
-    that order; the rest keep their build order behind them.
+    ("primary", shown on the page, or "more", folded into the "More
+    details" block). Sections named in `order` come first, in that order;
+    the rest keep their build order behind them.
+
+    Rows whose key is in `stacked` get `stacked = True`: label above,
+    value full width beneath, whatever the value's length. For free-text
+    fields whose typical value is too long to share a column with its
+    label (sample labels, batch names, organisations, e-mails); the
+    template stacks other rows only once their value passes 24 chars.
     """
     rank = {title: index for index, title in enumerate(order)}
     for section in sections:
         title = section.get("title", "")
         section["layout"] = "wide" if title in wide else "column"
         section["placement"] = "more" if title in more else "primary"
+        for row in section.get("rows", []):
+            if row.get("key") in stacked:
+                row["stacked"] = True
     return sorted(
         sections,
         key=lambda section: rank.get(section.get("title", ""), len(rank)),

@@ -95,6 +95,8 @@ SAMPLE_SECTION_SPECS: tuple[SectionSpec, ...] = (
 SAMPLE_SECTION_ORDER = ("Identity", "Classification", "Other Analysis", "Results", "Comments")
 SAMPLE_WIDE_SECTIONS = frozenset({"Comments"})
 SAMPLE_MORE_SECTIONS = frozenset({"Record", "Dates", "Lab Workflow", "Calibration", "Storage"})
+# Label above value: sample labels average 20 characters (max 94).
+SAMPLE_STACKED_FIELDS = frozenset({"user_label", "user_label_nr"})
 
 SAMPLE_PROJECT_SUBMISSION_KEYS: tuple[str, ...] = ("in_date", "desired_date", "out_date")
 SAMPLE_BOOLEAN_FIELDS = {"editable", "not_tobedated", "s_no_leftover", "c_n_isotop_a", "c_n_isotop_a_moved", "dendro_a"}
@@ -175,6 +177,7 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
         order=SAMPLE_SECTION_ORDER,
         wide=SAMPLE_WIDE_SECTIONS,
         more=SAMPLE_MORE_SECTIONS,
+        stacked=SAMPLE_STACKED_FIELDS,
     )
 
 
@@ -221,6 +224,8 @@ PREPARATION_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Comments", "", ("prep_comment", "old_info")),
 )
 PREPARATION_WIDE_SECTIONS = frozenset({"Comments"})
+# Prep batch names average 18 characters (max 39).
+PREPARATION_STACKED_FIELDS = frozenset({"batch"})
 
 PREPARATION_BOOLEAN_FIELDS = {"stop", "p_no_leftover"}
 PREPARATION_EXCLUDED_FIELDS = {"left_over", "sample_nr", "prep_nr"}
@@ -320,7 +325,7 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
             if yield_index < insert_at:
                 insert_at -= 1
             section["rows"].insert(insert_at, yield_row)
-    return arrange_sections(sections, wide=PREPARATION_WIDE_SECTIONS)
+    return arrange_sections(sections, wide=PREPARATION_WIDE_SECTIONS, stacked=PREPARATION_STACKED_FIELDS)
 
 
 TARGET_FIELD_LABELS = {
@@ -375,6 +380,8 @@ TARGET_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Comments", "", ("target_comment", "meas_comment")),
 )
 TARGET_WIDE_SECTIONS = frozenset({"Comments"})
+# Graph batch names average 16 characters (max 29).
+TARGET_STACKED_FIELDS = frozenset({"graph_batch"})
 
 TARGET_BOOLEAN_FIELDS = {"stop"}
 
@@ -480,7 +487,7 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
     attach_readout(
         sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label="C14 age"
     )
-    return arrange_sections(sections, wide=TARGET_WIDE_SECTIONS)
+    return arrange_sections(sections, wide=TARGET_WIDE_SECTIONS, stacked=TARGET_STACKED_FIELDS)
 
 
 # ---- Detail-update configs ------------------------------------------------

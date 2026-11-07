@@ -51,6 +51,9 @@ USER_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Notes", "", ("user_comment",)),
 )
 USER_WIDE_SECTIONS = frozenset({"Notes"})
+# Organisation, institute, e-mail and website average 25-27 characters,
+# address lines 17-18 (all up to 59-94).
+USER_STACKED_FIELDS = frozenset({"organisation", "institute", "email", "www", "address_1", "address_2"})
 
 
 def user_field_kind(key: str) -> str:
@@ -93,7 +96,7 @@ def build_user_sections(user: Any) -> list[dict[str, Any]]:
         other_description="",
         other_excluded_keys={"user_nr"},
     )
-    return arrange_sections(sections, wide=USER_WIDE_SECTIONS)
+    return arrange_sections(sections, wide=USER_WIDE_SECTIONS, stacked=USER_STACKED_FIELDS)
 
 
 PROJECT_FIELD_LABELS = {
@@ -137,6 +140,8 @@ PROJECT_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Comments", "", ("project_comment",)),
 )
 PROJECT_WIDE_SECTIONS = frozenset({"Comments"})
+# Project names average 23 characters (max 100).
+PROJECT_STACKED_FIELDS = frozenset({"project"})
 
 PROJECT_BOOLEAN_FIELDS = {
     "invoice",
@@ -185,7 +190,7 @@ def build_project_sections(project: Any) -> list[dict[str, Any]]:
         value_formatter=format_project_value,
         include_other=False,
     )
-    return arrange_sections(sections, wide=PROJECT_WIDE_SECTIONS)
+    return arrange_sections(sections, wide=PROJECT_WIDE_SECTIONS, stacked=PROJECT_STACKED_FIELDS)
 
 
 # ---- Detail-update configs ------------------------------------------------

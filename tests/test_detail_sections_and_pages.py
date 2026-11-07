@@ -86,6 +86,20 @@ def test_sample_sections_carry_project_dates_and_drop_old_info():
     assert "old_info" not in other_keys
 
 
+def test_sample_label_rows_always_stack_and_dendro_is_boolean():
+    sample = Sample(sample_nr=1, project_nr=9, user_label="A-1", user_label_nr="7", material="bone", dendro_a=0)
+
+    sections = ds.build_sample_sections(sample, project=None)
+    rows = {row["key"]: row for section in sections for row in section["rows"]}
+    # A short label still sits above its value: the field is free text that
+    # is usually long, so it is stacked by name, not by length.
+    assert rows["user_label"].get("stacked") is True
+    assert rows["user_label_nr"].get("stacked") is True
+    assert not rows["material"].get("stacked")
+    assert rows["dendro_a"]["kind"] == "boolean"
+    assert rows["dendro_a"]["value"] == "No"
+
+
 def test_target_results_rounding_and_no_other_section():
     target = Target(
         sample_nr=1,
