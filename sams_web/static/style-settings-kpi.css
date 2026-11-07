@@ -319,36 +319,6 @@
     max-height: 54dvh;
   }
 
-  .prep-bench-lookup-form {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .prep-bench-load-button {
-    width: 100%;
-  }
-
-  .prep-bench-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .prep-bench-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .prep-bench-field-span-2 {
-    grid-column: auto;
-  }
-
-  .prep-bench-actions {
-    position: static;
-  }
-
-  .prep-bench-storage-row {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
   .sample-workspace-section-head {
     align-items: stretch;
     flex-direction: column;

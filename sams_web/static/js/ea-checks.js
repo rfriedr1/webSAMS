@@ -543,8 +543,35 @@
 
   // ---- Boot -------------------------------------------------------------------------
 
+  // Compact strip (graphitization bench): each EA's button opens its card
+  // below the one-line status. The gauges were measured while hidden, so
+  // a resize event makes them redraw at their real width.
+  const installCompactStrip = () => {
+    document.querySelectorAll("[data-ea-open]").forEach((button) => {
+      const card = document.getElementById(button.getAttribute("aria-controls") || "");
+      if (!card) return;
+      const label = button.textContent;
+      const sync = () => {
+        const open = !card.hidden;
+        button.setAttribute("aria-expanded", String(open));
+        button.textContent = open ? "Close" : label;
+        button.classList.toggle("is-open", open);
+      };
+      button.addEventListener("click", () => {
+        card.hidden = !card.hidden;
+        sync();
+        if (!card.hidden) {
+          window.dispatchEvent(new Event("resize"));
+          card.querySelector("[data-ea-entry]:not([hidden]) .ea-weight-input")?.focus({ preventScroll: true });
+        }
+      });
+      sync();
+    });
+  };
+
   const boot = () => {
     document.querySelectorAll("[data-ea-card]").forEach(installCard);
+    installCompactStrip();
     drawChartsIn(document);
     installDialogs();
     document.querySelector("[data-ea-filter]")?.querySelectorAll("select").forEach((select) => {

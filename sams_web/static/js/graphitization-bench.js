@@ -249,7 +249,8 @@
           targetsJsonField.value = JSON.stringify(stagedTargets);
         }
         if (countBadge instanceof HTMLElement) {
-          countBadge.textContent = String(stagedTargets.length);
+          const count = stagedTargets.length;
+          countBadge.textContent = `${count} target${count === 1 ? "" : "s"}`;
         }
         if (batchTargetsCard instanceof HTMLElement) {
           batchTargetsCard.classList.toggle("is-dirty", stagedTargets.length > 0);
