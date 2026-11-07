@@ -97,7 +97,7 @@ SAMPLE_WIDE_SECTIONS = frozenset({"Comments"})
 SAMPLE_MORE_SECTIONS = frozenset({"Record", "Dates", "Lab Workflow", "Calibration", "Storage"})
 
 SAMPLE_PROJECT_SUBMISSION_KEYS: tuple[str, ...] = ("in_date", "desired_date", "out_date")
-SAMPLE_BOOLEAN_FIELDS = {"editable", "not_tobedated", "s_no_leftover", "c_n_isotop_a", "c_n_isotop_a_moved"}
+SAMPLE_BOOLEAN_FIELDS = {"editable", "not_tobedated", "s_no_leftover", "c_n_isotop_a", "c_n_isotop_a_moved", "dendro_a"}
 SAMPLE_EXCLUDED_FIELDS = {"old_info", "storage", "left_over", "sample_nr", "project_nr"}
 
 

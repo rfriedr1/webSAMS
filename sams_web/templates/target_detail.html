@@ -36,12 +36,12 @@
   <div class="panel-head">
     {% call render_record_head('Target ' ~ target.target_nr, 'Sample ' ~ sample.sample_nr ~ ' · Prep ' ~ preparation.prep_nr, target_edit_form_id, quick_nav=nav, actions=actions) %}
       <a href="{{ target_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ target_back_url }}" aria-label="Back to preparation" title="Back to preparation">&#x2039; Preparation {{ preparation.prep_nr }}</a>
-      <span class="record-context-item">Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} – {{ sample.user_label or 'Unnamed Sample' }}</a></span>
+      <span class="record-context-item is-key">Sample <a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }} – {{ sample.user_label or 'Unnamed Sample' }}</a></span>
       {% if project %}
-      <span class="record-context-item">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a></span>
+      <span class="record-context-item is-key">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a></span>
       {% endif %}
       {% if user %}
-      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
+      <span class="record-context-item is-key">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
       {% endif %}
       {% if target.target_id %}
       <span class="record-context-item">Target ID <strong>{{ target.target_id }}</strong></span>

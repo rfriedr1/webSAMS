@@ -30,10 +30,10 @@
     {% call render_record_head('Preparation ' ~ preparation.prep_nr, 'Sample ' ~ sample.sample_nr ~ (' · ' ~ sample.user_label if sample.user_label else ''), preparation_edit_form_id, quick_nav=nav, actions=actions) %}
       <a href="/samples/{{ sample.sample_nr }}" class="nav-back-arrow" data-history-back data-fallback="/samples/{{ sample.sample_nr }}" aria-label="Back to sample" title="Back to sample">&#x2039; Sample {{ sample.sample_nr }}</a>
       {% if project %}
-      <span class="record-context-item">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a></span>
+      <span class="record-context-item is-key">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a></span>
       {% endif %}
       {% if user %}
-      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
+      <span class="record-context-item is-key">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
       {% endif %}
     {% endcall %}
     {{ render_detail_notice_block(preparation_saved, preparation_save_error, "Preparation details were saved.", field_errors=preparation_field_errors, entity="preparation") }}
