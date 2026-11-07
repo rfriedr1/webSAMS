@@ -71,9 +71,33 @@
 - `SAMS_SETUP_DATA_FILE` (default: `sams_web/setup_data.json`) — the **live** settings file. It is gitignored because it holds the SMTP password; on a server point it at an absolute path outside the checkout (e.g. `C:\ProgramData\webSAMS\setup_data.json`) so `git pull` never touches it.
 - `sams_web/setup_data.example.json` is the secret-free, tracked snapshot. `SetupStore` reads it whenever the live file does not exist yet, so a fresh install starts with the lab's settings; the first save writes the live file. To carry a settings change into git, copy it into the example and blank every password.
 
+## Page Design Language (read before building or reshaping a page)
+The 2026-11 redesign (dashboard, detail pages, import wizard, benches, tables, header, Samples landing, Search, Analysis, Setup) followed one set of rules, because the old UI felt overwhelming: too many cards, values shown twice, boxes around everything. A new page follows them too. The local mockups in `docs/design/ui-review/` (untracked, real customer data) show the target look; for a big new page, sketch it there first.
+- **Fact sheet, not cards.** Every value appears once. No headline/KPI card rows, no box per field, no explanatory subtitle under a title. Structure comes from small uppercase group titles (`.fact-group-title`) and one thin rule between columns (`.fact-columns`, `.landing-starts`), never from nested boxes.
+- **The page starts with its job.** The global header and the trail (breadcrumb, Pin, Recent) already say where you are, so a page has no header panel that only repeats them (the benches and Lab → Analysis have none). A title line, when needed, is one of the existing three patterns; don't invent a fourth:
+	- `.panel-bar` for list and tool pages (title · muted count · controls right).
+	- `render_record_head` for a record.
+	- the fold-away `<details class="table-collapsible">` summary for a queue table.
+- **One panel per job**: a tool row, a table, an editor. Related records go in their own panel under the fact sheet (`.record-related`).
+- **Controls are compact and look alike.** A search or lookup field is `.search-field` (icon, borderless input, ~2.3rem tall); bench and lookup steppers use `stepper_buttons`; selects with more than 8 options become searchable automatically. Button labels are short verbs (*Save*, *Show*, *Load*), because the section title already names the thing.
+- **One action bar per form, same shape everywhere**: ghost *Cancel* on the left, one primary on the right (`.bench-actions`, `.setup-actions`, `.import-foot`). Never two primaries. Detail pages keep their own Edit / Save / Cancel toolbar.
+- **Tables**: mark the container `data-table-filter` and let `table-tools.js` build the toolbar; editors and small key/value tables get `data-table-plain`. Load the whole list, or add a server-side search and say when the list is capped ("First 200 results").
+- **Text and colour**: tokens only (type scale, spacing, semantic colours). Uppercase only for group titles; labels in sentence case; numbers with tabular figures. A status is never colour alone: add a word (*Low*, *N late*) or an icon.
+- **Empty, error and capped states say what to do next**: an empty table names the action that fills it, and an error says why it happened and what to do about it. Empty values are the muted `—`.
+- **A new page is wired into navigation**:
+	- `navigation.py`: main/sub nav and `NAVIGATION_COMMAND_ENTRIES` (command palette).
+	- a branch in `buildBreadcrumbs` (`navigation-ui.js`) so the trail reads `Module › page › record`.
+	- `data-page-label` when the page's first `h2` is not its name.
+	- `TABLE_HEADER_LABELS` for new columns.
+	- a Magic Nav command and `/help` when users will jump there often.
+	- the `:focus-visible` list in `style-core.css` for new clickable classes.
+	- a `css_v` bump.
+- **Responsive**: works at 1440, 1024, 860, 640 and 390 px with no horizontal page scroll (tables scroll inside `.table-wrap`). At ≤640px controls grow to touch size and secondary bits (the Recent list, the ⌘K hint) drop out.
+- **Verify by looking**: screenshot the page at desktop and phone width before calling it done, with every non-GET request blocked so nothing is written to the database, and compare it with the neighbouring pages.
+
 ## UX/UI Invariants (Keep Consistent)
 - Use modern design patters regarding visual alignment and sizing of UI objects and logical separation of control groups  
-- Use modern, clean, consistent typography and card-based detail layouts.
+- Use modern, clean, consistent typography and fact-sheet layouts (see "Page Design Language" above; the old card-based detail layout was retired 2026-11).
 - Each internal page should display breadcrumb navigation for orientation and quick backtracking.
 - Keep history-based back navigation on detail pages. Back navigation should alway show where to link back to.
 - Use icons instead of labelled buttons if the function of the icons are easily recognizable (don't do this in the primary and secondary navigation bar)
@@ -202,8 +226,8 @@
 ## Lab Warning Thresholds
 - The canonical list of in-app warning thresholds lives in `LAB_WARNING_THRESHOLD_FIELDS` in `sams_web/lab_warning_thresholds.py` — that tuple drives the Setup → "Lab Warning Thresholds" editor, the JSON persistence in `setup_data.json`, and the per-field formatting rules. Don't duplicate the list elsewhere; treat the code as source of truth and the Setup page as the user-facing rendering.
 - Each threshold has its own evaluator in `sams_web/viewmodels/lab_warnings.py` returning a `WarningOutcome` dict keyed by the threshold's key. Evaluators are pure (no DB / no service / no request), so warnings stay easy to test and easy to extend.
-- Detail-page integration is declarative: the entity's `DetailPageConfig` carries a `warnings_builder` callable, and `build_detail_page_context` exposes results as `{name}_warnings`. Templates branch via `render_detail_display_card(..., warning=*_warnings.get('<threshold_key>'))` — the macro handles the red-card highlight and the inline hint.
-- To add a new warning: (1) append a `LabWarningThresholdField` entry, (2) extend the relevant `evaluate_*_warnings` function (or write a new one + wire it via `warnings_builder`), and (3) reference the warning key in the right card on the detail template. The Setup UI picks up the field automatically.
+- Detail-page integration is declarative: the entity's `DetailPageConfig` carries a `warnings_builder` callable, and `build_detail_page_context` exposes results as `{name}_warnings`. `build_detail_page_context` also indexes them by field as `{name}_warnings_by_field`, which the template passes to `render_detail_sections(..., field_warnings=…)`; the row macro tints the row (`.has-warning`) and shows the inline hint.
+- To add a new warning: (1) append a `LabWarningThresholdField` entry, (2) extend the relevant `evaluate_*_warnings` function (or write a new one + wire it via `warnings_builder`), and (3) set the outcome's `field_key` to the row key of the field it concerns, so it lands on that row (and pass `field_warnings=` in the template if the entity doesn't yet). The Setup UI picks up the field automatically.
 
 ## Sample Import (Excel submission sheets)
 - Customers return filled-in copies of `templates/Submit_Samples_Template.xlsx`. The importer reads the `.xlsx` **directly** — no CSV export step (that was a legacy Delphi limitation).
