@@ -9,6 +9,7 @@
 {% from "_bench_macros.html" import stepper_buttons, ctx_item, bench_input, bench_flag, bench_flag_readonly %}
 <div
   class="bench-layout{% if not graph_bench_entry %} is-single{% endif %}"
+  data-page-label="Graphitization bench"
   id="graph-bench-entry"
   data-graph-bench
   data-graph-bench-current-sample="{{ graph_bench_entry.sample.sample_nr if graph_bench_entry else '' }}"

@@ -14,7 +14,8 @@ MAIN_NAV_ITEMS: tuple[dict[str, Any], ...] = (
     {"key": "search", "module": "search", "label": "Search", "href": "/search?global=1", "external": False},
     {"key": "setup", "module": "setup", "label": "Setup", "href": "/setup", "external": False},
     {"key": "help", "module": "help", "label": "Help", "href": "/help", "external": False},
-    {"key": "api_docs", "module": "api_docs", "label": "API Docs", "href": "/docs", "external": True},
+    # API Docs is not a lab module: it is linked from the Help page and the
+    # command palette instead of taking a slot in the header.
 )
 
 SUB_NAV_ITEMS: dict[str, tuple[dict[str, Any], ...]] = {
@@ -47,10 +48,10 @@ NAVIGATION_COMMAND_ENTRIES: tuple[dict[str, str], ...] = (
     {"label": "Samples: Projects", "href": "/projects"},
     {"label": "Samples: Submitters", "href": "/submitters"},
     {"label": "Samples: Import from Excel", "href": "/samples/import"},
-    {"label": "Lab Operations: Preparation", "href": "/lab/preparation"},
-    {"label": "Lab Operations: Graphitization", "href": "/lab/graphitization"},
-    {"label": "Lab Operations: Analysis", "href": "/lab/analysis"},
-    {"label": "Lab Operations: EA Checks", "href": "/lab/ea-checks"},
+    {"label": "Lab: Preparation", "href": "/lab/preparation"},
+    {"label": "Lab: Graphitization", "href": "/lab/graphitization"},
+    {"label": "Lab: Analysis", "href": "/lab/analysis"},
+    {"label": "Lab: EA Checks", "href": "/lab/ea-checks"},
     {"label": "Search: Global", "href": "/search?global=1"},
     {"label": "Setup", "href": "/setup"},
     {"label": "Help", "href": "/help"},

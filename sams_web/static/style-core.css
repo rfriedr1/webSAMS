@@ -144,204 +144,188 @@ h6 {
   left: -140px;
 }
 
+/* ---- Header -------------------------------------------------------------
+   One row: brand, main navigation, then Magic Nav and Search & jump on the
+   right. The module's sub-navigation is a second, thin row of underlined
+   tabs. Both rows share the page's content width, so the logo lines up
+   with the panels below. Redesigned 2026-11. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.5rem;
-  padding: 0.72rem 1.2rem 0.62rem;
-  border-bottom: 1px solid rgba(207, 217, 223, 0.8);
-  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
-  animation: slide-down 360ms ease-out both;
+}
+
+.topbar-row,
+.sub-nav-row {
+  width: min(1240px, 96%);
+  margin: 0 auto;
 }
 
 .topbar-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-areas: "brand nav tools";
   align-items: center;
-  gap: 0.9rem;
+  gap: var(--space-5);
+  min-height: 3.25rem;
+  padding-block: var(--space-2);
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  grid-area: brand;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
   text-decoration: none;
   color: inherit;
-  justify-self: start;
+  white-space: nowrap;
 }
 
 .brand:hover {
   color: inherit;
+  text-decoration: none;
 }
 
 .brand-mark {
-  min-width: 52px;
-  height: 34px;
-  border-radius: 10px;
+  align-self: center;
   display: grid;
   place-items: center;
+  height: 1.7rem;
+  padding: 0 0.42rem;
+  border-radius: 7px;
   color: var(--surface-solid);
-  font-weight: 800;
   font-size: var(--text-xs);
+  font-weight: 800;
   letter-spacing: 0.03em;
-  padding: 0 0.45rem;
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  box-shadow: 0 8px 22px rgba(12, 79, 98, 0.3);
 }
 
-.brand h1 {
-  margin: 0;
+.brand-name {
   font-size: var(--text-md);
   font-weight: 800;
-  line-height: 1.1;
+  color: var(--ink-strong);
 }
 
 .brand-version {
-  margin-left: 0.2rem;
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-.brand p {
-  margin: 0.1rem 0 0;
+/* Which database this app is on: quiet, but always there. */
+.brand-db {
+  align-self: center;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface-tint);
+  color: var(--ink-soft);
   font-size: var(--text-xs);
-  color: var(--muted);
+  font-weight: 600;
 }
 
 .main-nav {
+  grid-area: nav;
   display: flex;
-  gap: 0.35rem;
-  flex-wrap: nowrap;
+  gap: 0.15rem;
+  min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  justify-content: flex-end;
-  align-self: flex-end;
-  margin-left: auto;
-  padding: 0.02rem 0.02rem 0.16rem;
+  scrollbar-width: none;
 }
 
 .main-nav a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-weight: 600;
+  padding: 0.4rem 0.7rem;
+  border-radius: 7px;
+  color: var(--muted);
   font-size: var(--text-base);
-  color: #34505d;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 0.42rem 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
   white-space: nowrap;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 
 .main-nav a:hover {
-  color: var(--brand);
-  border-color: rgba(15, 97, 121, 0.3);
-  background: rgba(229, 241, 246, 0.7);
-  transform: translateY(-1px);
+  color: var(--ink-strong);
+  background: var(--bg-top);
+  text-decoration: none;
 }
 
 .main-nav a.is-active {
-  color: var(--surface-solid);
-  border-color: var(--brand);
-  background: linear-gradient(130deg, var(--brand), var(--brand-2));
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+
+.topbar-tools {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.sub-nav-row {
+  border-top: 1px solid var(--line-soft);
 }
 
 .sub-nav {
   display: flex;
-  gap: 0.34rem;
-  flex-wrap: nowrap;
+  gap: var(--space-5);
+  min-height: 2.25rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  justify-content: flex-end;
-  align-self: flex-end;
-  margin-left: auto;
-  padding: 0 0.02rem 0.08rem;
+  scrollbar-width: none;
 }
 
 .sub-nav a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-weight: 700;
+  padding-top: 2px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
   font-size: var(--text-sm);
-  color: #325362;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-tint);
-  padding: 0.31rem 0.64rem;
+  font-weight: 600;
+  text-decoration: none;
   white-space: nowrap;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 
 .sub-nav a:hover {
-  color: var(--brand-deep);
-  border-color: var(--line-strong);
-  background: var(--brand-tint);
-  transform: translateY(-1px);
+  color: var(--ink-strong);
+  text-decoration: none;
 }
 
 .sub-nav a.is-active {
-  color: var(--surface-solid);
-  border-color: var(--brand-accent);
-  background: linear-gradient(130deg, var(--brand-accent), var(--brand-accent));
-}
-
-.topbar-tools {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  min-width: 0;
-  width: 100%;
-  max-width: min(760px, 70vw);
-  justify-self: center;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  justify-self: end;
+  color: var(--brand);
+  border-bottom-color: var(--brand);
 }
 
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.42rem;
-  min-height: 1.95rem;
-  border-radius: 999px;
-  border-color: var(--line-strong);
+  gap: 0.4rem;
+  min-height: 2.1rem;
+  padding: 0 0.4rem 0 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
   background: var(--surface-solid);
-  color: #25596f;
-  padding: 0.26rem 0.42rem 0.26rem 0.7rem;
+  box-shadow: none;
+  color: var(--brand-deep);
   font-size: var(--text-sm);
   font-weight: 700;
 }
 
-.command-palette-trigger-label {
-  white-space: nowrap;
+.command-palette-trigger:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--brand-tint);
 }
 
-/* On narrow viewports the label collapses, leaving just the keycap so
-   the topbar still has room for Magic Nav. */
-@media (max-width: 860px) {
-  .command-palette-trigger-label {
-    display: none;
-  }
-  .command-palette-trigger {
-    padding: 0.26rem 0.5rem;
-  }
+.command-palette-trigger-label {
+  white-space: nowrap;
 }
 
 .command-palette-trigger-kbd {
@@ -359,23 +343,27 @@ h6 {
   white-space: nowrap;
 }
 
+/* Magic Nav: a search-like field with the Open and ? buttons inside it. */
+/* The Magic Nav field gives way first when the row gets tight. */
 .magic-identifier-shell {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.16rem;
+  flex: 0 1 22rem;
   min-width: 0;
-  width: 100%;
 }
 
 .magic-identifier-form {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.26rem 0.38rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(249, 252, 253, 0.96);
+  gap: 0.25rem;
+  height: 2.1rem;
+  padding: 0 0.2rem 0 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface-solid);
+}
+
+.magic-identifier-form:focus-within {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 2px rgba(27, 123, 151, 0.18);
 }
 
 .magic-identifier-form.has-error {
@@ -384,73 +372,83 @@ h6 {
 }
 
 .magic-identifier-label {
+  display: inline-flex;
   margin: 0;
-  display: block;
-  color: #365565;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  white-space: nowrap;
+  color: var(--muted);
+}
+
+.magic-identifier-label svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
 .magic-identifier-form input[type="text"] {
-  min-height: 1.95rem;
-  min-width: 12rem;
-  width: min(19rem, 46vw);
   flex: 1 1 auto;
-  border-radius: 999px;
-  border-color: var(--line-soft);
-  padding: 0.36rem 0.62rem;
+  width: auto;
+  min-width: 5rem;
+  min-height: 0;
+  height: 100%;
+  padding: 0 0.3rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-size: var(--text-sm);
+}
+
+.magic-identifier-form input[type="text"]:focus {
+  outline: none;
 }
 
 .magic-identifier-patch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.7rem;
+  min-height: 1.5rem;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  padding: 0.14rem 0.55rem;
+  padding: 0.1rem 0.5rem;
   color: var(--brand-accent);
   background: var(--brand-tint);
   font-size: var(--text-xs);
   font-weight: 700;
-  text-transform: none;
   white-space: nowrap;
 }
 
 .magic-identifier-patch.is-error {
-  border-color: #d29999;
+  border-color: var(--danger-line);
   color: var(--danger-text);
   background: var(--danger-bg);
-  text-transform: none;
 }
 
 .magic-identifier-form button {
-  min-height: 1.95rem;
-  border-radius: 999px;
-  padding: 0.3rem 0.72rem;
-  font-size: var(--text-sm);
+  min-height: 1.65rem;
+  padding: 0 0.6rem;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: var(--text-xs);
   line-height: 1;
 }
 
-/* Small "?" help button next to Magic Nav — opens a syntax cheat sheet.
-   Sized down so it doesn't compete with the primary Open button. */
+.magic-identifier-form button:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .magic-identifier-form .magic-identifier-help {
-  min-height: 1.95rem;
-  min-width: 1.95rem;
+  min-width: 1.65rem;
   padding: 0;
-  border-radius: 999px;
   border-color: var(--line-soft);
   background: var(--surface-tint);
-  color: #2e5e76;
-  font-size: var(--text-sm);
+  color: var(--brand-deep);
   font-weight: 800;
 }
 
 .magic-identifier-form .magic-identifier-help:hover {
   background: var(--brand-tint);
-  color: var(--brand-deep);
 }
 
 /* Help-page table-of-contents row at the top */
@@ -505,88 +503,76 @@ h6 {
   margin: 1rem auto 1.5rem;
 }
 
+/* ---- Trail -------------------------------------------------------------
+   One plain line above the content: breadcrumb on the left, Pin and the
+   Pinned / Recent links on the right. No boxes, no chips. */
 .context-strip {
-  display: grid;
-  /* Without an explicit track the implicit `auto` column sized itself to
-     the pinned/recent strip's max-content (~1230px) and pushed the whole
-     page into horizontal scroll below 1024px. `minmax(0, 1fr)` pins the
-     track to the container so the chips wrap instead. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.52rem;
-  margin-bottom: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-height: 1.75rem;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
 }
 
 .breadcrumbs {
   display: flex;
   align-items: center;
-  gap: 0.36rem;
   flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
   margin: 0;
 }
 
-.breadcrumb-link,
-.breadcrumb-current {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.75rem;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
 .breadcrumb-link {
-  text-decoration: none;
   color: var(--brand);
-  background: var(--surface-tint);
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.breadcrumb-link:hover,
-.breadcrumb-link:focus-visible {
-  color: #1b4d61;
-  border-color: var(--line-strong);
-  background: var(--brand-tint);
+.breadcrumb-link:hover {
+  text-decoration: underline;
 }
 
 .breadcrumb-current {
-  color: #355e72;
-  background: var(--brand-tint);
+  color: var(--ink-strong);
+  font-weight: 600;
 }
 
 .breadcrumb-separator {
-  color: #7893a0;
-  font-size: var(--text-xs);
-  font-weight: 700;
+  color: var(--ink-soft);
 }
 
 .quick-access {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
   flex-wrap: wrap;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  padding: 0.36rem 0.42rem;
-  background: rgba(252, 254, 255, 0.92);
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-width: 0;
+  margin-left: auto;
 }
 
-/* Pin toggle styled as a chip with a "Pin" / "Pinned" label, matching
-   the chip vocabulary used by quick-access-link and the breadcrumb's
-   nav-back-arrow. Avoids visual mismatch with its neighbours. */
 .quick-pin-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.32rem;
-  min-height: 1.75rem;
-  border-radius: 999px;
+  gap: 0.3rem;
+  min-height: 1.6rem;
+  padding: 0 0.55rem;
   border: 1px solid var(--line-soft);
-  background: var(--surface-tint);
-  color: #2a5f76;
-  padding: 0.18rem 0.72rem 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-solid);
+  box-shadow: none;
+  color: var(--brand-deep);
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
+}
+
+.quick-pin-toggle:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--brand-tint);
 }
 
 .quick-pin-toggle-glyph {
@@ -594,93 +580,63 @@ h6 {
   line-height: 1;
 }
 
-.quick-pin-toggle:hover,
-.quick-pin-toggle:focus-visible {
-  background: var(--brand-tint);
-  border-color: var(--line-strong);
-}
-
 .quick-pin-toggle.is-pinned {
   border-color: var(--brand-accent);
-  color: var(--surface-solid);
-  background: linear-gradient(130deg, var(--brand-accent), var(--brand-accent));
-}
-
-.quick-pin-toggle.is-pinned:hover,
-.quick-pin-toggle.is-pinned:focus-visible {
-  filter: brightness(1.05);
+  background: var(--brand-tint);
+  color: var(--brand);
 }
 
 .quick-access-group {
   display: inline-flex;
-  align-items: center;
-  gap: 0.32rem;
+  align-items: baseline;
+  gap: 0.5rem;
   min-width: 0;
 }
 
 .quick-access-label {
-  color: var(--ink-soft);
-  font-size: var(--text-xs);
-  font-weight: 700;
+  color: var(--muted);
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .quick-access-links {
   display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
   flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.75rem;
+  min-width: 0;
 }
 
 .quick-access-link {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  padding: 0.18rem 0.52rem;
-  text-decoration: none;
-  color: var(--brand-deep);
-  background: var(--surface-tint);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  line-height: 1.2;
-  max-width: 14rem;
+  max-width: 12rem;
   overflow: hidden;
+  color: var(--brand-deep);
+  font-weight: 600;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.quick-access-link:hover,
-.quick-access-link:focus-visible {
-  color: var(--brand-deep);
-  border-color: var(--line-strong);
-  background: var(--brand-tint);
+.quick-access-link:hover {
+  color: var(--brand);
+  text-decoration: underline;
 }
 
-/* Freshly-pinned link briefly slides in and pulses so the user sees
-   the action took effect. Removed after 1.2 s in JS. Respects
-   prefers-reduced-motion. */
+/* A freshly pinned link fades in so the click visibly took effect.
+   Removed after 1.2 s in JS. */
 .quick-access-link.is-newly-pinned {
   animation: quick-access-pin-in 600ms ease both;
-  border-color: var(--brand-2, var(--brand-accent));
-  box-shadow: 0 0 0 2px rgba(47, 115, 139, 0.18);
 }
 
 @keyframes quick-access-pin-in {
-  from { transform: translateY(-4px) scale(0.92); opacity: 0; }
-  to   { transform: translateY(0) scale(1);      opacity: 1; }
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .quick-access-link.is-newly-pinned {
     animation: none;
   }
-}
-
-.quick-access-empty {
-  color: #8a9da7;
-  font-size: var(--text-xs);
-  font-weight: 600;
 }
 
 /* Base `.cards` grid — used wherever KPI tiles appear (dashboard,
@@ -924,21 +880,42 @@ button:focus-visible,
 }
 
 
+/* ---- Header squeeze (1025–1180 px) ----------------------------------
+   The one-row header only just fits here: drop the product name (the
+   SAMS mark stays) and the shortcut hint, and show fewer Recent pages. */
+@media (max-width: 1180px) and (min-width: 1025px) {
+  .brand-name,
+  .command-palette-trigger-kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .quick-access-group.is-recent .quick-access-link:nth-child(n + 4) {
+    display: none;
+  }
+}
+
 /* ---- Tablet breakpoint (≤1024 px) ------------------------------------
    Between the desktop and the small-phone breakpoints. Tightens the
    most expensive horizontal blocks so iPads, split-screens, and narrow
    laptop windows stop overflowing. */
 @media (max-width: 1024px) {
-  /* Topbar: brand + magic-nav + actions wrap into 2 rows so the long
-     Magic Nav placeholder doesn't crowd the Search & jump trigger. */
+  /* Header: the main navigation moves to its own row under brand + tools. */
   .topbar-row {
-    flex-wrap: wrap;
-    row-gap: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand tools"
+      "nav nav";
+    row-gap: 0.15rem;
   }
 
-  .magic-identifier-shell {
-    order: 3;
-    flex: 1 0 100%;
+  .main-nav {
+    margin-inline: -0.7rem;
+  }
+
+  .quick-access-group.is-recent .quick-access-link:nth-child(n + 3) {
+    display: none;
   }
 
   /* Wide tables — give them horizontal scroll with a faint right-edge
@@ -978,30 +955,40 @@ button:focus-visible,
 /* ---- Small breakpoint (~640px) for tablet / phone --------------------- */
 
 @media (max-width: 640px) {
-  /* Compress the brand cluster: hide the subtitle, keep the chip + heading. */
-  .brand p {
+  /* Header: brand, then the two inputs across the full width, then the
+     navigation. The shortcut key means nothing on a touch screen. */
+  .topbar-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "tools"
+      "nav";
+    row-gap: var(--space-2);
+  }
+
+  .magic-identifier-shell {
+    flex: 1 1 auto;
+  }
+
+  .magic-identifier-form {
+    height: 2.6rem;
+  }
+
+  .magic-identifier-form button {
+    min-height: 2.1rem;
+  }
+
+  .command-palette-trigger {
+    min-height: 2.6rem;
+  }
+
+  .command-palette-trigger-kbd {
     display: none;
   }
 
-  .brand h1 {
-    font-size: var(--text-base);
-  }
-
-  /* The topbar grid drops to two rows: brand + magic-nav, then nav row. */
-  .topbar-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.6rem;
-  }
-
-  .topbar-tools {
-    grid-column: 1 / -1;
-    max-width: 100%;
-    justify-self: stretch;
-  }
-
-  .magic-identifier-form input[type="text"] {
-    min-width: 0;
-    width: 100%;
+  /* Trail: the breadcrumb and Pin stay, the Recent list goes. */
+  .quick-access-group.is-recent {
+    display: none;
   }
 
   /* Larger touch targets for primary inputs / buttons on small screens. */
@@ -1015,9 +1002,13 @@ button:focus-visible,
     min-height: 2.75rem;
   }
 
-  .main-nav a,
-  .sub-nav a {
-    padding-block: 0.5rem;
+  .main-nav {
+    margin-inline: -0.45rem;
+  }
+
+  .main-nav a {
+    padding: 0.55rem 0.45rem;
+    font-size: var(--text-sm);
   }
 
   .page {
