@@ -257,7 +257,9 @@ body.has-command-palette {
 }
 
 .detail-field-row.is-long-value dd,
-.detail-field-row.is-long-value .detail-field-display {
+.detail-field-row.is-long-value .detail-field-display,
+.detail-field-row.is-long-value .detail-field-editor input,
+.detail-field-row.is-long-value .detail-field-editor select {
   /* Prose-like values read left-aligned; the right-aligned scan column
      is for short text / numbers / dates (see UX invariants). */
   text-align: left;
@@ -1380,6 +1382,26 @@ button.record-action:disabled {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* One label column per section: the rows share it through `subgrid`, so
+   the label column is as wide as the section's longest label (capped at
+   45 %) and every value — and every edit box — starts at the same x.
+   Without it each row sized its own label and the edit boxes were ragged.
+   Stacked rows (`.is-long-value`) and dividers span both columns. */
+.fact-list.sample-field-list:not(.fact-list-band),
+.fact-list.project-field-list:not(.fact-list-band),
+.fact-list.user-field-list:not(.fact-list-band) {
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
+  column-gap: var(--space-2);
+}
+
+.fact-list:not(.fact-list-band) > * {
+  grid-column: 1 / -1;
+}
+
+.fact-list:not(.fact-list-band) > .detail-field-row:not(.is-long-value) {
+  grid-template-columns: subgrid;
+}
+
 /* No value may push past its column, however long and unbreakable
    (graph batch names, sample labels, e-mail addresses). Every box on
    the way down may shrink below its content's width, and the text wraps
@@ -1693,8 +1715,8 @@ button.record-action:disabled {
 
   /* Short values keep label and value on one line on a phone too; the
      general 640px rule stacks every row, which doubled the page length. */
-  .fact-list .detail-field-row:not(.is-long-value):not([data-field-kind="multiline"]) {
-    grid-template-columns: fit-content(45%) minmax(0, 1fr);
+  .fact-list:not(.fact-list-band) > .detail-field-row:not(.is-long-value) {
+    grid-template-columns: subgrid;
     gap: var(--space-2);
   }
 }
