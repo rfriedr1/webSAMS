@@ -1,0 +1,135 @@
+/* Shared components and responsive overrides that belong to no single
+   page: badges, status pills, the panel entrance animations, and the
+   ≤1024 / ≤860 px adjustments for tables, detail rows and the command
+   palette. Loaded after the page stylesheets it overrides. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.14rem 0.54rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Status pill: flattened so it stops reading as a button. Pre-rework
+   versions had a solid colored background that made users try to click
+   it. Now: thin 1 px border in the status color + colored text on a
+   neutral surface. Still legible, no longer button-shaped. */
+.status-pill {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: transparent;
+  font-weight: 700;
+}
+
+.status-pill::before {
+  content: "";
+  display: inline-block;
+  width: 0.46rem;
+  height: 0.46rem;
+  margin-right: 0.34rem;
+  border-radius: 999px;
+  background: currentColor;
+  vertical-align: 0.06em;
+}
+
+.status-planned {
+  color: #a06b1d;
+  border-color: var(--warn-line);
+  background: transparent;
+}
+
+.status-running {
+  color: var(--brand-deep);
+  border-color: var(--line-strong);
+  background: transparent;
+}
+
+.status-closed,
+.status-done {
+  color: var(--success);
+  border-color: var(--success-line);
+  background: transparent;
+}
+
+.status-on-hold,
+.status-hold {
+  color: #7d3675;
+  border-color: #dfc0de;
+  background: transparent;
+}
+
+.status-unknown {
+  color: var(--muted);
+  border-color: var(--line);
+  background: transparent;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .table-wrap {
+    max-height: 56dvh;
+  }
+
+  .user-field-row,
+  .project-field-row,
+  .sample-field-row {
+    grid-template-columns: 1fr;
+    gap: 0.18rem;
+  }
+
+  .user-projects-table-wrap {
+    max-height: 54dvh;
+  }
+
+  .sample-add-target-form {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .command-palette-panel {
+    width: 98vw;
+    padding: 0.56rem;
+  }
+
+  .command-palette-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .command-palette-close {
+    width: 100%;
+  }
+}

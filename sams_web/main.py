@@ -44,7 +44,9 @@ _CSS_BUNDLE_FILES: tuple[str, ...] = (
     "style-core.css",
     "style-tables.css",
     "style-detail-pages.css",
-    "style-settings-kpi.css",
+    "style-components.css",
+    "style-setup.css",
+    "style-dashboard.css",
 )
 
 _JS_BUNDLE_FILES: tuple[str, ...] = (

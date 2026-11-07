@@ -381,13 +381,11 @@ def lab_analysis_page(
     return templates.TemplateResponse(request, "lab_queue.html",
         {
             "request": request,
-            "title": "Analysis Workflow",
-            "description": "Analysis worklist for samples waiting for measurement and result review.",
+            "title": "Analysis",
             "table_key": "waiting_for_meas",
             "table_title": "Waiting for measurement",
             "rows": rows,
             "show_on_hold": False,
-            "show_on_hold_enabled": False,
             "magazine_lookup_enabled": True,
             "magazine_query": magazine_query,
             "magazine_table_columns": (

@@ -6,33 +6,14 @@
     All numbers and labels come from `build_dashboard_view` in
     routers/pages_dashboard_setup_help.py. -#}
 
-{% macro queue_cell(key, row) -%}
-  {%- set key_lower = key|string|lower -%}
-  {%- set display_value = format_table_cell_value(key, row.get(key)) -%}
-  {%- set sample_nr = row.get("sample_nr") -%}
-  {%- set prep_nr = row.get("prep_nr") -%}
-  {%- set target_nr = row.get("target_nr") -%}
-  {%- if key_lower == "sample_nr" and sample_nr is not none -%}
-    <a href="/samples/{{ sample_nr }}" class="table-link">{{ display_value }}</a>
-  {%- elif key_lower == "prep_nr" and sample_nr is not none and prep_nr is not none -%}
-    <a href="/samples/{{ sample_nr }}/preparations/{{ prep_nr }}" class="table-link">{{ display_value }}</a>
-  {%- elif key_lower in ("target_nr", "target_id") and sample_nr is not none and prep_nr is not none and target_nr is not none -%}
-    <a href="/samples/{{ sample_nr }}/preparations/{{ prep_nr }}/targets/{{ target_nr }}" class="table-link">{{ display_value }}</a>
-  {%- elif key_lower == "project" and row.get("project_nr") is not none -%}
-    <a href="/projects/{{ row.get('project_nr') }}" class="table-link">{{ display_value }}</a>
-  {%- elif key_lower == "last_name" and row.get("user_nr") is not none -%}
-    <a href="/submitters/{{ row.get('user_nr') }}" class="table-link">{{ display_value }}</a>
-  {%- else -%}
-    {{ display_value }}
-  {%- endif -%}
-{%- endmacro %}
+{% from "_table_macros.html" import table_cell %}
 
 {% block content %}
 <div class="dash-overview" data-page-label="Dashboard">
   <section class="panel dash-panel" aria-labelledby="dash-queues-title">
-    <div class="dash-panel-head">
-      <h2 id="dash-queues-title" class="dash-panel-title">Lab queues</h2>
-      <form method="get" action="/" class="dash-held-form">
+    <div class="panel-bar">
+      <h2 id="dash-queues-title" class="panel-bar-title is-small">Lab queues</h2>
+      <form method="get" action="/" class="dash-held-form panel-bar-actions">
         <label class="dash-toggle" title="Count and list samples on hold in Planned">
           <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" />
           Include held samples
@@ -92,9 +73,9 @@
   </section>
 
   <section class="panel dash-panel" aria-labelledby="dash-standards-title">
-    <div class="dash-panel-head">
-      <h2 id="dash-standards-title" class="dash-panel-title">Standards ready</h2>
-      <span class="dash-panel-count">{{ standards_total }} targets</span>
+    <div class="panel-bar">
+      <h2 id="dash-standards-title" class="panel-bar-title is-small">Standards ready</h2>
+      <span class="panel-bar-count">{{ standards_total }} targets</span>
     </div>
 
     <ul class="dash-bars" role="list">
@@ -159,7 +140,7 @@
         <tbody>
           {% for row in tab.rows %}
           <tr>
-            {% for key in tab.columns %}<td>{{ queue_cell(key, row) }}</td>{% endfor %}
+            {% for key in tab.columns %}<td>{{ table_cell(key, row) }}</td>{% endfor %}
           </tr>
           {% endfor %}
         </tbody>

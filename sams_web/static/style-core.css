@@ -694,8 +694,8 @@ h6 {
 
 /* A panel's title line: title, a muted count or note beside it, and any
    controls on the right. The one heading pattern for list and tool pages
-   (Samples, Search, Analysis, Setup); the dashboard and the record pages
-   keep their own equivalents. */
+   (dashboard, Samples, Search, Analysis, Setup); record pages use
+   `render_record_head`, queue tables the fold-away table summary. */
 .panel-bar {
   display: flex;
   flex-wrap: wrap;
@@ -746,19 +746,12 @@ h6 {
   color: var(--muted);
 }
 
-.inline-form,
-.stack-form {
+.inline-form {
   display: flex;
   gap: 0.52rem;
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 0.85rem;
-}
-
-.stack-form {
-  align-items: stretch;
-  flex-direction: column;
-  max-width: 540px;
 }
 
 .inline-notice {
@@ -860,7 +853,6 @@ button[name="action"][value="preview"] {
   border-color: var(--line-strong);
 }
 
-
 /* ---- Visible keyboard focus rings ----------------------------------- */
 
 button:focus-visible,
@@ -920,7 +912,6 @@ button:focus-visible,
   }
 }
 
-
 /* ---- Header squeeze (1025–1180 px) ----------------------------------
    The one-row header only just fits here: drop the product name (the
    SAMS mark stays) and the shortcut hint, and show fewer Recent pages. */
@@ -975,23 +966,11 @@ button:focus-visible,
     background-attachment: local, local, scroll;
   }
 
-  /* The detail-page sample-head-row title + edit toolbar stacks so the
-     h2 always gets its full width. */
-  .sample-head-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .sample-head-row > .detail-edit-toolbar {
-    justify-content: flex-end;
-  }
-
   /* Dashboard cards collapse one column earlier. */
   .cards {
     grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
   }
 }
-
 
 /* ---- Small breakpoint (~640px) for tablet / phone --------------------- */
 

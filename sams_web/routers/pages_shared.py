@@ -6,24 +6,19 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from sams_web import __version__
 from sams_web.config import get_settings
 from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_COMMAND_LABELS,
-    MAGIC_IDENTIFIER_COMMAND_ROUTES,
     MAGIC_IDENTIFIER_NAME_LABELS,
     MAGIC_IDENTIFIER_PREFIX_LABELS,
-    MAGIC_IDENTIFIER_PREFIX_ROUTES,
     MAGIC_IDENTIFIER_PREPARATION_LABEL,
     MAGIC_IDENTIFIER_SAMPLE_LABEL,
     MAGIC_IDENTIFIER_TARGET_LABEL,
-    append_magic_feedback,
-    build_magic_nav_rules,
-    resolve_magic_identifier,
 )
+from sams_web.search import fk_based_link
 from sams_web.navigation import (
     MAIN_NAV_ITEMS,
     NAVIGATION_COMMAND_ENTRIES,
@@ -31,8 +26,6 @@ from sams_web.navigation import (
     is_subnav_active,
     resolve_active_module,
 )
-from sams_web.services import SamsService
-from sams_web.thresholds import STANDARD_LABELS
 from sams_web.viewmodels import detail_sections as ds
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -42,67 +35,6 @@ logger = logging.getLogger(__name__)
 APP_SUBTITLE_BASE = "CEZA C14 Laboratory Information System"
 
 LAST_SAMPLE_COOKIE = "last_sample_nr"
-
-LAB_OPERATION_CONFIGS: dict[str, dict[str, Any]] = {
-    "preparation": {
-        "title": "Preparation Workflow",
-        "description": "Preparation-centric view for chemistry and pre-treatment tracking.",
-        "context": "preparations",
-        "default_limit": 400,
-        "columns": (
-            "sample_nr",
-            "prep_nr",
-            "batch",
-            "prep_start",
-            "prep_end",
-            "cn_ratio",
-            "c_percent",
-            "n_percent",
-            "prep_comment",
-        ),
-    },
-    "graphitization": {
-        "title": "Graphitization Workflow",
-        "description": "Target-centric view for graphitization, magazine assignment, and target handling.",
-        "context": "targets",
-        "default_limit": 400,
-        "columns": (
-            "sample_nr",
-            "prep_nr",
-            "target_nr",
-            "graph_batch",
-            "graphitized",
-            "magazine",
-            "position",
-            "weight",
-            "conc_c",
-            "conc_n",
-            "target_comment",
-        ),
-    },
-    "analysis": {
-        "title": "Analysis Workflow",
-        "description": "Measurement-focused view with FM, d13C, and C14 result indicators.",
-        "context": "targets",
-        "default_limit": 400,
-        "columns": (
-            "sample_nr",
-            "prep_nr",
-            "target_nr",
-            "magazine",
-            "position",
-            "calcset",
-            "fm",
-            "fm_sig",
-            "dc13",
-            "dc13_sig",
-            "c14_age",
-            "c14_age_sig",
-            "meas_comment",
-        ),
-        "require_any_fields": ("c14_age", "fm", "dc13"),
-    },
-}
 
 TABLE_HEADER_LABELS: dict[str, str] = {
     # Identifiers
@@ -267,6 +199,8 @@ templates.env.globals["format_cn_ratio"] = ds.format_cn_ratio
 templates.env.globals["format_cn_ratio_from_conc"] = ds.format_cn_ratio_from_conc
 templates.env.globals["format_table_header_label"] = format_table_header_label
 templates.env.globals["format_table_cell_value"] = format_table_cell_value
+# Which table cells link to which record: one rule for every table.
+templates.env.globals["row_link"] = fk_based_link
 templates.env.globals["main_navigation_items"] = MAIN_NAV_ITEMS
 templates.env.globals["sub_navigation_items"] = SUB_NAV_ITEMS
 templates.env.globals["navigation_command_entries"] = NAVIGATION_COMMAND_ENTRIES
@@ -281,64 +215,7 @@ templates.env.globals["app_database"] = get_settings().database_name
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261107-23"
-
-
-def has_non_empty_value(row: dict[str, Any], keys: tuple[str, ...]) -> bool:
-    for key in keys:
-        value = row.get(key)
-        if value is None:
-            continue
-        if isinstance(value, str) and value.strip() == "":
-            continue
-        return True
-    return False
-
-
-def select_columns(rows: list[dict[str, Any]], preferred_columns: tuple[str, ...]) -> list[dict[str, Any]]:
-    if not rows:
-        return rows
-    available = {key for row in rows for key in row.keys()}
-    selected = [key for key in preferred_columns if key in available]
-    if not selected:
-        return rows
-    return [{key: row.get(key) for key in selected} for row in rows]
-
-
-def render_lab_operation_page(
-    request: Request,
-    mode: str,
-    phrase: str,
-    limit: int,
-    service: SamsService,
-):
-    config = LAB_OPERATION_CONFIGS[mode]
-    context = config["context"]
-    normalized_phrase = phrase.strip()
-    resolved_limit = limit if limit > 0 else int(config["default_limit"])
-    error: str | None = None
-    rows: list[dict[str, Any]] = []
-    try:
-        rows = service.search(context=context, phrase=normalized_phrase, limit=resolved_limit)
-        required_fields = config.get("require_any_fields")
-        if required_fields:
-            rows = [row for row in rows if has_non_empty_value(row, tuple(required_fields))]
-        rows = select_columns(rows, tuple(config.get("columns", ())))
-    except ValueError as exc:
-        error = str(exc)
-
-    return templates.TemplateResponse(request, "lab_operations.html",
-        {
-            "request": request,
-            "mode": mode,
-            "title": config["title"],
-            "description": config["description"],
-            "phrase": phrase,
-            "limit": resolved_limit,
-            "rows": rows,
-            "error": error,
-        },
-    )
+templates.env.globals["css_v"] = "20261107-25"
 
 
 def parse_positive_int(raw_value: str) -> int | None:

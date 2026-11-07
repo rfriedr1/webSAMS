@@ -40,12 +40,15 @@ def fk_based_link(column: str, row: Mapping[str, Any]) -> str | None:
 
     - `sample_nr` column → `/samples/<sample_nr>`
     - `project_nr` or `project` column → `/projects/<project_nr>`
-    - `user_nr` or `last_name` column → `/submitters/<user_nr>`
+    - `user_nr`, `last_name` or `user_last_name` column → `/submitters/<user_nr>`
     - `prep_nr` column (with `sample_nr` in row) → `/samples/<sample_nr>/preparations/<prep_nr>`
-    - `target_nr` or `c14_age` column (with sample/prep/target FK in row) →
-      `/samples/<sample_nr>/preparations/<prep_nr>/targets/<target_nr>`
+    - `target_nr`, `target_id` or `c14_age` column (with sample/prep/target FK
+      in row) → `/samples/<sample_nr>/preparations/<prep_nr>/targets/<target_nr>`
 
-    Returns `None` for columns that have no entity-detail link.
+    Returns `None` for columns that have no entity-detail link. Also the
+    `row_link` template global, so every table (search, dashboard, lab
+    queues, magazine lookup) links the same columns the same way through
+    the `table_cell` macro in `_table_macros.html`.
     """
     sample_nr = row.get("sample_nr")
     project_nr = row.get("project_nr")
@@ -58,11 +61,11 @@ def fk_based_link(column: str, row: Mapping[str, Any]) -> str | None:
         return f"/samples/{sample_nr}"
     if column_lower in ("project_nr", "project") and project_nr is not None:
         return f"/projects/{project_nr}"
-    if column_lower in ("user_nr", "last_name") and user_nr is not None:
+    if column_lower in ("user_nr", "last_name", "user_last_name") and user_nr is not None:
         return f"/submitters/{user_nr}"
     if column_lower == "prep_nr" and sample_nr is not None and prep_nr is not None:
         return f"/samples/{sample_nr}/preparations/{prep_nr}"
-    if column_lower in ("target_nr", "c14_age") and sample_nr is not None and prep_nr is not None and target_nr is not None:
+    if column_lower in ("target_nr", "target_id", "c14_age") and sample_nr is not None and prep_nr is not None and target_nr is not None:
         return f"/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}"
     return None
 

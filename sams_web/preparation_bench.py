@@ -196,13 +196,11 @@ class PreparationBench:
                 prep_nr_raw = str(bench_entry["preparation"].prep_nr)
 
         return {
-            "title": "Preparation Workflow",
-            "description": "Preparation worklist for samples that are ready for pre-treatment planning and execution.",
+            "title": "Preparation",
             "table_key": "planned",
             "table_title": "Planned",
             "rows": rows,
             "show_on_hold": show_on_hold,
-            "show_on_hold_enabled": True,
             "bench_entry_enabled": True,
             "bench_entry": bench_entry,
             "bench_sample_nr_query": sample_nr_raw,
