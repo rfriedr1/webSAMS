@@ -28,6 +28,108 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+# Queue labels in the dashboard's own words, keyed by the queue key used
+# for both the counts and the tables (`SamsRepository.get_dashboard_*`).
+DASHBOARD_QUEUE_LABELS: dict[str, str] = {
+    "waiting_express": "Express",
+    "planned": "Planned",
+    "in_prep": "In prep",
+    "waiting_for_graph": "Waiting for graph",
+    "waiting_for_meas": "Waiting for meas",
+}
+# Bar order in the Lab queues panel: the sample's path through the lab,
+# with Express (a priority flag, not a step) last.
+DASHBOARD_QUEUE_BAR_ORDER = ("planned", "in_prep", "waiting_for_graph", "waiting_for_meas", "waiting_express")
+# Columns a queue table needs only to build its links, never shown.
+DASHBOARD_HELPER_COLUMNS = ("project_nr", "user_nr")
+DASHBOARD_HELPER_COLUMNS_BY_QUEUE = {"waiting_for_meas": ("sample_nr", "prep_nr", "target_nr")}
+# Visible note next to a standard whose stock is at or below its threshold.
+STANDARD_STATUS_TAGS = {"critical": "Low", "warning": "Getting low"}
+
+
+def queue_anchor(key: str) -> str:
+    """Element id of a queue's table panel (`#tbl-planned`, …)."""
+    return "tbl-" + key.replace("_", "-")
+
+
+def _percent_of(value: int, maximum: int) -> float:
+    return round((value / maximum) * 100, 1) if maximum > 0 else 0.0
+
+
+def _format_threshold_rule(rule: dict[str, int]) -> str:
+    """Compact description of a standard's threshold rule, shown as the
+    hover text of its dashboard bar. Mirrors the language of Setup →
+    Standard Inventory Thresholds."""
+    if not rule:
+        return ""
+    return (
+        f"Red below {rule['red_below']}"
+        f" · Yellow {rule['yellow_min']}–{rule['yellow_max']}"
+        f" · Green above {rule['green_above']}"
+    )
+
+
+def build_dashboard_view(data: dict[str, Any]) -> dict[str, Any]:
+    """Shape `SamsService.get_dashboard()` into what dashboard.html shows:
+    queue bars, standard bars and one tab per queue table. Pure, so the
+    page logic is testable without a database."""
+    counts: dict[str, int] = data["counts"]
+    standards: dict[str, int] = data["standards"]
+    statuses: dict[str, str] = data["standard_statuses"]
+    thresholds = data["standard_thresholds"]
+    tables: dict[str, list[dict[str, Any]]] = data["tables"]
+
+    max_count = max(counts.values(), default=0)
+    queue_bars = [
+        {
+            "key": key,
+            "label": DASHBOARD_QUEUE_LABELS.get(key, key),
+            "value": counts.get(key, 0),
+            "pct": _percent_of(counts.get(key, 0), max_count),
+            "anchor": queue_anchor(key),
+        }
+        for key in DASHBOARD_QUEUE_BAR_ORDER
+    ]
+
+    max_standard = max(standards.values(), default=0)
+    standard_bars = []
+    for label, key in STANDARD_LABELS:
+        value = standards.get(key, 0)
+        status = statuses.get(key, "neutral")
+        standard_bars.append(
+            {
+                "key": key,
+                "label": label,
+                "value": value,
+                "pct": _percent_of(value, max_standard),
+                "status": status,
+                "tag": STANDARD_STATUS_TAGS.get(status, ""),
+                "rule_summary": _format_threshold_rule(thresholds.get(key, {})),
+            }
+        )
+
+    queue_tabs = []
+    for key, rows in tables.items():
+        hidden = set(DASHBOARD_HELPER_COLUMNS) | set(DASHBOARD_HELPER_COLUMNS_BY_QUEUE.get(key, ()))
+        columns = [column for column in (rows[0].keys() if rows else ()) if column not in hidden]
+        queue_tabs.append(
+            {
+                "key": key,
+                "label": DASHBOARD_QUEUE_LABELS.get(key, key.replace("_", " ").capitalize()),
+                "anchor": queue_anchor(key),
+                "rows": rows,
+                "columns": columns,
+            }
+        )
+
+    return {
+        "queue_bars": queue_bars,
+        "standard_bars": standard_bars,
+        "standards_total": sum(standards.get(key, 0) for _label, key in STANDARD_LABELS),
+        "queue_tabs": queue_tabs,
+    }
+
+
 @router.get("/")
 def dashboard(
     request: Request,
@@ -35,68 +137,10 @@ def dashboard(
     service: SamsService = Depends(get_service),
 ):
     data = service.get_dashboard(show_on_hold=show_on_hold)
-    counts = data["counts"]
-    standards = data["standards"]
-    standard_statuses = data["standard_statuses"]
-    chart_spec = [
-        ("Planned", "planned"),
-        ("In Prep", "in_prep"),
-        ("Waiting for Graph", "waiting_for_graph"),
-        ("Waiting for Meas", "waiting_for_meas"),
-        ("Express", "waiting_express"),
-    ]
-    standards_spec = STANDARD_LABELS
-    max_count = max(max(counts.values(), default=0), 1)
-    queue_chart = [
-        {
-            "label": label,
-            "key": key,
-            "value": counts.get(key, 0),
-            "pct": round((counts.get(key, 0) / max_count) * 100, 1),
-        }
-        for label, key in chart_spec
-    ]
-    standards_thresholds = data["standard_thresholds"]
-
-    def _format_threshold_rule(rule: dict[str, int]) -> str:
-        """Compact human description of a standard's threshold rule, shown
-        as a hover tooltip on the dashboard standards-card. Mirrors the
-        language of the Setup → Standard Inventory Thresholds editor so
-        the user's mental model lines up across the two surfaces."""
-        if not rule:
-            return ""
-        return (
-            f"Red below {rule['red_below']}"
-            f" · Yellow {rule['yellow_min']}–{rule['yellow_max']}"
-            f" · Green above {rule['green_above']}"
-        )
-
-    standards_cards = [
-        {
-            "label": label,
-            "key": key,
-            "value": standards.get(key, 0),
-            "status": standard_statuses.get(key, "neutral"),
-            "rule_summary": _format_threshold_rule(standards_thresholds.get(key, {})),
-        }
-        for label, key in standards_spec
-    ]
-    max_standard_count = max(max(standards.values(), default=0), 1)
-    standards_chart = [
-        {
-            **item,
-            "pct": round((item["value"] / max_standard_count) * 100, 1),
-        }
-        for item in standards_cards
-    ]
     return templates.TemplateResponse(request, "dashboard.html",
         {
             "request": request,
-            "counts": counts,
-            "tables": data["tables"],
-            "queue_chart": queue_chart,
-            "standards_cards": standards_cards,
-            "standards_chart": standards_chart,
+            **build_dashboard_view(data),
             "show_on_hold": show_on_hold,
             "ea_tile": EaCheckLog(service).dashboard_tile(),
         },

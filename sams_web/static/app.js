@@ -26,6 +26,7 @@
     installers.installDetailEditMode?.();
     installers.installDetailEmptyFields?.();
     installers.installAnchorDetails?.();
+    installers.installTabPanels?.();
     installers.installFieldErrorSummary?.();
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();
