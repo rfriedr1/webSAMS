@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -45,6 +46,19 @@ DASHBOARD_HELPER_COLUMNS = ("project_nr", "user_nr")
 DASHBOARD_HELPER_COLUMNS_BY_QUEUE = {"waiting_for_meas": ("sample_nr", "prep_nr", "target_nr")}
 # Visible note next to a standard whose stock is at or below its threshold.
 STANDARD_STATUS_TAGS = {"critical": "Low", "warning": "Getting low"}
+# Lab queue bars split each queue by its project's desired date.
+DASHBOARD_DUE_SOON_DAYS = 14
+DEADLINE_BANDS = ("late", "soon", "later", "undated")
+DEADLINE_BAND_LABELS = {
+    "late": "Past desired date",
+    "soon": f"Due within {DASHBOARD_DUE_SOON_DAYS} days",
+    "later": "Due later",
+    "undated": "No desired date",
+}
+# Each queue's count is its table's rows, except Waiting for graph: its
+# table lists one row per target, its count is per sample. The deadline
+# split counts what the count counts.
+DASHBOARD_QUEUE_UNIT = {"waiting_for_graph": "sample_nr"}
 
 
 def queue_anchor(key: str) -> str:
@@ -69,26 +83,116 @@ def _format_threshold_rule(rule: dict[str, int]) -> str:
     )
 
 
-def build_dashboard_view(data: dict[str, Any]) -> dict[str, Any]:
+def _standard_scale(value: int, rule: dict[str, int], max_standard: int) -> dict[str, Any]:
+    """Bar geometry for one standard. A full bar means "enough": the scale
+    ends at the first green count (`green_above + 1`), so 11 Oxas against
+    a green threshold of 14 fill 73 % of the bar, not 100 % because they
+    happen to be the largest stock. The red and yellow ranges are drawn as
+    faint zones in the track. Without a rule the bar falls back to the
+    largest stock, and there is no target to show."""
+    if not rule:
+        return {"pct": _percent_of(value, max_standard), "target": None, "zones": None}
+    target = int(rule["green_above"]) + 1
+
+    def at(count: int) -> float:
+        return round(min(max(count, 0) / target, 1) * 100, 1)
+
+    return {
+        "pct": at(value),
+        "target": target,
+        "zones": {
+            "red_end": at(int(rule["red_below"])),
+            "yellow_start": at(int(rule["yellow_min"])),
+            "yellow_end": at(int(rule["yellow_max"]) + 1),
+        },
+    }
+
+
+def _as_date(value: Any) -> date | None:
+    """A queue row's desired date as a `date`, or None when it is missing
+    or a legacy sentinel (year < 1950)."""
+    if isinstance(value, datetime):
+        value = value.date()
+    elif isinstance(value, str):
+        try:
+            value = date.fromisoformat(value.strip()[:10])
+        except ValueError:
+            return None
+    if not isinstance(value, date) or value.year < 1950:
+        return None
+    return value
+
+
+def deadline_split(key: str, rows: list[dict[str, Any]], today: date) -> dict[str, int]:
+    """How many items of one queue are past their desired date, due within
+    `DASHBOARD_DUE_SOON_DAYS`, due later, or have no desired date. Counts
+    the same items as the queue's count (`DASHBOARD_QUEUE_UNIT`)."""
+    unit = DASHBOARD_QUEUE_UNIT.get(key)
+    soon_end = today + timedelta(days=DASHBOARD_DUE_SOON_DAYS)
+    split = dict.fromkeys(DEADLINE_BANDS, 0)
+    seen: set[Any] = set()
+    for row in rows:
+        ident = row.get(unit) if unit else None
+        if ident is not None:
+            if ident in seen:
+                continue
+            seen.add(ident)
+        desired = _as_date(row.get("desired_date"))
+        if desired is None:
+            split["undated"] += 1
+        elif desired < today:
+            split["late"] += 1
+        elif desired <= soon_end:
+            split["soon"] += 1
+        else:
+            split["later"] += 1
+    return split
+
+
+def _queue_bar(key: str, count: int, rows: list[dict[str, Any]], today: date) -> dict[str, Any]:
+    """One Lab queues bar. A queue has no natural maximum, so the bar is not
+    a fill level: it is the whole queue, split by how urgent its items are.
+    Only the queue's own count gives its size."""
+    split = deadline_split(key, rows, today)
+    total = sum(split.values())
+    label = DASHBOARD_QUEUE_LABELS.get(key, key)
+    segments = [
+        {"band": band, "count": split[band], "pct": _percent_of(split[band], total)}
+        for band in DEADLINE_BANDS
+        if split[band]
+    ]
+    details = ", ".join(f"{split[band]} {DEADLINE_BAND_LABELS[band].lower()}" for band in DEADLINE_BANDS if split[band])
+    return {
+        "key": key,
+        "label": label,
+        "value": count,
+        "late": split["late"],
+        "segments": segments,
+        "title": f"{label}: {count}" + (f" ({details})" if details else ""),
+        "anchor": queue_anchor(key),
+    }
+
+
+def build_dashboard_view(data: dict[str, Any], today: date | None = None) -> dict[str, Any]:
     """Shape `SamsService.get_dashboard()` into what dashboard.html shows:
     queue bars, standard bars and one tab per queue table. Pure, so the
     page logic is testable without a database."""
+    today = today or date.today()
     counts: dict[str, int] = data["counts"]
     standards: dict[str, int] = data["standards"]
     statuses: dict[str, str] = data["standard_statuses"]
     thresholds = data["standard_thresholds"]
     tables: dict[str, list[dict[str, Any]]] = data["tables"]
 
-    max_count = max(counts.values(), default=0)
     queue_bars = [
-        {
-            "key": key,
-            "label": DASHBOARD_QUEUE_LABELS.get(key, key),
-            "value": counts.get(key, 0),
-            "pct": _percent_of(counts.get(key, 0), max_count),
-            "anchor": queue_anchor(key),
-        }
+        _queue_bar(key, counts.get(key, 0), tables.get(key) or [], today)
         for key in DASHBOARD_QUEUE_BAR_ORDER
+    ]
+    present_bands = {segment["band"] for bar in queue_bars for segment in bar["segments"]}
+    deadline_legend = [
+        {"band": band, "label": DEADLINE_BAND_LABELS[band]}
+        for band in DEADLINE_BANDS
+        if band in present_bands
     ]
 
     max_standard = max(standards.values(), default=0)
@@ -96,15 +200,16 @@ def build_dashboard_view(data: dict[str, Any]) -> dict[str, Any]:
     for label, key in STANDARD_LABELS:
         value = standards.get(key, 0)
         status = statuses.get(key, "neutral")
+        rule = thresholds.get(key) or {}
         standard_bars.append(
             {
                 "key": key,
                 "label": label,
                 "value": value,
-                "pct": _percent_of(value, max_standard),
                 "status": status,
                 "tag": STANDARD_STATUS_TAGS.get(status, ""),
-                "rule_summary": _format_threshold_rule(thresholds.get(key, {})),
+                "rule_summary": _format_threshold_rule(rule),
+                **_standard_scale(value, rule, max_standard),
             }
         )
 
@@ -124,6 +229,8 @@ def build_dashboard_view(data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "queue_bars": queue_bars,
+        "deadline_legend": deadline_legend,
+        "due_soon_days": DASHBOARD_DUE_SOON_DAYS,
         "standard_bars": standard_bars,
         "standards_total": sum(standards.get(key, 0) for _label, key in STANDARD_LABELS),
         "queue_tabs": queue_tabs,

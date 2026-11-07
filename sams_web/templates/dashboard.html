@@ -43,17 +43,31 @@
       </form>
     </div>
 
+    {#- A queue has no maximum, so a bar is not a fill level: it is the whole
+        queue, split by the project's desired date (build_dashboard_view). -#}
     <ul class="dash-bars" role="list">
       {% for bar in queue_bars %}
       <li>
-        <a class="dash-bar dash-bar-{{ bar.key }}" href="#{{ bar.anchor }}" title="Show the {{ bar.label }} table">
+        <a class="dash-bar dash-bar-queue" href="#{{ bar.anchor }}" title="{{ bar.title }} · show the table">
           <span class="dash-bar-label">{{ bar.label }}</span>
-          <span class="dash-bar-track" aria-hidden="true"><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
+          <span class="dash-bar-track dash-bar-split" aria-hidden="true">
+            {%- for segment in bar.segments -%}
+            <span class="dash-bar-segment is-{{ segment.band }}" style="width: {{ segment.pct }}%;"></span>
+            {%- endfor -%}
+          </span>
           <span class="dash-bar-value">{{ bar.value }}</span>
+          {% if bar.late %}<span class="dash-bar-late">{{ bar.late }} late</span>{% endif %}
         </a>
       </li>
       {% endfor %}
     </ul>
+    {% if deadline_legend %}
+    <ul class="dash-legend" role="list" aria-label="Bar colours">
+      {% for item in deadline_legend %}
+      <li class="is-{{ item.band }}">{{ item.label }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
 
     {% if ea_tile %}
     <div class="dash-ea{% if ea_tile.overdue %} is-overdue{% endif %}">
@@ -91,8 +105,14 @@
           {% if bar.rule_summary %}title="{{ bar.label }}: {{ bar.value }} · {{ bar.rule_summary }}"{% endif %}
         >
           <span class="dash-bar-label">{{ bar.label }}</span>
-          <span class="dash-bar-track" aria-hidden="true"><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
-          <span class="dash-bar-value">{{ bar.value }}</span>
+          {#- A full bar is the first green count; the faint red / yellow
+              zones in the track show where the thresholds sit. -#}
+          <span
+            class="dash-bar-track{% if bar.zones %} has-zones{% endif %}"
+            {% if bar.zones %}style="--red-end: {{ bar.zones.red_end }}%; --yellow-start: {{ bar.zones.yellow_start }}%; --yellow-end: {{ bar.zones.yellow_end }}%;"{% endif %}
+            aria-hidden="true"
+          ><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
+          <span class="dash-bar-value">{{ bar.value }}{% if bar.target and bar.value < bar.target %}<span class="dash-bar-target" title="Green from {{ bar.target }}"> / {{ bar.target }}</span>{% endif %}</span>
           {% if bar.tag %}<span class="dash-bar-tag">{{ bar.tag }}</span>{% endif %}
         </div>
       </li>
