@@ -774,141 +774,70 @@ body.has-command-palette {
   font-style: italic;
 }
 
-/* /samples landing page action cards.
-
-   The shared `.cards` grid styles `<p>` as a big bold KPI number (`font-size:
-   1.45rem; font-weight: 800`) -- which is correct for the dashboard tiles
-   ("Planned 125") but wrong for prose paragraphs. The rules below override
-   that for the landing-page cards so the description paragraphs render at
-   regular reading weight, and the CTA sits as its own pill-shaped button
-   aligned to the bottom of the card. */
-.samples-landing-cards {
-  margin-top: 0.4rem;
-  align-items: stretch;
+/* ---- /samples landing ---------------------------------------------
+   A few starting points side by side, separated by one rule like the
+   fact-sheet columns: a small uppercase title, the record number as the
+   link, one muted line. No cards. */
+.landing-starts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 17rem));
+  margin: 0 0 var(--space-4) calc(-1 * var(--space-5));
+  clip-path: inset(0 0 0 1px);
 }
 
-.samples-landing-card {
+.landing-start {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 1rem 1rem 1.05rem;
-  min-height: 12rem;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-1) var(--space-5);
+  border-left: 1px solid var(--line-soft);
 }
 
-/* The shared `.cards p` rule sets a big-bold KPI value (1.45rem / 800).
-   Force-override here so the prose paragraphs render as normal body text. */
-.samples-landing-card h3 {
-  font-size: var(--text-sm) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.02em;
-  color: #6c8493 !important;
-  text-transform: uppercase;
-  margin: 0 0 0.15rem !important;
+.panel .landing-start .fact-group-title {
+  margin: 0;
+  padding: 0;
 }
 
-.samples-landing-card p {
-  margin: 0 !important;
-  font-size: var(--text-base) !important;
-  font-weight: 500 !important;
-  line-height: 1.4 !important;
-  color: var(--ink-strong) !important;
-}
-
-.samples-landing-card p strong {
-  font-weight: 700 !important;
-  color: var(--brand) !important;
-}
-
-.samples-landing-card .samples-landing-cta {
+.landing-start-link {
   align-self: flex-start;
-  margin-top: auto;
+  color: var(--brand);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-decoration: none;
 }
 
-.samples-landing-cta {
-  display: inline-flex !important;
-  align-items: center;
-  padding: 0.55rem 1rem !important;
-  border-radius: 999px !important;
-  background: linear-gradient(130deg, var(--brand), var(--brand-2)) !important;
-  color: var(--surface-solid) !important;
-  font-weight: 700 !important;
-  font-size: var(--text-base) !important;
-  line-height: 1 !important;
-  text-decoration: none !important;
-  border: 1px solid var(--brand) !important;
-  transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+.landing-start-link.is-text {
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
-.samples-landing-cta:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 14px rgba(15, 97, 121, 0.22);
-  color: var(--surface-solid) !important;
+.landing-start-link:hover {
+  text-decoration: underline;
 }
 
-/* Primary card — leads with a filled brand background so the user's eye
-   lands on it first. The secondary card keeps the default surface and
-   gets an outline-style CTA so visual weight clearly trails. */
-.samples-landing-card-primary {
-  background: linear-gradient(135deg, var(--brand), var(--brand-2)) !important;
-  border-color: transparent !important;
-  color: var(--surface-solid) !important;
-}
-
-.samples-landing-card-primary h3 {
-  color: rgba(255, 255, 255, 0.82) !important;
-}
-
-.samples-landing-card-primary p {
-  color: var(--surface-solid) !important;
-}
-
-.samples-landing-card-primary p strong {
-  color: var(--surface-solid) !important;
-}
-
-.samples-landing-card-primary .samples-landing-cta {
-  background: var(--surface-solid) !important;
-  color: var(--brand) !important;
-  border-color: var(--surface-solid) !important;
-}
-
-.samples-landing-card-primary .samples-landing-cta:hover {
-  filter: brightness(0.96);
-  color: var(--brand) !important;
-}
-
-/* Secondary CTA — outline style so it visibly defers to the primary. */
-.samples-landing-cta-secondary {
-  background: transparent !important;
-  color: var(--brand) !important;
-  border-color: var(--brand) !important;
-}
-
-.samples-landing-cta-secondary:hover {
-  background: rgba(15, 97, 121, 0.08) !important;
-  color: var(--brand) !important;
-}
-
-/* Magic-Nav explainer demoted to a quiet help line below the cards. */
-.samples-landing-hint {
-  margin: 0.6rem 0 0;
-  padding: 0.55rem 0.8rem;
-  border-left: 3px solid var(--line);
+.landing-start-note {
   color: var(--muted);
   font-size: var(--text-sm);
-  line-height: 1.45;
 }
 
-.samples-landing-hint strong {
-  color: var(--ink);
+.landing-hint {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 
-.samples-landing-hint code {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 0.04rem 0.34rem;
-  background: var(--surface-solid);
-  font-size: 0.85em;
+.landing-hint code {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: var(--surface-tint);
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
 }
 
 /* Empty-state row inside a list table — friendlier than a flat one-liner. */

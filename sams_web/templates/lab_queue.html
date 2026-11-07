@@ -18,27 +18,9 @@
 {% endblock %}
 
 {% block content %}
-{#- The benches carry no page header: the breadcrumb and the Lab sub-nav
-    already say where you are, and the bench is what the page is for. -#}
-{% if not bench_entry_enabled and not graph_bench_entry_enabled %}
-<section class="panel">
-  <div class="panel-head">
-    <h2>{{ title }}</h2>
-    <p>{{ description }}</p>
-  </div>
-
-  {% if show_on_hold_enabled %}
-  <form method="get" action="/lab/preparation" class="inline-form">
-    <label>
-      <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} />
-      include not-to-be-dated samples
-    </label>
-    <button type="submit">Refresh</button>
-  </form>
-  {% endif %}
-</section>
-{% endif %}
-
+{#- Lab pages carry no page header: the breadcrumb and the Lab sub-nav
+    already say where you are. The bench (or the analysis magazine lookup)
+    comes first, then the queue table. -#}
 {% if bench_entry_enabled %}
 {% include "_preparation_bench.html" %}
 {% endif %}
@@ -46,6 +28,95 @@
 {% if graph_bench_entry_enabled %}
 {% if ea_strip %}{% with ea_strip_compact = true %}{% include "_ea_check_strip.html" %}{% endwith %}{% endif %}
 {% include "_graphitization_bench.html" %}
+{% endif %}
+
+{% if magazine_lookup_enabled %}
+{#- Analysis: look up one magazine's targets. A tool row like the bench
+    lookup; the table only appears once a magazine is chosen. -#}
+<section class="panel" id="tbl-magazine-targets" data-page-label="Analysis">
+  <div class="panel-bar">
+    <h2 class="panel-bar-title is-small">Magazine</h2>
+    {% if magazine_query and not magazine_error %}
+    <span class="panel-bar-count">{{ magazine_rows|length }} target{{ '' if magazine_rows|length == 1 else 's' }} in {{ magazine_query }}</span>
+    {% endif %}
+    <form method="get" action="/lab/analysis" class="panel-bar-actions magazine-form" role="search">
+      <label class="sr-only" for="analysis-magazine">Magazine</label>
+      <div class="search-field magazine-field{% if magazine_error %} has-error{% endif %}">
+        <input
+          id="analysis-magazine"
+          type="text"
+          name="magazine"
+          value="{{ magazine_query or '' }}"
+          list="analysis-magazine-list"
+          placeholder="Magazine, e.g. {{ (magazine_options or ['130710'])[0] }}"
+          autocomplete="off"
+        />
+        {% if magazine_query %}
+        <a href="/lab/analysis" class="magazine-clear" title="Clear magazine" aria-label="Clear magazine">&times;</a>
+        {% endif %}
+      </div>
+      <datalist id="analysis-magazine-list">
+        {% for magazine_value in magazine_options or [] %}
+        <option value="{{ magazine_value }}"></option>
+        {% endfor %}
+      </datalist>
+      <button type="submit" class="search-submit">Show</button>
+    </form>
+  </div>
+
+  {% if magazine_error %}
+  <p class="error">{{ magazine_error }}</p>
+  {% elif magazine_query and magazine_rows %}
+  {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
+  <section data-table-filter data-table-download-name="magazine-{{ magazine_query }}">
+    <div class="table-wrap table-wrap-horizontal">
+      <table>
+        <thead>
+          <tr>
+            {% for key in visible_magazine_columns %}
+            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in magazine_rows %}
+          <tr>
+            {% for key in visible_magazine_columns %}
+            {% set key_lower = key|string|lower %}
+            {% set value = row.get(key) %}
+            {% set sample_nr_value = row.get("sample_nr") %}
+            {% set prep_nr_value = row.get("prep_nr") %}
+            {% set target_nr_value = row.get("target_nr") %}
+            {% set project_nr_value = row.get("project_nr") %}
+            {% set user_nr_value = row.get("user_nr") %}
+            {% set display_value = format_table_cell_value(key, value) %}
+            <td>
+              {% if key_lower == "sample_nr" and sample_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
+              <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "project" and project_nr_value is not none %}
+              <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% elif key_lower == "user_last_name" and user_nr_value is not none %}
+              <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
+              {% else %}
+              {{ display_value }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+  </section>
+  {% elif magazine_query %}
+  <p class="table-empty">No targets are assigned to magazine {{ magazine_query }} yet.</p>
+  {% endif %}
+</section>
 {% endif %}
 
 <section class="panel" id="tbl-{{ table_key|replace('_', '-') }}">
@@ -137,99 +208,4 @@
 </section>
 {% endif %}
 
-{% if magazine_lookup_enabled %}
-<section class="panel" id="tbl-magazine-targets">
-  <details class="table-collapsible" {% if magazine_query %}open{% endif %}>
-    <summary class="table-summary">
-      <span class="table-summary-title">Magazine Targets</span>
-      <span class="badge table-summary-count">
-        {% if magazine_query %}
-        {{ magazine_rows|length }} rows
-        {% else %}
-        Search
-        {% endif %}
-      </span>
-    </summary>
-
-    <form method="get" action="/lab/analysis" class="inline-form" style="margin-top: 0.6rem;">
-      <label>
-        Magazine
-        <input
-          type="text"
-          name="magazine"
-          value="{{ magazine_query or '' }}"
-          list="analysis-magazine-list"
-          placeholder="e.g. M123"
-          autocomplete="off"
-        />
-      </label>
-      <datalist id="analysis-magazine-list">
-        {% for magazine_value in magazine_options or [] %}
-        <option value="{{ magazine_value }}"></option>
-        {% endfor %}
-      </datalist>
-      <button type="submit">Search</button>
-      {% if magazine_query %}
-      <a href="/lab/analysis">Clear</a>
-      {% endif %}
-    </form>
-    {% if magazine_error %}
-    <p class="error" style="margin-top: 0.45rem;">{{ magazine_error }}</p>
-    {% endif %}
-
-    {% if not magazine_error and magazine_query and magazine_rows %}
-    {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
-    <section data-table-filter style="margin-top: 0.7rem;">
-      <div class="table-wrap table-wrap-horizontal">
-        <table>
-          <thead>
-            <tr>
-              {% for key in visible_magazine_columns %}
-              <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in magazine_rows %}
-            <tr>
-              {% for key in visible_magazine_columns %}
-              {% set key_lower = key|string|lower %}
-              {% set value = row.get(key) %}
-              {% set sample_nr_value = row.get("sample_nr") %}
-              {% set prep_nr_value = row.get("prep_nr") %}
-              {% set target_nr_value = row.get("target_nr") %}
-              {% set project_nr_value = row.get("project_nr") %}
-              {% set user_nr_value = row.get("user_nr") %}
-              {% set display_value = format_table_cell_value(key, value) %}
-              <td>
-                {% if key_lower == "sample_nr" and sample_nr_value is not none %}
-                <a href="/samples/{{ sample_nr_value }}" class="table-link">{{ display_value }}</a>
-                {% elif key_lower == "prep_nr" and sample_nr_value is not none and prep_nr_value is not none %}
-                <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}" class="table-link">{{ display_value }}</a>
-                {% elif key_lower == "target_nr" and sample_nr_value is not none and prep_nr_value is not none and target_nr_value is not none %}
-                <a href="/samples/{{ sample_nr_value }}/preparations/{{ prep_nr_value }}/targets/{{ target_nr_value }}" class="table-link">{{ display_value }}</a>
-                {% elif key_lower == "project" and project_nr_value is not none %}
-                <a href="/projects/{{ project_nr_value }}" class="table-link">{{ display_value }}</a>
-                {% elif key_lower == "user_last_name" and user_nr_value is not none %}
-                <a href="/submitters/{{ user_nr_value }}" class="table-link">{{ display_value }}</a>
-                {% else %}
-                {{ display_value }}
-                {% endif %}
-              </td>
-              {% endfor %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
-    </section>
-    {% elif not magazine_error and magazine_query %}
-    <p class="table-empty" style="margin-top: 0.6rem;">No targets found for magazine "{{ magazine_query }}".</p>
-    {% else %}
-    <p class="table-empty" style="margin-top: 0.6rem;">Enter a magazine value to load all targets assigned to that magazine.</p>
-    {% endif %}
-  </details>
-</section>
-{% endif %}
 {% endblock %}

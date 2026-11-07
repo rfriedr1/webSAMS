@@ -27,7 +27,7 @@
   <template data-setup-row-template="staff">{{ staff_row({"name": "", "role": "staff"}) }}</template>
   <button type="button" class="setup-add-row" data-setup-add-row="staff">+ Add a person</button>
   <div class="setup-actions">
-    <button type="submit">Save {{ active_section.title }}</button>
+    <button type="submit" class="setup-save">Save</button>
   </div>
 </form>
 {% include "setup/_add_row_script.html" %}

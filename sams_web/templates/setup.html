@@ -1,45 +1,43 @@
 {% extends "base.html" %}
 
+{#- Setup: the sections as a plain list on the left, the chosen section's
+    editor on the right. Saving is confirmed by the toast (?saved=true).
+    Redesigned 2026-11 (boxed section links, a page header and the storage
+    details on top made it heavy). -#}
 {% block content %}
 <section class="panel">
-  <div class="panel-head">
-    <h2>Setup</h2>
-    <p>Configuration center for system-level options and future setup modules.</p>
-  </div>
-  <p class="setup-note">
-    Storage file: <code>{{ active_section.storage_file }}</code>
-  </p>
-
-  {% if saved %}
-  <div class="result-box">Setup values were saved.</div>
-  {% endif %}
-  {% if error %}
-  <p class="error">{{ error }}</p>
-  {% endif %}
-
   <div class="setup-layout">
-    <aside class="setup-nav" aria-label="Setup sections">
+    <nav class="setup-nav" aria-label="Setup sections">
+      <h2 class="setup-nav-title">Setup</h2>
       {% for section in sections %}
       <a
         href="/setup?section={{ section.key }}"
-        class="setup-link {% if section.key == active_section.key %}is-active{% endif %}"
+        class="setup-link{% if section.key == active_section.key %} is-active{% endif %}"
+        {% if section.key == active_section.key %}aria-current="page"{% endif %}
       >
-        <strong>{{ section.title }}</strong>
-        <span>{{ section.status|title }}</span>
+        {{ section.title }}
+        {% if section.status != "active" %}<span class="setup-link-status">{{ section.status|title }}</span>{% endif %}
       </a>
       {% endfor %}
-    </aside>
+    </nav>
 
     <div class="setup-content">
-      <h3>{{ active_section.title }}</h3>
-      <p class="setup-note">{{ active_section.description }}</p>
-      <p class="setup-note">
-        Storage section key: <code>{{ active_section.storage_section }}</code>
-      </p>
+      <div class="panel-bar setup-head">
+        <h3 class="panel-bar-title">{{ active_section.title }}</h3>
+      </div>
+      <p class="setup-intro">{{ active_section.description }}</p>
+
+      {% if error %}
+      <p class="error">{{ error }}</p>
+      {% endif %}
 
       {#- One editor per section kind: templates/setup/_<kind>.html. The kind comes
           from the section's handler in setup_handlers.py. -#}
       {% include "setup/_" ~ active_section.kind ~ ".html" %}
+
+      <p class="setup-storage">
+        Stored in <code>{{ active_section.storage_file }}</code>, section <code>{{ active_section.storage_section }}</code>.
+      </p>
     </div>
   </div>
 </section>

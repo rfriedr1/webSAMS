@@ -11,62 +11,87 @@
   background: var(--surface-tint);
 }
 
+/* ---- Setup page (redesigned 2026-11) --------------------------------
+   Sections as a plain list on the left (active = brand tint, like the
+   main nav), the editor on the right behind one vertical rule. */
 .setup-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 0.9rem;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: var(--space-5);
 }
 
 .setup-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.1rem;
+  align-self: start;
+  position: sticky;
+  top: 7rem;
 }
 
-.setup-link {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  padding: 0.56rem 0.7rem 0.56rem 0.9rem;
-  text-decoration: none;
-  background: var(--surface-tint);
-  color: var(--muted);
-}
-
-.setup-link strong {
-  font-size: var(--text-sm);
+.panel .setup-nav-title {
+  margin: 0 0 var(--space-2);
+  padding-left: 0.6rem;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
-.setup-link span {
-  color: var(--ink-soft);
-  font-size: var(--text-xs);
+.setup-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0.42rem 0.6rem;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/* Active state: 3 px left-accent bar in the brand colour + heavier
-   weight on the label. Inactive items now sit at a lower contrast so
-   the active one truly pops. */
+.setup-link:hover {
+  color: var(--ink-strong);
+  background: var(--bg-top);
+  text-decoration: none;
+}
+
 .setup-link.is-active {
-  border-color: #89b6c7;
-  background: var(--brand-tint);
-  color: var(--ink);
-  box-shadow: inset 3px 0 0 0 var(--brand);
-}
-
-.setup-link.is-active strong {
-  font-weight: 800;
   color: var(--brand);
+  background: var(--brand-tint);
 }
 
-.setup-link.is-active span {
-  color: var(--ink-soft);
+.setup-link-status {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 
 .setup-content {
   min-width: 0;
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--line-soft);
+}
+
+.setup-head {
+  margin-bottom: var(--space-1);
+}
+
+.setup-intro {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-soft);
+  font-size: var(--text-base);
+}
+
+/* Where the section lives on disk: for whoever maintains the server,
+   so it sits quietly at the foot of the editor. */
+.setup-storage {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.setup-storage code {
+  font-size: var(--text-xs);
 }
 
 .setup-table td input[type="number"] {
@@ -74,8 +99,28 @@
   max-width: 6.8rem;
 }
 
+/* One action bar under every editor: Save on the right, like the bench
+   action bar. */
 .setup-actions {
-  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+
+.setup-actions .setup-save {
+  min-width: 7rem;
+  min-height: 2.3rem;
+  padding: 0 1.2rem;
+  border-radius: 9px;
+  box-shadow: none;
+  font-size: var(--text-sm);
+}
+
+.setup-actions .setup-save:hover {
+  transform: none;
 }
 
 .setup-threshold-list {
@@ -277,7 +322,6 @@
 @media (max-width: 1024px) {
   .split,
   .grid-2,
-  .setup-layout,
   .sample-workspace-grid,
   .sample-workspace-detail-grid {
     grid-template-columns: 1fr;
@@ -285,6 +329,29 @@
 }
 
 @media (max-width: 860px) {
+  .setup-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .setup-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.3rem;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .panel .setup-nav-title {
+    flex-basis: 100%;
+  }
+
+  .setup-content {
+    padding-left: 0;
+    border-left: 0;
+  }
+
   .table-wrap {
     max-height: 56dvh;
   }
@@ -459,7 +526,7 @@
 .setup-custom-row textarea { min-height: 3.6rem; resize: vertical; }
 
 .setup-add-row {
-  margin-top: var(--space-2);
+  margin: var(--space-2) 0 var(--space-4);
   min-height: 2.1rem;
   padding: 0.3rem 0.9rem;
   border: 1px dashed var(--brand);

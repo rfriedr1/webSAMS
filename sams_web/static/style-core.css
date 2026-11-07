@@ -692,6 +692,43 @@ h6 {
   margin-bottom: 0.8rem;
 }
 
+/* A panel's title line: title, a muted count or note beside it, and any
+   controls on the right. The one heading pattern for list and tool pages
+   (Samples, Search, Analysis, Setup); the dashboard and the record pages
+   keep their own equivalents. */
+.panel-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: 2rem;
+  margin-bottom: var(--space-3);
+}
+
+.panel .panel-bar-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.panel .panel-bar-title.is-small {
+  font-size: var(--text-md);
+}
+
+.panel-bar-count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.panel-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
 .panel h2,
 .panel h3,
 .panel h4 {
@@ -856,6 +893,10 @@ button:focus-visible,
 .graph-batch-remove-btn:focus-visible,
 .prep-bench-stepper-button:focus-visible,
 .ea-line-open:focus-visible,
+.setup-link:focus-visible,
+.landing-start-link:focus-visible,
+.magazine-clear:focus-visible,
+.search-submit:focus-visible,
 [data-detail-edit-button]:focus-visible,
 [data-history-back]:focus-visible,
 [data-table-clear]:focus-visible,

@@ -1,23 +1,45 @@
 {% extends "base.html" %}
 
+{#- Search: one row (record type, phrase, Search), the result count in the
+    title line, the results table below. Redesigned 2026-11. -#}
 {% block content %}
+{% set context_label = context|replace('_', ' ')|capitalize %}
 <section class="panel">
-  <div class="panel-head">
-    <h2>Global Search</h2>
-    <p>Search across submitters, projects, samples, preparations, and targets using flexible text matching.</p>
+  <div class="panel-bar">
+    <h2 class="panel-bar-title">Search</h2>
+    {% if results %}
+    <span class="panel-bar-count">
+      {%- if results|length >= result_limit %}First {{ result_limit }} results{% else %}{{ results|length }} result{{ '' if results|length == 1 else 's' }}{% endif %}
+      {%- if phrase %} for “{{ phrase }}”{% endif -%}
+    </span>
+    {% endif %}
   </div>
 
-  <form method="get" action="/search" class="inline-form">
+  <form method="get" action="/search" class="search-form" role="search">
     {% if global_mode %}
     <input type="hidden" name="global" value="1" />
     {% endif %}
-    <select name="context">
+    <label class="sr-only" for="search-context">Search in</label>
+    <select id="search-context" name="context" class="search-context" data-no-searchable>
       {% for c in contexts %}
-      <option value="{{ c }}" {% if c == context %}selected{% endif %}>{{ c }}</option>
+      <option value="{{ c }}" {% if c == context %}selected{% endif %}>{{ c|replace('_', ' ')|capitalize }}</option>
       {% endfor %}
     </select>
-    <input type="text" name="phrase" value="{{ phrase }}" placeholder="search phrase" required />
-    <button type="submit">Search</button>
+    <div class="search-field">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm9 16-3.5-3.5" /></svg>
+      <label class="sr-only" for="search-phrase">Search for</label>
+      <input
+        id="search-phrase"
+        type="search"
+        name="phrase"
+        value="{{ phrase }}"
+        placeholder="Name, label, number or comment"
+        autocomplete="off"
+        required
+        {% if not phrase and not results %}autofocus{% endif %}
+      />
+    </div>
+    <button type="submit" class="search-submit">Search</button>
   </form>
 
   {% if error %}
@@ -25,7 +47,10 @@
   {% endif %}
 
   {% if results %}
-  <section data-table-filter>
+  {% if results|length >= result_limit %}
+  <p class="search-cap-note">Only the first {{ result_limit }} are shown. Add a word to narrow the search; the filter below only looks through these rows.</p>
+  {% endif %}
+  <section data-table-filter data-table-download-name="search-{{ context }}">
     <div class="table-wrap table-wrap-horizontal">
       <table class="search-results-table">
         <thead>
@@ -52,8 +77,10 @@
       </table>
     </div>
   </section>
-  {% elif phrase or auto_load %}
-  <p>No results.</p>
+  {% elif (phrase or auto_load) and not error %}
+  <p class="table-empty">No {{ context|replace('_', ' ') }} match “{{ phrase }}”. Try fewer words, part of a word, or another record type.</p>
+  {% elif not error %}
+  <p class="search-help">Looks for the words in names, labels, comments and numbers of {{ context_label|lower }}. Pick another record type on the left.</p>
   {% endif %}
 </section>
 {% endblock %}

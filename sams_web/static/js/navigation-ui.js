@@ -159,7 +159,7 @@
 
     if (root === "search") {
       const isGlobal = query.get("global") === "1";
-      crumbs.push({ label: isGlobal ? "Global Search" : "Search", href: isGlobal ? "/search?global=1" : "/search" });
+      crumbs.push({ label: "Search", href: isGlobal ? "/search?global=1" : "/search" });
       const context = normalizeWhitespace(query.get("context") || "");
       if (context && contextLabels[context]) {
         const contextHref = isGlobal ? `/search?global=1&context=${context}` : `/search?context=${context}`;
@@ -302,11 +302,19 @@
       renderLinkGroup(pinnedHost, pinned);
       // The trail is one line, so Recent shows only a few pages, and never
       // the page you are on or one that is already pinned.
+      // Pages that share a name (one search page, three phrases) show once.
       const pinnedUrls = new Set(pinned.map((item) => item.url));
+      const shownLabels = new Set([currentLabel]);
       renderLinkGroup(
         recentHost,
         recent
-          .filter((item) => item.url !== currentUrl && !pinnedUrls.has(item.url))
+          .filter((item) => {
+            if (item.url === currentUrl || pinnedUrls.has(item.url) || shownLabels.has(item.label)) {
+              return false;
+            }
+            shownLabels.add(item.label);
+            return true;
+          })
           .slice(0, MAX_RECENT_SHOWN),
       );
       const isPinned = pinned.some((item) => item.url === currentUrl);

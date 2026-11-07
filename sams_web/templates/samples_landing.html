@@ -1,50 +1,43 @@
 {% extends "base.html" %}
 
+{#- Samples landing: a few starting points as fact-sheet columns, then the
+    Magic Nav tip. Redesigned 2026-11 (the action cards were too heavy). -#}
 {% block content %}
 <section class="panel">
-  <div class="panel-head">
-    <h2>Samples</h2>
-    <p>{{ "{:,}".format(sample_count) }} samples in the database. Pick where to start.</p>
-  </div>
-
-  <div class="cards samples-landing-cards">
-    {% if last_sample_nr is not none and last_sample_nr != newest_sample_nr %}
-    <article class="samples-landing-card">
-      <h3>Browse where you left off</h3>
-      <p>Resume your most recently viewed sample — <strong>{{ last_sample_nr }}</strong>.</p>
-      <a href="/samples/{{ last_sample_nr }}" class="samples-landing-cta">Open sample {{ last_sample_nr }}</a>
-    </article>
-    {% endif %}
-
-    {% if newest_sample_nr is not none %}
-    {# Primary CTA — most common path. Filled card on the brand gradient
-       so it's the unambiguous "start here". The other cards stay quiet
-       so this one truly leads. #}
-    <article class="samples-landing-card samples-landing-card-primary">
-      <h3>Newest sample</h3>
-      <p>The most recently created sample is <strong>{{ newest_sample_nr }}</strong>.</p>
-      <a href="/samples/{{ newest_sample_nr }}" class="samples-landing-cta">Open sample {{ newest_sample_nr }} &rarr;</a>
-    </article>
-    {% endif %}
-
-    <article class="samples-landing-card">
-      <h3>Browse all samples</h3>
-      <p>Search across every sample in the database with text matching across labels, descriptions, comments and IDs.</p>
-      <a href="/search?context=samples" class="samples-landing-cta samples-landing-cta-secondary">Search samples</a>
-    </article>
-  </div>
-
-  {# Magic-Nav explainer demoted from a card row to a subtle help block —
-     it teaches a feature, not an action; shouldn't share visual weight
-     with the primary CTA. #}
-  <p class="samples-landing-hint">
-    <strong>Tip:</strong> jump straight to a record by number using the Magic Nav field in the topbar —
-    <code>12345</code> for sample, <code>12345.1</code> for prep, <code>12345.1.1</code> for target.
-  </p>
+  <div class="panel-bar">
+    <h2 class="panel-bar-title">Samples</h2>
+    <span class="panel-bar-count">{{ "{:,}".format(sample_count) }} in the database</span>
   </div>
 
   {% if newest_sample_nr is none %}
-  <p class="table-empty">No samples in the database yet.</p>
+  <p class="table-empty">No samples in the database yet. Use <a href="/samples/import">Import</a> to add the first ones.</p>
+  {% else %}
+  <div class="landing-starts">
+    <div class="landing-start">
+      <h3 class="fact-group-title">Newest sample</h3>
+      <a class="landing-start-link" href="/samples/{{ newest_sample_nr }}">{{ newest_sample_nr }}</a>
+      <span class="landing-start-note">The most recently created sample</span>
+    </div>
+
+    {% if last_sample_nr is not none and last_sample_nr != newest_sample_nr %}
+    <div class="landing-start">
+      <h3 class="fact-group-title">Last viewed</h3>
+      <a class="landing-start-link" href="/samples/{{ last_sample_nr }}">{{ last_sample_nr }}</a>
+      <span class="landing-start-note">Carry on where you left off</span>
+    </div>
+    {% endif %}
+
+    <div class="landing-start">
+      <h3 class="fact-group-title">All samples</h3>
+      <a class="landing-start-link is-text" href="/search?context=samples">Search samples</a>
+      <span class="landing-start-note">Labels, descriptions, comments and numbers</span>
+    </div>
+  </div>
   {% endif %}
+
+  <p class="landing-hint">
+    Open any record by typing its number into Magic Nav at the top:
+    <code>12345</code> a sample, <code>12345.1</code> a preparation, <code>12345.1.1</code> a target.
+  </p>
 </section>
 {% endblock %}
