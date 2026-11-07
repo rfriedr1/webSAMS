@@ -4,6 +4,7 @@
   const RECENT_PAGES_STORAGE_KEY = "sams_recent_pages_v1";
   const PINNED_PAGES_STORAGE_KEY = "sams_pinned_pages_v1";
   const MAX_RECENT_PAGES = 8;
+  const MAX_RECENT_SHOWN = 4;
   const MAX_PINNED_PAGES = 12;
 
   const { normalizeWhitespace } = window.SAMSUtil;
@@ -73,34 +74,42 @@
       targets: "Targets",
     };
 
+    // Every page under a module starts with the module's name, so the
+    // trail always reads "Module › page › record" like the header does.
+    const SAMPLES = { label: "Samples", href: "/samples" };
+    const LAB = { label: "Lab", href: "/lab/preparation" };
+
     if (root === "submitters") {
-      crumbs.push({ label: "Submitters", href: "/submitters" });
-      if (segments[1]) {
+      crumbs.push(SAMPLES, { label: "Submitters", href: "/submitters" });
+      if (/^\d+$/.test(segments[1] || "")) {
         crumbs.push({ label: `Submitter ${segments[1]}`, href: `/submitters/${segments[1]}` });
       }
       return crumbs;
     }
 
     if (root === "projects") {
-      crumbs.push({ label: "Projects", href: "/projects" });
-      if (segments[1]) {
+      crumbs.push(SAMPLES, { label: "Projects", href: "/projects" });
+      if (/^\d+$/.test(segments[1] || "")) {
         crumbs.push({ label: `Project ${segments[1]}`, href: `/projects/${segments[1]}` });
       }
       return crumbs;
     }
 
     if (root === "samples") {
+      crumbs.push(SAMPLES);
       const sampleNr = segments[1];
-      if (sampleNr) {
-        crumbs.push({ label: `Sample ${sampleNr}`, href: `/samples/${sampleNr}` });
-      } else {
-        crumbs.push({ label: "Samples", href: "/samples" });
+      if (!sampleNr) {
+        return crumbs;
       }
+      if (!/^\d+$/.test(sampleNr)) {
+        crumbs.push({ label: titleCaseToken(sampleNr), href: `/samples/${sampleNr}` });
+        return crumbs;
+      }
+      crumbs.push({ label: `Sample ${sampleNr}`, href: `/samples/${sampleNr}` });
       if (segments[2] === "preparations" && segments[3]) {
-        const prepNr = segments[3];
         crumbs.push({
-          label: `Prep ${prepNr}`,
-          href: `/samples/${sampleNr}/preparations/${prepNr}`,
+          label: `Prep ${segments[3]}`,
+          href: `/samples/${sampleNr}/preparations/${segments[3]}`,
         });
       }
       if (segments[4] === "targets" && segments[5]) {
@@ -113,7 +122,10 @@
     }
 
     if (root === "setup") {
-      crumbs.push({ label: "Settings", href: "/setup" });
+      crumbs.push({ label: "Setup", href: "/setup" });
+      if (segments[1]) {
+        crumbs.push({ label: titleCaseToken(segments[1]), href: path });
+      }
       return crumbs;
     }
 
@@ -123,25 +135,22 @@
     }
 
     if (root === "lab") {
-      crumbs.push({ label: "Lab Operations", href: "/lab/preparation" });
+      const labLabels = {
+        preparation: "Preparation",
+        graphitization: "Graphitization",
+        analysis: "Analysis",
+        "ea-checks": "EA Checks",
+      };
       const labMode = segments[1] || "preparation";
-      if (labMode === "preparation") {
-        crumbs.push({ label: "Prep", href: "/lab/preparation" });
-      } else if (labMode === "graphitization") {
-        crumbs.push({ label: "Graphitization", href: "/lab/graphitization" });
-      } else if (labMode === "analysis") {
-        crumbs.push({ label: "Analysis", href: "/lab/analysis" });
-      } else if (labMode === "ea-checks") {
-        crumbs.push({ label: "EA Checks", href: "/lab/ea-checks" });
-      } else {
-        crumbs.push({ label: titleCaseToken(labMode), href: path });
-      }
+      crumbs.push(LAB, {
+        label: labLabels[labMode] || titleCaseToken(labMode),
+        href: `/lab/${labMode}`,
+      });
       return crumbs;
     }
 
     if (root === "qc") {
-      crumbs.push({ label: "Lab Operations", href: "/lab/preparation" });
-      crumbs.push({ label: "EA Checks", href: "/lab/ea-checks" });
+      crumbs.push(LAB, { label: "EA Checks", href: "/lab/ea-checks" });
       if (segments[1] === "signoffs" && segments[2]) {
         crumbs.push({ label: `Sign-off #${segments[2]}`, href: path });
       }
@@ -208,7 +217,14 @@
     });
   };
 
+  // The name a page is remembered under in Recent / Pinned. A page whose
+  // first heading is not its name (the benches open with the EA checks
+  // strip) says so with `data-page-label`.
   const deriveCurrentPageLabel = () => {
+    const named = document.querySelector("main.page [data-page-label]");
+    if (named && normalizeWhitespace(named.getAttribute("data-page-label") || "")) {
+      return normalizeWhitespace(named.getAttribute("data-page-label"));
+    }
     const header = document.querySelector("main.page h2");
     if (header && normalizeWhitespace(header.textContent)) {
       return normalizeWhitespace(header.textContent);
@@ -284,21 +300,15 @@
       const pinned = normalizeCollection(loadStoredPages(PINNED_PAGES_STORAGE_KEY), MAX_PINNED_PAGES);
       const recent = normalizeCollection(loadStoredPages(RECENT_PAGES_STORAGE_KEY), MAX_RECENT_PAGES);
       renderLinkGroup(pinnedHost, pinned);
-      renderLinkGroup(recentHost, recent);
-      // Hide the entire context-strip when neither breadcrumbs nor any
-      // quick-access content is showing; otherwise hide just the
-      // quick-access shell when both groups are empty.
-      const quickAccess = document.querySelector(".quick-access");
-      if (quickAccess) {
-        quickAccess.hidden = pinned.length === 0 && recent.length === 0;
-      }
-      const breadcrumbs = document.querySelector("[data-breadcrumbs]");
-      const strip = document.querySelector("[data-context-strip]");
-      if (strip) {
-        const breadcrumbsHidden = !breadcrumbs || breadcrumbs.hidden || !breadcrumbs.children.length;
-        const quickAccessHidden = !quickAccess || quickAccess.hidden;
-        strip.hidden = breadcrumbsHidden && quickAccessHidden;
-      }
+      // The trail is one line, so Recent shows only a few pages, and never
+      // the page you are on or one that is already pinned.
+      const pinnedUrls = new Set(pinned.map((item) => item.url));
+      renderLinkGroup(
+        recentHost,
+        recent
+          .filter((item) => item.url !== currentUrl && !pinnedUrls.has(item.url))
+          .slice(0, MAX_RECENT_SHOWN),
+      );
       const isPinned = pinned.some((item) => item.url === currentUrl);
       pinButton.classList.toggle("is-pinned", isPinned);
       pinButton.title = isPinned ? "Unpin current page (Ctrl/Cmd + Shift + P)" : "Pin current page (Ctrl/Cmd + Shift + P)";
@@ -458,12 +468,12 @@
           { label: "Samples: Sample", href: "/samples" },
           { label: "Samples: Projects", href: "/projects" },
           { label: "Samples: Submitters", href: "/submitters" },
-          { label: "Lab Operations: Preparation", href: "/lab/preparation" },
-          { label: "Lab Operations: Graphitization", href: "/lab/graphitization" },
-          { label: "Lab Operations: Analysis", href: "/lab/analysis" },
-          { label: "Lab Operations: EA Checks", href: "/lab/ea-checks" },
+          { label: "Lab: Preparation", href: "/lab/preparation" },
+          { label: "Lab: Graphitization", href: "/lab/graphitization" },
+          { label: "Lab: Analysis", href: "/lab/analysis" },
+          { label: "Lab: EA Checks", href: "/lab/ea-checks" },
           { label: "Search: Global", href: "/search?global=1" },
-          { label: "Settings", href: "/setup" },
+          { label: "Setup", href: "/setup" },
           { label: "Help", href: "/help" },
           { label: "API Docs", href: "/docs" },
         ];

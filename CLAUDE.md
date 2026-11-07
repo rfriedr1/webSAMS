@@ -112,7 +112,9 @@
 - **Save / notice feedback fires as a toast** (top-right, auto-dismissing) via `window.SAMSToast.show(message, kind)` where `kind` ∈ `success | error | info`. The toast module also auto-promotes `?saved`, `?bench_saved`, `?graph_saved`, `?graph_batch_saved`, and any `*_notice` query params on page load and strips them from the URL via `history.replaceState`. Inline panel-head feedback is allowed alongside, but the toast is the primary surface.
 - **Decorative animations and the blurred bg-shapes respect `@media (prefers-reduced-motion: reduce)`** — they're hidden / shortened for users who opted out.
 - **Every interactive element has a visible `:focus-visible` outline** (`2px solid var(--brand-2)` with `2px` offset). When you add a new clickable thing, include it in the focus-ring rule list in `style-core.css`.
-- **Three responsive breakpoints**: 1024px (large), 860px (medium), 640px (small). At 640px: the brand subtitle hides, cards stack to one column, inputs/buttons grow to ~44px touch targets, the magic-nav input fills its row.
+- **Three responsive breakpoints**: 1024px (large), 860px (medium), 640px (small). At 640px: cards stack to one column, inputs/buttons grow to ~44px touch targets, the header stacks (brand, then Magic Nav + Jump across the full width, then the nav). The header alone also has a squeeze step at 1025–1180px (product name and the ⌘K hint hide) so its single row still fits.
+- **Header** (`base.html`, redesigned 2026-11 per the mockup in `docs/design/ui-review/`): **one row** — brand (SAMS mark, name, version, and a `.brand-db` tag with the database name from the `app_database` global, so test vs live is always visible), the flat main nav (`.main-nav a`, active = brand colour on `--brand-tint`), then on the right **Magic Nav and the ⌘K "Jump" trigger as two separate inputs**. The module's sub-nav is a thin second row of **underlined tabs** (`.sub-nav-row`). Both rows share the page width (`min(1240px, 96%)`). At ≤1024px the main nav moves to its own row. Merging Magic Nav and the palette into one field is a possible later step, not done.
+- **The trail** (`.context-strip`) is one plain line under the header: breadcrumb text on the left; *☆ Pin*, Pinned and Recent as plain links on the right. Recent never lists the current page or a pinned one and shows at most 4 (3 at ≤1180px, 2 at ≤1024px, none at ≤640px); the command palette still has all 8.
 
 ## Magic Nav Rules
 - Input only digits: treat as `sample_nr` and open sample detail.
@@ -186,8 +188,9 @@
 - **Bench lookup steppers**: Sample #, Prep # and Target # on both benches share one up/down control — `.prep-bench-stepper` + the `stepper_buttons` macro in `_bench_macros.html`. The native number spinner and datalist arrow are hidden in CSS so the three look alike. Sample # steps by one (handled in each bench script); Prep # / Target # step to the next *existing* value from their datalist via `bench-number-stepper.js`, which fires `change` so the bench's own handler validates and loads.
 - **Searchable selects**: any `<select>` with more than 8 real options is auto-enhanced into a type-to-filter combobox by `searchable-select.js`. Mark a select with `data-no-searchable` to opt out. The shim commits back to the native `<select>` so server-side form handling is unchanged.
 - **Page progress bar**: indeterminate top-of-page sweep on form submit / link navigation, via `page-progress.js`. No setup needed; appears automatically.
-- **Pinned / Recent quick-access groups** auto-hide when their list is empty. Don't render placeholder "No pinned pages" text — that's deliberately removed.
-- **Breadcrumbs** auto-hide when there is only the root crumb (the page title already says where you are).
+- **Pinned / Recent quick-access groups** auto-hide when their list is empty (the Pin button always stays). Don't render placeholder "No pinned pages" text — that's deliberately removed.
+- **Breadcrumbs** auto-hide when there is only the root crumb (the page title already says where you are). Every page under a module starts with the module, named as in the header: `Samples › Sample 48211 › Prep 1 › Target 2`, `Samples › Projects › Project 246`, `Lab › Graphitization`, `Lab › EA Checks › Sign-off #3`, `Setup › …` (`buildBreadcrumbs` in `navigation-ui.js`).
+- **Recent / Pinned remember a page by its first `main.page h2`**, unless an element in `main.page` carries `data-page-label` (the benches, whose first heading is the EA strip's, and the dashboard, whose first is "Lab queues").
 
 ## Settings and Setup
 - Store setup data in a generic settings file, not feature-specific filenames.
@@ -266,7 +269,7 @@
 - `Search`
 - `Setup`
 - `Help`
-- `API Docs`
+- API Docs is not in the main nav (moved 2026-11): it is linked from the Help page's contents list and the command palette.
 - Secondary navigation:
 - Under `Samples`: `Sample`, `Projects`, `Submitters`, `Import`
 - Under `Lab`: `Preparation`, `Graphitization`, `Analysis`, `EA Checks`

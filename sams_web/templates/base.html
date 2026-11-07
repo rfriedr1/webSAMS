@@ -26,15 +26,32 @@
     <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
     <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
 
+    {#- Header: one row (brand, main navigation, Magic Nav + Search & jump),
+        then the module's sub-navigation as underlined tabs. Under it, one
+        plain line: breadcrumb on the left, Pin / Pinned / Recent on the
+        right. Redesigned 2026-11 (mockup in docs/design/ui-review/). -#}
     <header class="topbar">
       <div class="topbar-row">
         <a class="brand" href="/" data-command-link data-command-label="Dashboard">
           <span class="brand-mark">SAMS</span>
-          <div>
-            <h1>SAMS Web <span class="brand-version">v{{ app_version }}</span></h1>
-            <p>{{ app_subtitle or 'CEZA C14 Laboratory Information System' }}</p>
-          </div>
+          <span class="brand-name">SAMS Web</span>
+          <span class="brand-version">v{{ app_version }}</span>
+          {% if app_database %}<span class="brand-db" title="Database: {{ app_database }}">{{ app_database }}</span>{% endif %}
         </a>
+
+        <nav class="main-nav" aria-label="Primary modules">
+          {% for item in main_navigation_items %}
+          <a
+            href="{{ item.href }}"
+            {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
+            class="{% if active_module == item.module %}is-active{% endif %}"
+            {% if active_module == item.module %}aria-current="page"{% endif %}
+            data-command-link
+            data-command-label="{{ item.label }}"
+          >{{ item.label }}</a>
+          {% endfor %}
+        </nav>
+
         <div class="topbar-tools">
           {% set magic_error = request.query_params.get('magic_error') %}
           {% set magic_value = request.query_params.get('magic_identifier', '') %}
@@ -51,7 +68,10 @@
               data-magic-command-labels='{{ magic_identifier_command_labels | tojson }}'
               data-magic-error="{{ magic_error or '' }}"
             >
-              <label for="magic-identifier-input" class="magic-identifier-label">Magic Nav</label>
+              <label for="magic-identifier-input" class="magic-identifier-label" title="Magic Nav: type a number or a command and press Enter">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm9 16-3.5-3.5" /></svg>
+                <span class="sr-only">Magic Nav</span>
+              </label>
               <input
                 id="magic-identifier-input"
                 name="magic_identifier"
@@ -65,7 +85,7 @@
               />
               <span class="magic-identifier-patch" data-magic-identifier-patch hidden></span>
               <input type="hidden" name="next" value="{{ request.url.path }}" />
-              <button type="submit">Open</button>
+              <button type="submit" class="magic-identifier-open">Open</button>
               <button
                 type="button"
                 class="magic-identifier-help"
@@ -75,8 +95,6 @@
               >?</button>
             </form>
           </div>
-        </div>
-        <div class="topbar-actions">
           <button
             type="button"
             class="command-palette-trigger"
@@ -85,37 +103,29 @@
             title="Search &amp; jump · Ctrl + K"
             aria-label="Search &amp; jump"
           >
-            <span class="command-palette-trigger-label" aria-hidden="true">Search &amp; jump</span>
+            <span class="command-palette-trigger-label" aria-hidden="true">Jump</span>
             <kbd class="command-palette-trigger-kbd" data-platform-kbd aria-hidden="true">Ctrl K</kbd>
           </button>
         </div>
       </div>
 
-      <nav class="main-nav" aria-label="Primary modules">
-        {% for item in main_navigation_items %}
-        <a
-          href="{{ item.href }}"
-          {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
-          class="{% if active_module == item.module %}is-active{% endif %}"
-          data-command-link
-          data-command-label="{{ item.label }}"
-        >{{ item.label }}</a>
-        {% endfor %}
-      </nav>
-
       {% set active_sub_items = sub_navigation_items.get(active_module, ()) %}
       {% if active_sub_items %}
-      <nav class="sub-nav" aria-label="{{ active_module|replace('_', ' ') }}">
-        {% for item in active_sub_items %}
-        <a
-          href="{{ item.href }}"
-          {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
-          class="{% if is_subnav_active(request, active_module, item.key) %}is-active{% endif %}"
-          data-command-link
-          data-command-label="{{ item.label }}"
-        >{{ item.label }}</a>
-        {% endfor %}
-      </nav>
+      <div class="sub-nav-row">
+        <nav class="sub-nav" aria-label="{{ active_module|replace('_', ' ') }}">
+          {% for item in active_sub_items %}
+          {% set sub_active = is_subnav_active(request, active_module, item.key) %}
+          <a
+            href="{{ item.href }}"
+            {% if item.external %}target="_blank" rel="noreferrer"{% endif %}
+            class="{% if sub_active %}is-active{% endif %}"
+            {% if sub_active %}aria-current="page"{% endif %}
+            data-command-link
+            data-command-label="{{ item.label }}"
+          >{{ item.label }}</a>
+          {% endfor %}
+        </nav>
+      </div>
       {% endif %}
     </header>
 
@@ -131,8 +141,8 @@
             <span class="quick-access-label" title="Pages you've pinned. Star a page to add. Up to 12 stay until you unpin.">Pinned</span>
             <div class="quick-access-links" data-pinned-links></div>
           </div>
-          <div class="quick-access-group">
-            <span class="quick-access-label" title="Your last 8 pages — automatic. No need to pin to revisit.">Recent</span>
+          <div class="quick-access-group is-recent">
+            <span class="quick-access-label" title="Pages you opened recently — automatic. No need to pin to revisit.">Recent</span>
             <div class="quick-access-links" data-recent-links></div>
           </div>
         </div>
