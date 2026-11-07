@@ -236,12 +236,12 @@ body.has-command-palette {
 .project-field-row,
 .sample-field-row {
   display: grid;
-  /* The label sizes to its own text but may never take more than 45 % of
-     the row, so the value always keeps the majority of the width. The
-     previous `minmax(min-content, 11rem)` let a 176px label starve the
-     value down to ~64px inside a narrow card, shattering names like
-     "Otto-Friedrich-Universitaet Bamberg" across six lines. */
-  grid-template-columns: minmax(min-content, 45%) minmax(0, 1fr);
+  /* The label takes the width of its own text, capped at 45 % of the row;
+     the value gets everything else. `fit-content`, not
+     `minmax(min-content, 45%)`: the grid grows a minmax track to its
+     maximum whenever there is room, so every label column was 45 % wide
+     and a 16-character graph batch ran into the next column. */
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
   align-items: flex-start;
   gap: var(--space-2);
 }
@@ -1276,6 +1276,14 @@ body.has-command-palette {
   text-decoration: underline;
 }
 
+/* Parent records (project, submitter, sample) are what operators read
+   and click most on a record, so they are a step larger than the rest
+   of the context line. */
+.record-context-item.is-key a {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
 .record-context-item strong {
   color: var(--ink-strong);
   font-weight: 600;
@@ -1369,6 +1377,25 @@ button.record-action:disabled {
 .fact-list.project-field-list,
 .fact-list.user-field-list {
   gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* No value may push past its column, however long and unbreakable
+   (graph batch names, sample labels, e-mail addresses). Every box on
+   the way down may shrink below its content's width, and the text wraps
+   inside instead of running into the next column. */
+.fact-list .detail-field-row,
+.fact-list .detail-field-row dd,
+.fact-list .detail-field-display {
+  min-width: 0;
+}
+
+.fact-list .detail-field-shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fact-list .detail-field-display {
+  overflow-wrap: anywhere;
 }
 
 .fact-list .detail-field-shell {
@@ -1667,7 +1694,7 @@ button.record-action:disabled {
   /* Short values keep label and value on one line on a phone too; the
      general 640px rule stacks every row, which doubled the page length. */
   .fact-list .detail-field-row:not(.is-long-value):not([data-field-kind="multiline"]) {
-    grid-template-columns: minmax(min-content, 45%) minmax(0, 1fr);
+    grid-template-columns: fit-content(45%) minmax(0, 1fr);
     gap: var(--space-2);
   }
 }

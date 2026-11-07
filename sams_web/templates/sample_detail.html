@@ -30,7 +30,7 @@
     {% call render_record_head('Sample ' ~ sample.sample_nr, sample.user_label or 'Unnamed sample', sample_edit_form_id, quick_nav=nav) %}
       <a href="{{ sample_back_url }}" class="nav-back-arrow" data-history-back data-fallback="{{ sample_back_url }}" aria-label="Back" title="Back">&#x2039; Back</a>
       {% if project %}
-      <span class="record-context-item">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
+      <span class="record-context-item is-key">Project <a href="/projects/{{ project.project_nr }}">{{ project.project_nr }} – {{ project.project }}</a>
       {% if project.status %}
       {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
       <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status }}</span>
@@ -38,7 +38,7 @@
       </span>
       {% endif %}
       {% if user %}
-      <span class="record-context-item">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
+      <span class="record-context-item is-key">Submitter <a href="/submitters/{{ user.user_nr }}">{{ user.last_name }}, {{ user.first_name }}</a></span>
       {% endif %}
     {% endcall %}
     {{ render_detail_notice_block(sample_saved, sample_save_error, "Sample details were saved.", field_errors=sample_field_errors, entity="sample") }}
@@ -79,7 +79,7 @@
   </section>
 
   {% if meta_sections %}
-  <details class="record-more">
+  <details class="record-more" open>
     <summary class="record-more-summary">
       <span class="record-more-title">More details</span>
       <span class="record-more-count">{{ meta_sections | map(attribute='title') | join(' · ') }}</span>
