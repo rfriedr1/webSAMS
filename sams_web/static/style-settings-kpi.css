@@ -1013,52 +1013,6 @@ button.dash-tab[aria-selected="true"] {
 
 /* Compact table toolbar: one row, filter field with an icon instead of
    labelled boxes; the row count and the download sit at the right. */
-.table-tools.table-tools-compact {
-  align-items: center;
-  padding: 0 0 var(--space-2);
-}
-
-.table-filter {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.table-filter svg {
-  position: absolute;
-  left: 0.6rem;
-  width: 0.85rem;
-  height: 0.85rem;
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  pointer-events: none;
-}
-
-.table-tools-compact input[type="search"] {
-  width: 16rem;
-  min-height: 2rem;
-  padding: 0.25rem 0.6rem 0.25rem 1.9rem;
-  font-size: var(--text-sm);
-}
-
-.table-tools-compact select {
-  min-height: 2rem;
-  padding: 0.2rem 0.5rem;
-  font-size: var(--text-sm);
-}
-
-.table-tools-compact .table-tool-status {
-  order: 5;
-  margin: 0 0 0 auto;
-  font-weight: 600;
-}
-
-.table-tools-compact .table-tool-download {
-  order: 6;
-}
-
 @media (max-width: 860px) {
   .dash-overview {
     grid-template-columns: minmax(0, 1fr);
@@ -1077,13 +1031,5 @@ button.dash-tab[aria-selected="true"] {
 
   .dash-bar-queue {
     grid-template-columns: 7.8rem minmax(0, 1fr) 2.4rem 3.8rem;
-  }
-
-  .table-tools-compact input[type="search"] {
-    width: 100%;
-  }
-
-  .table-tools-compact .table-filter {
-    flex: 1 1 100%;
   }
 }

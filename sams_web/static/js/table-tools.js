@@ -244,20 +244,48 @@
     return button;
   };
 
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const svgIcon = (pathData) => {
+    const icon = document.createElementNS(SVG_NS, "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", pathData);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    icon.append(path);
+    return icon;
+  };
+
+  const srOnly = (text) => {
+    const span = document.createElement("span");
+    span.className = "sr-only";
+    span.textContent = text;
+    return span;
+  };
+
+  // One compact toolbar for every table: filter field with a search icon,
+  // column select, clear, "N of M", download. Labels are for screen
+  // readers only; the icon and placeholder say what the field does.
+  // Templates do not write their own toolbar any more.
   const createTableTools = (container, table, headers, rowCount) => {
-    const labelText = container.dataset.tableSearchLabel || "Search";
-    const placeholder = container.dataset.tableSearchPlaceholder || "Type to filter rows";
-    const columnText = container.dataset.tableColumnLabel || "Column";
-    const allColumnsText = container.dataset.tableAllColumnsLabel || "All Columns";
-    const clearText = container.dataset.tableClearLabel || "Clear";
+    const labelText = container.dataset.tableSearchLabel || "Filter rows";
+    const placeholder = container.dataset.tableSearchPlaceholder || "Filter rows";
+    const columnText = container.dataset.tableColumnLabel || "Column to filter";
+    const allColumnsText = container.dataset.tableAllColumnsLabel || "All columns";
+    const clearText = container.dataset.tableClearLabel || "Clear filter";
 
     const tools = ensureToolsRow(container, table);
 
     let searchInput = container.querySelector("[data-table-search]");
     if (!searchInput) {
       const searchLabel = document.createElement("label");
-      searchLabel.className = "table-tool-field";
-      searchLabel.append(document.createTextNode(labelText));
+      searchLabel.className = "table-filter";
+      searchLabel.append(svgIcon("M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm9 16-3.5-3.5"), srOnly(labelText));
       searchInput = document.createElement("input");
       searchInput.type = "search";
       searchInput.placeholder = placeholder;
@@ -271,10 +299,11 @@
     let columnSelect = container.querySelector("[data-table-column]");
     if (!columnSelect) {
       const columnLabel = document.createElement("label");
-      columnLabel.className = "table-tool-field";
-      columnLabel.append(document.createTextNode(columnText));
+      columnLabel.className = "table-tool-column";
+      columnLabel.append(srOnly(columnText));
       columnSelect = document.createElement("select");
       columnSelect.setAttribute("data-table-column", "");
+      columnSelect.setAttribute("data-no-searchable", "");
       columnLabel.append(columnSelect);
       tools.append(columnLabel);
     }
@@ -301,18 +330,7 @@
     clearButton.setAttribute("title", clearText);
     clearButton.setAttribute("aria-label", clearText);
     clearButton.textContent = "";
-    const clearSvgNs = "http://www.w3.org/2000/svg";
-    const clearIcon = document.createElementNS(clearSvgNs, "svg");
-    clearIcon.setAttribute("viewBox", "0 0 24 24");
-    clearIcon.setAttribute("aria-hidden", "true");
-    const clearPath = document.createElementNS(clearSvgNs, "path");
-    clearPath.setAttribute("d", "M6 6l12 12M18 6L6 18");
-    clearPath.setAttribute("fill", "none");
-    clearPath.setAttribute("stroke", "currentColor");
-    clearPath.setAttribute("stroke-width", "2");
-    clearPath.setAttribute("stroke-linecap", "round");
-    clearIcon.append(clearPath);
-    clearButton.append(clearIcon);
+    clearButton.append(svgIcon("M6 6l12 12M18 6L6 18"));
     const downloadButton = ensureDownloadButton(container, table);
 
     let visible = container.querySelector("[data-table-visible]");
@@ -324,34 +342,11 @@
       visible.setAttribute("data-table-visible", "");
       total = document.createElement("span");
       total.setAttribute("data-table-total", "");
-      status.append(visible, document.createTextNode(" / "), total, document.createTextNode(" shown"));
+      status.append(visible, document.createTextNode(" of "), total);
       tools.append(status);
     }
     visible.textContent = formatRowNumber(rowCount);
     total.textContent = formatRowNumber(rowCount);
-
-    // Big-table affordance: when a table holds enough rows to slow the
-    // user down with scroll-and-scan, label the status as a badge and
-    // prepend a "type to filter" hint. The threshold is intentionally
-    // conservative — 200 is enough rows that scroll becomes a chore.
-    const status = container.querySelector(".table-tool-status");
-    if (status) {
-      const BIG_THRESHOLD = 200;
-      const isBig = rowCount >= BIG_THRESHOLD;
-      status.classList.toggle("is-big-dataset", isBig);
-      let hint = container.querySelector("[data-table-big-hint]");
-      if (isBig) {
-        if (!hint) {
-          hint = document.createElement("p");
-          hint.className = "table-big-hint";
-          hint.setAttribute("data-table-big-hint", "");
-          hint.textContent = "Large table — type to filter or sort a column.";
-          tools.parentNode?.insertBefore(hint, tools.nextSibling);
-        }
-      } else if (hint) {
-        hint.remove();
-      }
-    }
 
     return {
       searchInput,
