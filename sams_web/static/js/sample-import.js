@@ -31,8 +31,8 @@
     draft: null,
     mapping: {},
     party: {
-      submitter: { mode: "new", user_nr: null, values: {}, browse: [], query: "" },
-      invoice: { enabled: false, mode: "new", user_nr: null, values: {}, browse: [], query: "" },
+      submitter: { mode: "new", user_nr: null, picking: false, values: {}, browse: [], browseRan: false, query: "" },
+      invoice: { enabled: false, mode: "new", user_nr: null, picking: false, values: {}, browse: [], browseRan: false, query: "" },
     },
     project: { mode: "new", existing_project_nr: null, values: {}, existing: [], matches: [] },
     groups: {},
@@ -117,7 +117,15 @@
       const position = STEPS.indexOf(el.dataset.step);
       el.classList.toggle("is-current", position === index);
       el.classList.toggle("is-done", position < index);
+      if (position === index) el.setAttribute("aria-current", "step");
+      else el.removeAttribute("aria-current");
     });
+    // The action bar serves steps 2-4; each of its parts names its step.
+    $("[data-foot]").hidden = !root.querySelector(`[data-foot-for="${step}"]`);
+    root.querySelectorAll("[data-foot-for]").forEach((el) => {
+      el.hidden = el.dataset.footFor !== step;
+    });
+    $("[data-file-chip]").hidden = step === "upload" || !state.draft;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -191,6 +199,11 @@
     showError("");
     setStep("upload");
   });
+  $("[data-invoice-enabled]").addEventListener("change", (event) => {
+    state.party.invoice.enabled = event.target.checked;
+    renderParty("invoice");
+    renderAlerts();
+  });
   $("[data-back-review]").addEventListener("click", () => setStep("review"));
   $("[data-goto-lab]").addEventListener("click", () => {
     if (reviewProblems().length) { renderAlerts(); return; }
@@ -224,8 +237,10 @@
     state.party.submitter = {
       mode: strong ? "existing" : "new",
       user_nr: strong ? strong.user_nr : null,
+      picking: false,
       values: { ...payload.draft.submitter.values },
       browse: [],
+      browseRan: false,
       query: "",
     };
 
@@ -234,8 +249,10 @@
       enabled: !payload.draft.same_invoice_address && !payload.draft.invoice.is_empty,
       mode: invoiceStrong ? "existing" : "new",
       user_nr: invoiceStrong ? invoiceStrong.user_nr : null,
+      picking: false,
       values: { ...payload.draft.invoice.values },
       browse: [],
+      browseRan: false,
       query: "",
     };
 
@@ -307,9 +324,10 @@
 
   function renderReview() {
     const d = state.draft;
-    $("[data-source-summary]").innerHTML =
-      `<strong>${esc(d.file_name)}</strong> &middot; sheet “${esc(d.sheet_name)}” ` +
-      `&middot; header row ${d.header_row} &middot; ${d.sample_count} sample row(s)`;
+    $("[data-file-name]").textContent = d.file_name;
+    $("[data-file-facts]").textContent =
+      `sheet “${d.sheet_name}” · header row ${d.header_row} · ${d.sample_count} rows`;
+    $("[data-invoice-enabled]").checked = state.party.invoice.enabled;
     renderParty("submitter");
     renderParty("invoice");
     renderProject();
@@ -317,123 +335,140 @@
   }
 
   const PARTY_LABEL = { submitter: "submitter", invoice: "invoice recipient" };
+  const EMPTY = '<span class="detail-empty">—</span>';
+  const present = (value) => String(value ?? "").trim() !== "";
+
+  const candidatesFor = (which) =>
+    (which === "submitter"
+      ? state.payload.submitter_candidates
+      : state.payload.invoice_candidates) || [];
+
+  /** The stored record currently chosen for this party, or null. */
+  function selectedRecord(which) {
+    const party = state.party[which];
+    if (party.mode !== "existing" || !party.user_nr) return null;
+    return (
+      [...candidatesFor(which), ...(party.browse || [])].find((c) => c.user_nr === party.user_nr) ||
+      null
+    );
+  }
 
   /**
    * Submitter / invoice picker.
    *
-   * Three ways to choose: a scored candidate, a browsable search over all
-   * submitters, or create a new record from editable fields. The scored
-   * list stays on top because it is right most of the time; the browse
-   * box exists for when it isn't.
+   * Left: the choices as one compact radio list: scored candidates, "pick
+   * another" (a search over all submitters) and "create new". Right: what
+   * that choice means. For a stored record, the sheet and the record side
+   * by side with differences flagged, because a returning customer may
+   * have moved or changed e-mail; for a new record, the editable fields.
    */
   function renderParty(which) {
     const host = $(`[data-${which}]`);
     const party = state.party[which];
-    const candidates =
-      which === "submitter"
-        ? state.payload.submitter_candidates || []
-        : state.payload.invoice_candidates || [];
+    const candidates = candidatesFor(which);
     const parsed = which === "submitter" ? state.draft.submitter : state.draft.invoice;
-
-    // The invoice block is optional; everything hides behind one toggle.
-    const toggle =
-      which === "invoice"
-        ? `<label class="import-toggle">
-             <input type="checkbox" data-invoice-enabled ${party.enabled ? "checked" : ""} />
-             <span>Bill a different person or address than the submitter</span>
-           </label>`
-        : "";
+    const note = $(`[data-${which}-note]`);
 
     if (which === "invoice" && !party.enabled) {
-      host.innerHTML =
-        toggle +
-        `<p class="import-fixups-hint">The submitter's own address will be used for billing.</p>`;
-      host.querySelector("[data-invoice-enabled]").addEventListener("change", (e) => {
-        party.enabled = e.target.checked;
-        renderParty("invoice");
-        renderAlerts();
-      });
+      note.textContent = "Otherwise the submitter is billed.";
+      host.hidden = true;
+      host.innerHTML = "";
       return;
     }
+    host.hidden = false;
+    note.textContent = candidates.length
+      ? `${candidates.length} match${candidates.length === 1 ? "" : "es"} on file`
+      : "no match on file";
 
+    const choice = (value, checked, title, lines, extra = "") => `
+      <label class="import-choice ${checked ? "is-selected" : ""}">
+        <input type="radio" name="${which}-choice" value="${value}" ${checked ? "checked" : ""} />
+        <span class="import-choice-body">
+          <span class="import-choice-title">${title}</span>
+          ${lines.filter(Boolean).map((l) => `<span class="import-choice-meta">${l}</span>`).join("")}
+        </span>
+      </label>${extra}`;
+
+    const metaOf = (c) => esc([c.organisation, c.town].filter(Boolean).join(" · "));
     const candidateHtml = candidates
-      .map((c) => {
-        const checked = party.mode === "existing" && party.user_nr === c.user_nr;
-        return `
-          <label class="import-choice ${checked ? "is-selected" : ""}">
-            <input type="radio" name="${which}-choice" value="${c.user_nr}" ${checked ? "checked" : ""} />
-            <span class="import-choice-body">
-              <span class="import-choice-title">${esc(c.display_name)}
-                <span class="import-choice-id">#${c.user_nr}</span>
-                ${c.is_strong ? '<span class="import-badge-strong">strong match</span>' : ""}
+      .map((c) =>
+        choice(
+          c.user_nr,
+          party.mode === "existing" && !party.picking && party.user_nr === c.user_nr,
+          `${esc(c.display_name)} <span class="import-choice-id">#${c.user_nr}</span>` +
+            (c.is_strong ? ' <span class="import-badge-strong">strong match</span>' : ""),
+          [metaOf(c), c.reasons?.length ? `<em>${esc(c.reasons.join(", "))}</em>` : ""]
+        )
+      )
+      .join("");
+
+    let browseBlock = "";
+    if (party.picking) {
+      const results = (party.browse || [])
+        .map((r) => {
+          const checked = party.user_nr === r.user_nr;
+          return `
+            <label class="import-choice is-compact ${checked ? "is-selected" : ""}">
+              <input type="radio" name="${which}-pick" value="${r.user_nr}" ${checked ? "checked" : ""} />
+              <span class="import-choice-body">
+                <span class="import-choice-title">${esc(r.display_name)} <span class="import-choice-id">#${r.user_nr}</span></span>
+                <span class="import-choice-meta">${esc([r.organisation, r.town, r.email].filter(Boolean).join(" · ")) || EMPTY}</span>
               </span>
-              <span class="import-choice-meta">${esc(c.organisation || "—")}${c.email ? " &middot; " + esc(c.email) : ""}</span>
-              <span class="import-choice-why">${esc(c.reasons.join(", "))}</span>
-            </span>
-          </label>`;
-      })
-      .join("");
-
-    const browseHtml = party.browse
-      .map((r) => {
-        const checked = party.mode === "existing" && party.user_nr === r.user_nr;
-        return `
-          <label class="import-choice is-compact ${checked ? "is-selected" : ""}">
-            <input type="radio" name="${which}-choice" value="${r.user_nr}" ${checked ? "checked" : ""} />
-            <span class="import-choice-body">
-              <span class="import-choice-title">${esc(r.display_name)}
-                <span class="import-choice-id">#${r.user_nr}</span></span>
-              <span class="import-choice-meta">${esc(r.organisation || "—")}${r.town ? " &middot; " + esc(r.town) : ""}${r.email ? " &middot; " + esc(r.email) : ""}</span>
-            </span>
-          </label>`;
-      })
-      .join("");
-
-    const newChecked = party.mode === "new";
-    host.innerHTML = `
-      ${toggle}
-      ${renderSheetContact(parsed)}
-      ${candidates.length
-        ? `<p class="import-fixups-hint">${candidates.length} existing ${PARTY_LABEL[which]}(s) match this sheet.</p>`
-        : `<p class="import-fixups-hint">Nothing matched automatically — search below, or create a new record.</p>`}
-      <div class="import-choices">${candidateHtml}</div>
-
-      <details class="import-details" data-browse-details ${party.browse.length ? "open" : ""}>
-        <summary>Browse all submitters</summary>
+            </label>`;
+        })
+        .join("");
+      browseBlock = `
         <div class="import-browse">
-          <input type="search" data-browse-input value="${esc(party.query)}"
-                 placeholder="Search by name, organisation or institute" />
-          <button type="button" class="import-secondary" data-browse-go>Search</button>
-        </div>
-        <div class="import-choices import-browse-results">
-          ${browseHtml || '<p class="import-empty">No search yet.</p>'}
-        </div>
-      </details>
+          <div class="import-browse-form">
+            <input type="search" data-browse-input value="${esc(party.query)}"
+                   placeholder="Name, organisation or institute" aria-label="Search submitters" />
+            <button type="button" class="import-secondary" data-browse-go>Search</button>
+          </div>
+          <div class="import-browse-results">
+            ${results || `<p class="import-empty">${party.browseRan ? "No submitter found." : "Search to list submitters."}</p>`}
+          </div>
+        </div>`;
+    }
 
-      <div class="import-choices">
-        <label class="import-choice ${newChecked ? "is-selected" : ""}">
-          <input type="radio" name="${which}-choice" value="new" ${newChecked ? "checked" : ""} />
-          <span class="import-choice-body">
-            <span class="import-choice-title">Create a new ${esc(PARTY_LABEL[which])}</span>
-            <span class="import-choice-meta">${esc(parsed.display_name)}</span>
-          </span>
-        </label>
-      </div>
+    const choices = `
+      <div class="import-choices" role="radiogroup" aria-label="${esc(PARTY_LABEL[which])}">
+        ${candidateHtml}
+        ${choice("browse", !!party.picking, `Pick another ${esc(PARTY_LABEL[which])}…`, ["Search all submitters"], browseBlock)}
+        ${choice("new", party.mode === "new", `Create a new ${esc(PARTY_LABEL[which])}`, ["From the sheet values, which you can edit"])}
+      </div>`;
 
-      ${newChecked ? renderContactForm(which, party.values) : ""}`;
+    let detail;
+    if (party.mode === "new") {
+      detail = renderContactForm(which, party.values);
+    } else {
+      const record = selectedRecord(which);
+      detail = renderComparison(parsed, record);
+    }
 
+    host.innerHTML = `<div class="import-party-grid">${choices}<div class="import-party-detail">${detail}</div></div>`;
+
+    const rerender = () => {
+      renderParty(which);
+      if (which === "submitter") refreshProjectsForSubmitter();
+      renderAlerts();
+    };
     host.querySelectorAll(`input[name='${which}-choice']`).forEach((input) => {
       input.addEventListener("change", () => {
         if (input.value === "new") {
-          party.mode = "new";
-          party.user_nr = null;
+          Object.assign(party, { mode: "new", user_nr: null, picking: false });
+        } else if (input.value === "browse") {
+          Object.assign(party, { mode: "existing", user_nr: null, picking: true });
         } else {
-          party.mode = "existing";
-          party.user_nr = Number(input.value);
+          Object.assign(party, { mode: "existing", user_nr: Number(input.value), picking: false });
         }
-        renderParty(which);
-        if (which === "submitter") refreshProjectsForSubmitter();
-        renderAlerts();
+        rerender();
+        if (input.value === "browse") root.querySelector(`[data-${which}] [data-browse-input]`)?.focus();
+      });
+    });
+    host.querySelectorAll(`input[name='${which}-pick']`).forEach((input) => {
+      input.addEventListener("change", () => {
+        Object.assign(party, { mode: "existing", user_nr: Number(input.value) });
+        rerender();
       });
     });
 
@@ -441,11 +476,10 @@
     const runBrowse = async () => {
       party.query = browseInput.value;
       try {
-        const res = await fetch(
-          `/samples/import/submitters?q=${encodeURIComponent(party.query)}`
-        );
+        const res = await fetch(`/samples/import/submitters?q=${encodeURIComponent(party.query)}`);
         const data = await res.json();
         party.browse = data.submitters || [];
+        party.browseRan = true;
         renderParty(which);
         root.querySelector(`[data-${which}] [data-browse-input]`)?.focus();
       } catch (_e) {
@@ -463,46 +497,56 @@
         renderAlerts();
       });
     });
-
-    if (which === "invoice") {
-      host.querySelector("[data-invoice-enabled]")?.addEventListener("change", (e) => {
-        party.enabled = e.target.checked;
-        renderParty("invoice");
-        renderAlerts();
-      });
-    }
   }
 
   /**
-   * Read-only block with the contact details exactly as the sheet gave them.
-   *
-   * Always shown, whatever is selected below: a matched record can differ
-   * from the sheet (new address, new e-mail), and the operator can only
-   * spot that with both side by side. Each value carries its cell address.
+   * The sheet's contact block next to the chosen stored record. Each sheet
+   * value carries its cell address; a record value that differs from what
+   * the sheet says is flagged. The import never changes a stored record,
+   * so a difference is for the operator to follow up on the submitter page.
    */
-  function renderSheetContact(parsed) {
-    if (!parsed || parsed.is_empty) {
-      return `<p class="import-fixups-hint">The sheet gives no details for this block.</p>`;
+  function renderComparison(parsed, record) {
+    const sheet = parsed?.values || {};
+    const sources = parsed?.sources || {};
+    const stored = record?.record || {};
+    const labels = new Map((state.payload.contact_fields || []).map((f) => [f.key, f.label]));
+    Object.keys(sheet).forEach((k) => { if (!labels.has(k)) labels.set(k, k.replace(/_/g, " ")); });
+    const keys = [...labels.keys()].filter((k) => present(sheet[k]) || (record && present(stored[k])));
+    if (!keys.length) {
+      return `<p class="import-empty">The sheet gives no contact details here${record ? ", and the record has none" : ""}.</p>`;
     }
-    const labels = new Map(
-      (state.payload.contact_fields || []).map((f) => [f.key, f.label])
-    );
-    const order = [...labels.keys()];
-    Object.keys(parsed.values).forEach((k) => { if (!labels.has(k)) order.push(k); });
-    const rows = order
-      .filter((k) => String(parsed.values[k] ?? "").trim())
+    const norm = (v) => String(v ?? "").normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+    let differences = 0;
+    const rows = keys
       .map((k) => {
-        const label = labels.get(k) || k.replace(/_/g, " ");
-        const cell = parsed.sources?.[k];
-        return `<dt>${esc(label)}</dt>
-                <dd>${esc(parsed.values[k])}${cell ? ` <span class="import-cell-ref">${esc(cell)}</span>` : ""}</dd>`;
+        const fromSheet = sheet[k];
+        const fromRecord = stored[k];
+        const differs = !!record && present(fromSheet) && norm(fromSheet) !== norm(fromRecord);
+        if (differs) differences += 1;
+        const cell = sources[k] ? ` <span class="import-cell-ref">${esc(sources[k])}</span>` : "";
+        return `
+          <tr class="${differs ? "is-diff" : ""}">
+            <th scope="row">${esc(labels.get(k))}</th>
+            <td>${present(fromSheet) ? esc(fromSheet) + cell : EMPTY}</td>
+            ${record
+              ? `<td>${differs ? '<span class="import-diff-mark" title="Differs from the sheet">≠</span>' : ""}${present(fromRecord) ? esc(fromRecord) : EMPTY}</td>`
+              : ""}
+          </tr>`;
       })
       .join("");
+    const note = !record
+      ? "Choose a record on the left to compare it with the sheet."
+      : differences
+        ? `${differences} field${differences === 1 ? " differs" : "s differ"} from the sheet. The import keeps the stored record as it is; update it on the <a href="/submitters/${record.user_nr}" target="_blank" rel="noopener">submitter page</a> if the customer's details changed.`
+        : "The stored record matches the sheet.";
     return `
-      <div class="import-sheet-contact">
-        <p class="import-sheet-contact-title">From the sheet</p>
-        <dl>${rows}</dl>
-      </div>`;
+      <div class="table-wrap import-compare-wrap">
+        <table class="import-compare" data-table-plain>
+          <thead><tr><th>Field</th><th>From the sheet</th>${record ? `<th>Record #${record.user_nr}</th>` : ""}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="import-hint ${differences ? "is-warning" : ""}">${note}</p>`;
   }
 
   /** Editable field set shown when creating a NEW submitter/invoice record. */
@@ -511,31 +555,26 @@
     const body = fields
       .map((f) => {
         const value = values[f.key] ?? "";
+        const id = `import-${which}-${f.key}`;
         let control;
         if (f.kind === "textarea") {
-          control = `<textarea data-contact-field="${f.key}" rows="3">${esc(value)}</textarea>`;
+          control = `<textarea id="${id}" data-contact-field="${f.key}" rows="2">${esc(value)}</textarea>`;
         } else if (f.kind === "select") {
-          control = `<select data-contact-field="${f.key}">${optionList(
+          control = `<select id="${id}" data-contact-field="${f.key}" data-no-searchable>${optionList(
             f.options.map((o) => o.value), value, "—"
           )}</select>`;
         } else {
-          control = `<input type="${f.kind === "email" ? "email" : "text"}"
+          control = `<input id="${id}" type="${f.kind === "email" ? "email" : "text"}"
                             data-contact-field="${f.key}" value="${esc(value)}" />`;
         }
-        return `<div class="import-field ${f.kind === "textarea" ? "import-span-2" : ""}">
-                  <label>${esc(f.label)}</label>${control}
+        return `<div class="import-field ${f.kind === "textarea" ? "is-full" : ""}">
+                  <label for="${id}">${esc(f.label)}</label>${control}
                 </div>`;
       })
       .join("");
     return `
-      <div class="import-newrecord">
-        <p class="import-fixups-hint">
-          These values will be saved as a new record — check them before importing.
-          Salutation, title, language and comment are not in the sheet; fill them in as needed.
-          <em>Language picks the confirmation-e-mail template (blank = German); you can still change it before sending.</em>
-        </p>
-        <div class="import-field-grid">${body}</div>
-      </div>`;
+      <p class="import-hint">Saved as a new record, from the sheet's values. Salutation, title, language and comment are not in the sheet; language picks the e-mail template (blank = German).</p>
+      <div class="import-form-grid">${body}</div>`;
   }
 
   /** Reload the existing-project list when the submitter selection changes. */
@@ -599,15 +638,10 @@
       .filter(Boolean);
   }
 
-  const PROJECT_TEXT_FIELDS = [
-    { key: "project", label: "Project Name", type: "text", span: 2 },
-    { key: "in_date", label: "In Date", type: "date" },
-    { key: "desired_date", label: "Desired Date", type: "date" },
-  ];
   const PROJECT_SELECTS = [
-    { key: "project_type", label: "Project Type" },
+    { key: "project_type", label: "Project type" },
     { key: "research", label: "Research" },
-    { key: "report_type", label: "Report Type" },
+    { key: "report_type", label: "Report type" },
     { key: "supervisor", label: "Supervisor" },
   ];
   const PROJECT_CHECKS = [
@@ -617,16 +651,18 @@
   ];
 
   /**
-   * The duplicate-project prompt.
+   * The duplicate-project prompt and the suggested-name hint.
    *
-   * Rendered into its own container so it can refresh on every keystroke
-   * in the project-name field without re-rendering (and therefore
-   * blurring) the form inputs around it.
+   * Rendered into their own containers so they can refresh on every
+   * keystroke in the project-name field without re-rendering (and
+   * therefore blurring) the inputs around them.
    */
   function renderDuplicatePrompt() {
     const p = state.project;
     const host = $("[data-project-duplicate]");
-    if (!host) return;
+    const hint = $("[data-project-name-hint]");
+    if (!host || !hint) return;
+
     let duplicateHtml = "";
     if (p.matches.length) {
       const rows = p.matches
@@ -638,8 +674,7 @@
               <span class="import-choice-body">
                 <span class="import-choice-title">Add to project #${m.project_nr}
                   ${m.match === "exact" ? '<span class="import-badge-strong">same name</span>' : ""}</span>
-                <span class="import-choice-meta">${esc(m.project)}</span>
-                <span class="import-choice-why">${esc(m.status)}${m.in_date ? " &middot; in " + esc(m.in_date) : ""}</span>
+                <span class="import-choice-meta">${esc(m.project)}${m.status ? " · " + esc(m.status) : ""}${m.in_date ? " · in " + esc(m.in_date) : ""}</span>
               </span>
             </label>`;
         })
@@ -647,37 +682,30 @@
       const newChecked = p.mode === "new";
       duplicateHtml = `
         <div class="import-duplicate">
-          <p class="import-duplicate-title">
-            This submitter already has a project with this name.
-          </p>
-          <div class="import-choices">
+          <p class="import-duplicate-title">This submitter already has a project with this name.</p>
+          <div class="import-choices is-row">
             ${rows}
             <label class="import-choice ${newChecked ? "is-selected" : ""}">
               <input type="radio" name="project-mode" value="new" ${newChecked ? "checked" : ""} />
               <span class="import-choice-body">
                 <span class="import-choice-title">Create a separate project</span>
-                <span class="import-choice-meta">Suggested name: ${esc(variantName(p.values.project))}</span>
+                <span class="import-choice-meta">with the name below</span>
               </span>
             </label>
           </div>
-          ${newChecked
-            ? `<button type="button" class="import-secondary" data-use-variant>Use the suggested name</button>`
-            : ""}
         </div>`;
-    } else if (p.mode === "new") {
-      // No clash to resolve (new submitter, or nothing similar on file):
-      // still offer the lab's `<name>_<Month>_<Year>` convention as a
-      // one-click option — it is never applied on its own.
-      const suggestion = variantName(p.values.project);
-      if (suggestion && suggestion !== String(p.values.project || "").trim()) {
-        duplicateHtml = `
-          <p class="import-name-suggestion">
-            Suggested name: <strong>${esc(suggestion)}</strong>
-            <button type="button" class="import-secondary" data-use-variant>Use the suggested name</button>
-          </p>`;
-      }
     }
     host.innerHTML = duplicateHtml;
+    host.hidden = !duplicateHtml;
+
+    // The lab's `<name>_<Month>_<Year>` convention, offered as one click
+    // and never applied on its own.
+    const suggestion = p.mode === "new" ? variantName(p.values.project) : "";
+    hint.innerHTML =
+      suggestion && suggestion !== String(p.values.project || "").trim()
+        ? `Suggested: <span class="import-hint-value">${esc(suggestion)}</span>
+           <button type="button" class="import-link" data-use-variant>use it</button>`
+        : "";
 
     host.querySelectorAll("input[name='project-mode']").forEach((input) => {
       input.addEventListener("change", () => {
@@ -691,7 +719,7 @@
         renderAlerts();
       });
     });
-    host.querySelector("[data-use-variant]")?.addEventListener("click", () => {
+    hint.querySelector("[data-use-variant]")?.addEventListener("click", () => {
       p.values.project = variantName(p.values.project) || p.values.project;
       p.matches = matchProjectNames(p.values.project, p.existing);
       renderProject();
@@ -702,60 +730,60 @@
   function renderProject() {
     const p = state.project;
     const opts = state.payload.project_options;
+    const sub = state.party.submitter;
+
+    $("[data-project-note]").textContent =
+      p.mode === "existing"
+        ? `adding to project #${p.existing_project_nr}; its settings stay as they are`
+        : sub.mode === "existing" && sub.user_nr
+          ? `new project for submitter #${sub.user_nr}`
+          : sub.mode === "new"
+            ? "new project for the new submitter"
+            : "new project";
 
     // When appending, project settings belong to the existing project.
-    const settingsDisabled = p.mode === "existing";
-    const textFields = PROJECT_TEXT_FIELDS.map(
-      (f) => `
-        <div class="import-field ${f.span === 2 ? "import-span-2" : ""}">
-          <label>${esc(f.label)}</label>
-          <input type="${f.type}" data-project-field="${f.key}"
-                 value="${esc(p.values[f.key] ?? "")}" ${settingsDisabled ? "disabled" : ""} />
-        </div>`
-    ).join("");
-
-    const selects = PROJECT_SELECTS.map(
-      (f) => `
-        <div class="import-field">
-          <label>${esc(f.label)}</label>
-          <select data-project-field="${f.key}" ${settingsDisabled ? "disabled" : ""}>
-            ${optionList(opts[f.key] || [], p.values[f.key] ?? "", "—")}
-          </select>
-        </div>`
-    ).join("");
-
-    const priority = `
-      <div class="import-field">
-        <label>Priority</label>
-        <select data-project-field="priority" ${settingsDisabled ? "disabled" : ""}>
-          ${(opts.priority || [])
-            .map(
-              (o) =>
-                `<option value="${o.value}" ${String(o.value) === String(p.values.priority) ? "selected" : ""}>${esc(o.label)}</option>`
-            )
-            .join("")}
-        </select>
+    const off = p.mode === "existing" ? "disabled" : "";
+    const value = (key) => esc(p.values[key] ?? "");
+    const field = (key, label, control, cls = "") => `
+      <div class="import-field ${cls}">
+        <label for="import-project-${key}">${esc(label)}</label>${control}
       </div>`;
-
+    const input = (key, type) =>
+      `<input id="import-project-${key}" type="${type}" data-project-field="${key}" value="${value(key)}" ${off} />`;
+    const select = (key) =>
+      `<select id="import-project-${key}" data-project-field="${key}" ${off}>
+         ${optionList(opts[key] || [], p.values[key] ?? "", "—")}
+       </select>`;
+    const priority = `
+      <select id="import-project-priority" data-project-field="priority" data-no-searchable ${off}>
+        ${(opts.priority || [])
+          .map((o) => `<option value="${esc(o.value)}" ${String(o.value) === String(p.values.priority) ? "selected" : ""}>${esc(o.label)}</option>`)
+          .join("")}
+      </select>`;
     const checks = PROJECT_CHECKS.map(
       (f) => `
-        <label class="import-check">
-          <input type="checkbox" data-project-check="${f.key}"
-                 ${p.values[f.key] ? "checked" : ""} ${settingsDisabled ? "disabled" : ""} />
-          <span>${esc(f.label)}</span>
+        <label class="import-inline-check">
+          <input type="checkbox" data-project-check="${f.key}" ${p.values[f.key] ? "checked" : ""} ${off} />
+          ${esc(f.label)}
         </label>`
     ).join("");
 
     $("[data-project]").innerHTML = `
-      <div data-project-duplicate></div>
-      ${settingsDisabled
-        ? `<p class="import-fixups-hint">Samples will be added to the existing project — its settings are left unchanged.</p>`
-        : ""}
-      <div class="import-field-grid">${textFields}${selects}${priority}</div>
-      <div class="import-checks">${checks}</div>
-      <div class="import-field import-span-2">
-        <label>Comment</label>
-        <textarea data-project-field="project_comment" rows="2" ${settingsDisabled ? "disabled" : ""}>${esc(p.values.project_comment ?? "")}</textarea>
+      <div data-project-duplicate hidden></div>
+      <div class="import-form-grid is-project">
+        <div class="import-field is-wide">
+          <label for="import-project-project">Project name</label>
+          ${input("project", "text")}
+          <p class="import-hint" data-project-name-hint></p>
+        </div>
+        ${field("in_date", "In date", input("in_date", "date"))}
+        ${field("desired_date", "Desired date", input("desired_date", "date"))}
+        ${PROJECT_SELECTS.map((f) => field(f.key, f.label, select(f.key))).join("")}
+        ${field("priority", "Priority", priority)}
+        <div class="import-checks">${checks}</div>
+        ${field("project_comment", "Comment",
+          `<textarea id="import-project-project_comment" data-project-field="project_comment" rows="2" ${off}>${value("project_comment")}</textarea>`,
+          "is-full")}
       </div>`;
 
     const host = $("[data-project]");
@@ -784,6 +812,13 @@
 
   // ---- review-stage validation ----------------------------------------
 
+  /** The action bar's status line: "Ready · …", or what blocks the step. */
+  function footStatus(el, blocked, text) {
+    el.innerHTML = blocked
+      ? '<span class="is-blocked">Fix the items above to continue</span>'
+      : `<strong>Ready</strong> · ${esc(text)}`;
+  }
+
   function reviewProblems() {
     const problems = [];
     const sub = state.party.submitter;
@@ -796,6 +831,9 @@
     const inv = state.party.invoice;
     if (inv.enabled && inv.mode === "new" && !String(inv.values.last_name || "").trim()) {
       problems.push("The new invoice recipient needs a last name.");
+    }
+    if (inv.enabled && inv.mode === "existing" && !inv.user_nr) {
+      problems.push("Choose an existing invoice recipient, or switch to creating a new one.");
     }
     if (state.project.mode === "new" && !String(state.project.values.project || "").trim()) {
       problems.push("Enter a project name.");
@@ -822,24 +860,27 @@
       section.hidden = false;
       section.classList.toggle("has-errors", problems.length > 0);
       $("[data-alerts-title]").textContent = problems.length
-        ? `${problems.length} thing(s) to fix`
-        : `${items.length} note(s)`;
+        ? `${problems.length === 1 ? "One thing" : `${problems.length} things`} to fix`
+        : items.length === 1 ? "Note" : "Notes";
       $("[data-alert-list]").innerHTML = items
         .map((i) => `<li class="is-${i.severity}">${esc(i.message)}</li>`)
         .join("");
     }
     $("[data-goto-lab]").disabled = problems.length > 0;
-    $("[data-review-status]").textContent = problems.length
-      ? "Resolve the items above to continue"
-      : "Ready — continue to assign lab values";
+    const sub = state.party.submitter;
+    footStatus(
+      $("[data-review-status]"),
+      problems.length,
+      [
+        sub.mode === "existing" ? `submitter #${sub.user_nr}` : "new submitter",
+        state.project.mode === "existing" ? `add to project #${state.project.existing_project_nr}` : "new project",
+      ].join(" · ")
+    );
   }
 
   // -------------------------------------------------------------- step 3
 
   function renderLabStage() {
-    $("[data-lab-summary]").innerHTML =
-      `<strong>${esc(state.draft.file_name)}</strong> &middot; ` +
-      `${includedSamples().length} sample(s) selected`;
     renderGroups();
     renderMapping();
     renderSamples();
@@ -850,27 +891,26 @@
   const includedSamples = () => state.draft.samples.filter((s) => s.include);
 
   /**
-   * Group cards: one per distinct submitter material.
+   * Group rows: one per distinct submitter material.
    *
-   * The customer's wording ("collagen") is shown as the heading, and the
-   * lab's own vocabulary is chosen beneath it. Suggestions come from the
-   * server's fuzzy match so the usual case is a confirming click.
+   * The customer's wording ("collagen") heads the row and the lab's own
+   * vocabulary is chosen beside it. A material suggestion from the
+   * server's fuzzy match sits under the select, so the usual case is one
+   * confirming click.
    */
   function renderGroups() {
     const opts = state.payload.lookup_options;
     const methods = state.payload.method_options || [];
     const suggestions = state.payload.group_suggestions || {};
 
-    $("[data-groups]").innerHTML = groupKeys()
+    const rowsHtml = groupKeys()
       .map((key) => {
-        const rows = state.draft.samples.filter(
-          (s) => s.include && groupKeyFor(s) === key
-        ).length;
+        const rows = state.draft.samples.filter((s) => s.include && groupKeyFor(s) === key).length;
         if (!rows) return "";
         const g = state.groups[key] || { steps: [] };
-        // Quick picks: a quiet "a · b" text line, not buttons in
-        // boxes. The value already selected is left out.
-        const chips = (field) =>
+        // Quick picks: a quiet "a · b" text line, not buttons in boxes.
+        // The value already selected is left out.
+        const picks = (field) =>
           (suggestions[key]?.[field] || [])
             .filter((v) => v !== g[field])
             .slice(0, 3)
@@ -881,41 +921,41 @@
                          title="Set ${esc(field)} to ${esc(v)}">${esc(v)}</button>`
             )
             .join("");
-        const selects = LOOKUP_FIELDS.map(
-          (field) => `
-            <div class="import-field">
-              <label>${esc(state.payload.field_labels.sample[field] || field)}</label>
-              <select data-group-select="${esc(key)}" data-group-field="${field}">
+        const lookups = LOOKUP_FIELDS.map((field) => {
+          const label = state.payload.field_labels.sample[field] || field;
+          const quick = picks(field);
+          return `
+            <td>
+              <select class="${g[field] ? "" : "is-unset"}" data-group-select="${esc(key)}"
+                      data-group-field="${field}" aria-label="${esc(label)} for “${esc(key)}”">
                 ${optionList(opts[field] || [], g[field] || "", "— undefined —")}
               </select>
-              ${chips(field) ? `<div class="import-suggests">${chips(field)}</div>` : ""}
-            </div>`
-        ).join("");
+              ${quick ? `<div class="import-suggests">${quick}</div>` : ""}
+            </td>`;
+        }).join("");
         const steps = g.steps
           .map(
             (value, index) => `
-              <select data-group-step="${esc(key)}" data-step-index="${index}"
-                      aria-label="Preparation step ${index + 1}">
-                ${optionList(methods, value || "", `Step ${index + 1}`)}
-              </select>`
+              <td>
+                <select data-group-step="${esc(key)}" data-step-index="${index}"
+                        aria-label="Preparation step ${index + 1} for “${esc(key)}”">
+                  ${optionList(methods, value || "", "—")}
+                </select>
+              </td>`
           )
           .join("");
         return `
-          <article class="import-group">
-            <header class="import-group-head">
-              <span class="import-group-name">“${esc(key)}”</span>
-              <span class="import-group-count">${rows} row(s)</span>
-            </header>
-            <div class="import-field-grid import-group-fields">${selects}</div>
-            <div class="import-group-steps">
-              <label>Preparation steps</label>
-              <div class="import-step-selects">${steps}</div>
-            </div>
-          </article>`;
+          <tr>
+            <th scope="row" class="import-group-name">“${esc(key)}”<span>${rows} row${rows === 1 ? "" : "s"}</span></th>
+            ${lookups}${steps}
+          </tr>`;
       })
       .join("");
-
     const host = $("[data-groups]");
+    host.innerHTML =
+      rowsHtml ||
+      `<tr><td class="table-empty-row" colspan="9">No rows are included. Tick <strong>Import</strong> on a row below to bring it back.</td></tr>`;
+
     host.querySelectorAll("[data-group-select]").forEach((sel) => {
       sel.addEventListener("change", () => {
         applyGroupValue(sel.dataset.groupSelect, sel.dataset.groupField, sel.value);
@@ -961,7 +1001,7 @@
     const fields = state.payload.mappable_fields;
     const columns = state.draft.columns;
     const mapped = columns.filter((c) => state.mapping[c.column_letter]).length;
-    $("[data-mapping-count]").textContent = `${mapped} of ${columns.length} mapped`;
+    $("[data-mapping-count]").textContent = `· ${mapped} of ${columns.length} mapped`;
     $("[data-mapping-grid]").innerHTML = columns
       .map((column) => {
         const current = state.mapping[column.column_letter] || "";
@@ -1093,59 +1133,77 @@
     renderColumnToggles();
     const sheet = sheetFields();
     const labels = state.payload.field_labels.sample;
+    const total = state.draft.samples.length;
+    const included = includedSamples().length;
     $("[data-sample-count]").textContent =
-      `${includedSamples().length} of ${state.draft.samples.length} row(s) will be imported`;
+      included === total ? `all ${total} will be imported` : `${included} of ${total} will be imported`;
 
+    const allSelected = state.selection.size === total && total > 0;
     $("[data-sample-head]").innerHTML =
       "<tr>" +
-      '<th class="import-col-check"><input type="checkbox" data-select-all title="Select all" /></th>' +
+      `<th class="import-col-check"><input type="checkbox" data-select-all aria-label="Select all rows" ${allSelected ? "checked" : ""} /></th>` +
+      '<th class="import-col-include">Import</th>' +
       '<th class="import-col-row">Row</th>' +
       sheet.map((f) => `<th>${esc(labels[f] || f)}</th>`).join("") +
-      LOOKUP_FIELDS.map(
-        (f) => `<th class="import-col-lab">Lab ${esc(labels[f] || f)}</th>`
-      ).join("") +
-      STEP_COLUMNS.map((_, i) => `<th class="import-col-step">Step ${i + 1}</th>`).join("") +
+      LOOKUP_FIELDS.map((f) => `<th class="import-col-lab">Lab ${esc((labels[f] || f).toLowerCase())}</th>`).join("") +
+      STEP_COLUMNS.map((_, i) => `<th class="import-col-step">Prep ${i + 1}</th>`).join("") +
       "</tr>";
+    const selectAll = $("[data-select-all]");
+    selectAll.indeterminate = state.selection.size > 0 && !allSelected;
 
     const opts = state.payload.lookup_options;
     const methods = state.payload.method_options || [];
+    // Each sheet column is as wide as its longest value (within reason):
+    // an input has no content width of its own, so `size` sets it.
+    const widths = Object.fromEntries(
+      sheet.map((field) => [
+        field,
+        Math.min(
+          24,
+          Math.max(4, ...state.draft.samples.map((s) => String(s.values[field] ?? "").length + 1))
+        ),
+      ])
+    );
 
     $("[data-sample-body]").innerHTML = state.draft.samples
       .map((sample, index) => {
         const sheetCells = sheet
           .map(
             (field) =>
-              `<td><input data-cell-row="${index}" data-cell-field="${field}"
+              `<td class="import-col-sheet"><input size="${widths[field]}" data-cell-row="${index}" data-cell-field="${field}"
+                          aria-label="${esc(labels[field] || field)}, row ${sample.row_number}"
                           value="${esc(sample.values[field] ?? "")}" /></td>`
           )
           .join("");
         const labCells = LOOKUP_FIELDS.map((field) => {
           const value = sample.values[`lab_${field}`] || "";
-          return `<td class="import-col-lab ${value ? "" : "is-unset"}">
-                    <select data-cell-row="${index}" data-lab-field="${field}">
+          return `<td class="import-col-lab">
+                    <select class="${value ? "" : "is-unset"}" data-cell-row="${index}" data-lab-field="${field}"
+                            aria-label="Lab ${esc(labels[field] || field)}, row ${sample.row_number}">
                       ${optionList(opts[field] || [], value, "— undefined —")}
                     </select></td>`;
         }).join("");
         const stepCells = STEP_COLUMNS.map(
           (col, i) => `<td class="import-col-step">
-              <select data-cell-row="${index}" data-step-field="${col}">
-                ${optionList(methods, sample.values[col] || "", `Step ${i + 1}`)}
+              <select data-cell-row="${index}" data-step-field="${col}"
+                      aria-label="Preparation step ${i + 1}, row ${sample.row_number}">
+                ${optionList(methods, sample.values[col] || "", "—")}
               </select></td>`
         ).join("");
         const errors = (sample.issues || []).filter((i) => i.severity === "error");
+        const selected = state.selection.has(index);
         return `
-          <tr class="${sample.include ? "" : "is-excluded"} ${errors.length ? "has-error" : ""}
-                     ${state.selection.has(index) ? "is-selected-row" : ""}">
+          <tr class="${sample.include ? "" : "is-excluded"} ${errors.length ? "has-error" : ""} ${selected ? "is-selected-row" : ""}">
             <td class="import-col-check">
-              <input type="checkbox" data-select-row="${index}" ${state.selection.has(index) ? "checked" : ""} />
+              <input type="checkbox" data-select-row="${index}" ${selected ? "checked" : ""}
+                     aria-label="Select row ${sample.row_number}" />
             </td>
-            <td class="import-col-row">
-              <label class="import-include">
-                <input type="checkbox" data-include-row="${index}" ${sample.include ? "checked" : ""}
-                       title="Include this row" />
-                <span>${sample.row_number}</span>
-              </label>
+            <td class="import-col-include">
+              <input type="checkbox" role="switch" class="import-switch" data-include-row="${index}"
+                     ${sample.include ? "checked" : ""} aria-label="Import row ${sample.row_number}"
+                     title="${sample.include ? "Imported; click to leave this row out" : "Left out; click to import this row"}" />
             </td>
+            <td class="import-col-row">${sample.row_number}</td>
             ${sheetCells}${labCells}${stepCells}
           </tr>`;
       })
@@ -1199,15 +1257,15 @@
     const bar = $("[data-bulkbar]");
     if (!state.selection.size) { bar.hidden = true; return; }
     bar.hidden = false;
-    $("[data-bulk-count]").textContent = `${state.selection.size} row(s) selected`;
+    $("[data-bulk-count]").textContent = `${state.selection.size} selected`;
 
     const fieldSelect = $("[data-bulk-field]");
     if (!fieldSelect.options.length) {
       const labels = state.payload.field_labels.sample;
       fieldSelect.innerHTML = LOOKUP_FIELDS.map(
-        (f) => `<option value="lab_${f}">Lab ${esc(labels[f] || f)}</option>`
+        (f) => `<option value="lab_${f}">Lab ${esc((labels[f] || f).toLowerCase())}</option>`
       ).concat(
-        STEP_COLUMNS.map((c, i) => `<option value="${c}">Preparation step ${i + 1}</option>`)
+        STEP_COLUMNS.map((c, i) => `<option value="${c}">Prep ${i + 1}</option>`)
       ).join("");
       fieldSelect.addEventListener("change", renderBulkValues);
     }
@@ -1232,6 +1290,12 @@
     });
     renderSamples(); renderGroups(); renderLabAlerts();
   });
+  const includeSelected = (include) => {
+    state.selection.forEach((index) => { state.draft.samples[index].include = include; });
+    renderSamples(); renderGroups(); renderLabAlerts();
+  };
+  $("[data-bulk-exclude]").addEventListener("click", () => includeSelected(false));
+  $("[data-bulk-include]").addEventListener("click", () => includeSelected(true));
   $("[data-bulk-clear]").addEventListener("click", () => {
     state.selection = new Set();
     renderSamples(); renderBulkBar();
@@ -1300,79 +1364,88 @@
       section.hidden = false;
       section.classList.toggle("has-errors", problems.length > 0);
       $("[data-lab-alerts-title]").textContent = problems.length
-        ? `${problems.length} thing(s) to fix before importing`
-        : `${items.length} note(s)`;
+        ? `${problems.length === 1 ? "One thing" : `${problems.length} things`} to fix before importing`
+        : items.length === 1 ? "Note" : "Notes";
       $("[data-lab-alert-list]").innerHTML = items
         .map((i) => `<li class="is-${i.severity}">${esc(i.message)}</li>`)
         .join("");
     }
     $("[data-commit]").disabled = problems.length > 0 || state.committing;
     $("[data-goto-extras]").disabled = problems.length > 0;
-    $("[data-lab-status]").textContent = problems.length
-      ? "Resolve the items above to continue"
-      : `${includedSamples().length} sample(s) ready`;
+    const count = includedSamples().length;
+    const noMaterial = includedSamples().filter((s) => !s.values.lab_material).length;
+    footStatus(
+      $("[data-lab-status]"),
+      problems.length,
+      `${count} sample${count === 1 ? "" : "s"}` + (noMaterial ? ` · ${noMaterial} without lab material` : "")
+    );
   }
 
   // ------------------------------------------------- step 4: extra analyses
 
   /** The analyses requested beyond C14 dating; set by hand, not by the sheet. */
   const EXTRA_FLAGS = [
-    { key: "cn_isotop_a", label: "C/N isotope analysis" },
-    { key: "dendro_a", label: "Dendro analysis" },
+    { key: "cn_isotop_a", label: "C/N isotope analysis", short: "C/N isotope" },
+    { key: "dendro_a", label: "Dendro analysis", short: "Dendro" },
   ];
 
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  /**
+   * One compact table: row, label, lab material, and a checkbox column per
+   * analysis. Each column head carries its own count and All / None, so
+   * the set-all controls sit where they act.
+   */
   function renderExtrasStage() {
     const rows = includedSamples();
-    $("[data-extras-summary]").textContent =
-      `${rows.length} sample(s) — tick the analyses requested in addition to C14 dating.`;
 
-    const bar = $("[data-extras-bar]");
-    bar.replaceChildren(
-      ...EXTRA_FLAGS.map(({ key, label }) => {
-        const on = rows.filter((r) => r.values[key]).length;
-        const wrap = document.createElement("div");
-        wrap.className = "import-extras-set";
-        const name = document.createElement("strong");
-        name.textContent = label;
-        const count = document.createElement("span");
-        count.className = "import-extras-count";
-        count.textContent = `${on} of ${rows.length}`;
-        const all = document.createElement("button");
-        all.type = "button"; all.className = "import-secondary";
-        all.textContent = "All";
-        all.addEventListener("click", () => setAllFlags(key, true));
-        const none = document.createElement("button");
-        none.type = "button"; none.className = "import-restart";
-        none.textContent = "None";
-        none.addEventListener("click", () => setAllFlags(key, false));
-        wrap.append(name, count, all, none);
-        return wrap;
-      })
+    const headRow = el("tr");
+    headRow.append(
+      el("th", "import-col-row", "Row"),
+      el("th", "", "Sample label"),
+      el("th", "", "Lab material")
     );
-
-    const head = $("[data-extras-head]");
-    const headRow = document.createElement("tr");
-    ["Row", "Sample label", ...EXTRA_FLAGS.map((f) => f.label)].forEach((text) => {
-      const th = document.createElement("th");
-      th.textContent = text;
+    EXTRA_FLAGS.forEach(({ key, short }) => {
+      const th = el("th", "import-col-flag");
+      const on = rows.filter((r) => r.values[key]).length;
+      const tools = el("span", "import-flag-tools");
+      const all = el("button", "import-link", "All");
+      all.type = "button";
+      all.setAttribute("aria-label", `Tick ${short} for every sample`);
+      all.addEventListener("click", () => setAllFlags(key, true));
+      const none = el("button", "import-link", "None");
+      none.type = "button";
+      none.setAttribute("aria-label", `Clear ${short} for every sample`);
+      none.addEventListener("click", () => setAllFlags(key, false));
+      tools.append(el("span", "", `${on} of ${rows.length}`), all, none);
+      th.append(el("span", "import-flag-name", short), tools);
       headRow.append(th);
     });
-    head.replaceChildren(headRow);
+    $("[data-extras-head]").replaceChildren(headRow);
 
     $("[data-extras-body]").replaceChildren(
       ...rows.map((sample) => {
-        const tr = document.createElement("tr");
-        const nr = document.createElement("td");
-        nr.textContent = sample.row_number;
-        const label = document.createElement("td");
-        label.textContent = sample.values.user_label || "—";
-        tr.append(nr, label);
-        EXTRA_FLAGS.forEach(({ key, label: flagLabel }) => {
-          const td = document.createElement("td");
-          const box = document.createElement("input");
+        const tr = el("tr");
+        const material = sample.values.lab_material;
+        const materialCell = el("td");
+        if (material) materialCell.textContent = material;
+        else materialCell.append(el("span", "detail-empty", "undefined"));
+        tr.append(
+          el("td", "import-col-row", String(sample.row_number)),
+          el("td", "", sample.values.user_label || "—"),
+          materialCell
+        );
+        EXTRA_FLAGS.forEach(({ key, label }) => {
+          const td = el("td", "import-col-flag");
+          const box = el("input");
           box.type = "checkbox";
           box.checked = !!sample.values[key];
-          box.setAttribute("aria-label", `${flagLabel} for row ${sample.row_number}`);
+          box.setAttribute("aria-label", `${label}, row ${sample.row_number}`);
           box.addEventListener("change", () => {
             sample.values[key] = box.checked;
             renderExtrasStage();
@@ -1384,7 +1457,15 @@
       })
     );
 
-    $("[data-commit-status]").textContent = `Ready — ${rows.length} sample(s) will be created`;
+    const extras = EXTRA_FLAGS
+      .map(({ key, short }) => [short, rows.filter((r) => r.values[key]).length])
+      .filter(([, n]) => n)
+      .map(([short, n]) => `${n} ${short}`);
+    footStatus(
+      $("[data-commit-status]"),
+      0,
+      `${rows.length} sample${rows.length === 1 ? "" : "s"} will be created` + (extras.length ? ` · ${extras.join(" · ")}` : "")
+    );
   }
 
   function setAllFlags(key, value) {
@@ -1490,6 +1571,9 @@
         label, `${includedSamples().filter((r) => r.values[key]).length} sample(s)`,
       ]),
     ];
+    const count = includedSamples().length;
+    dialog.querySelector("[data-commit-title]").textContent =
+      `Import ${count} sample${count === 1 ? "" : "s"} now?`;
     const summary = dialog.querySelector("[data-commit-summary]");
     summary.replaceChildren(
       ...rows.flatMap(([label, value]) => {
@@ -1540,46 +1624,50 @@
     } finally {
       state.committing = false;
       button.disabled = false;
-      button.textContent = "Import samples";
+      button.textContent = "Import samples…";
     }
   });
 
   // -------------------------------------------------------------- step 4
 
   function renderDone(result) {
-    const range = result.sample_nrs.length
-      ? `${result.sample_nrs[0]}–${result.sample_nrs[result.sample_nrs.length - 1]}`
-      : "—";
+    const nrs = result.sample_nrs || [];
+    const sampleLink = (nr) => `<a href="/samples/${encodeURIComponent(nr)}">${esc(nr)}</a>`;
+    const range = nrs.length
+      ? nrs.length === 1
+        ? sampleLink(nrs[0])
+        : `${sampleLink(nrs[0])} – ${sampleLink(nrs[nrs.length - 1])}`
+      : EMPTY;
+    const count = result.sample_count;
     $("[data-done]").innerHTML = `
-      <div class="import-done-head">
-        <span class="import-done-mark" aria-hidden="true">&#10003;</span>
-        <div>
-          <h3>Imported ${result.sample_count} sample${result.sample_count === 1 ? "" : "s"}</h3>
-          <p>Each sample has preparation&nbsp;#1 and target&nbsp;#1 ready for the bench.</p>
+      <div class="import-done-line">
+        <span class="import-done-mark" aria-hidden="true">✓</span>
+        <h2>Imported ${count} sample${count === 1 ? "" : "s"}</h2>
+        <div class="import-done-actions">
+          <a class="import-primary" href="${esc(result.project_url)}">Open project</a>
+          ${result.first_sample_url ? `<a class="import-secondary" href="${esc(result.first_sample_url)}">Open first sample</a>` : ""}
+          <a class="import-ghost" href="/samples/import">Import another file</a>
         </div>
       </div>
-      <div class="cards import-done-cards">
-        <article>
-          <h3>Project</h3>
-          <p><a href="${result.project_url}">#${result.project_nr}</a></p>
-          <span class="import-done-meta">${esc(result.project_name)}${result.project_created ? " (new)" : " (existing)"}</span>
-        </article>
-        <article>
-          <h3>Submitter</h3>
-          <p><a href="${result.submitter_url}">#${result.user_nr}</a></p>
-          <span class="import-done-meta">${esc(result.submitter_name)}${result.submitter_created ? " (new)" : " (existing)"}</span>
-        </article>
-        <article>
-          <h3>Samples</h3>
-          <p>${range}</p>
-          <span class="import-done-meta">${result.sample_count} created</span>
-        </article>
-      </div>
-      <div class="import-done-actions">
-        <a class="import-primary" href="${result.project_url}">Open the project</a>
-        ${result.first_sample_url ? `<a class="import-secondary" href="${result.first_sample_url}">Open first sample</a>` : ""}
-        <a class="import-secondary" href="/samples/import">Import another file</a>
-      </div>`;
+      <dl class="import-done-facts">
+        <div>
+          <dt>Project</dt>
+          <dd><a href="${esc(result.project_url)}">#${esc(result.project_nr)}</a>
+            <span class="import-done-tag">${result.project_created ? "new" : "existing"}</span>
+            <span class="import-done-meta">${esc(result.project_name)}</span></dd>
+        </div>
+        <div>
+          <dt>Submitter</dt>
+          <dd><a href="${esc(result.submitter_url)}">#${esc(result.user_nr)}</a>
+            <span class="import-done-tag">${result.submitter_created ? "new" : "existing"}</span>
+            <span class="import-done-meta">${esc(result.submitter_name)}</span></dd>
+        </div>
+        <div>
+          <dt>Samples</dt>
+          <dd>${range}
+            <span class="import-done-meta">each with preparation #1 and target #1</span></dd>
+        </div>
+      </dl>`;
   }
 
   /**
@@ -1605,7 +1693,7 @@
     const section = $("[data-email-section]");
     const host = $("[data-email]");
     section.hidden = false;
-    host.innerHTML = `<p class="import-fixups-hint"><span class="import-spinner"></span> Preparing the confirmation e-mail…</p>`;
+    host.innerHTML = `<p class="import-hint"><span class="import-spinner" aria-hidden="true"></span> Preparing the confirmation e-mail…</p>`;
     try {
       const res = await fetchEmailPreview(result, null);
       const data = await res.json();
@@ -1637,29 +1725,30 @@
       .map((t) => `<option value="${esc(t.code)}" ${t.code === data.template ? "selected" : ""}>${esc(t.label)}</option>`)
       .join("");
 
+    const from = email.from_name ? `${email.from_name} <${email.from_address}>` : email.from_address;
     host.innerHTML = `
       ${blockers.length
-        ? `<p class="table-truncation-notice">${blockers.map(esc).join(" ")}
+        ? `<p class="import-hint is-warning">${blockers.map(esc).join(" ")}
              <a href="/setup?section=email_settings">Open e-mail settings</a></p>`
-        : `<p class="import-fixups-hint">
-             Review the message below — it is <strong>not sent</strong> until you click Send.
-           </p>`}
-      <div class="import-field-grid import-email-grid">
-        <div class="import-field"><label for="import-email-template">Template</label>
+        : ""}
+      <div class="import-mail">
+        <label for="import-email-template">Template</label>
+        <div class="import-mail-template">
           <select id="import-email-template" data-email-template data-no-searchable>${templateOptions}</select>
-          <span class="import-field-hint" data-email-template-reason>${esc(templateReasonText(data))}</span></div>
-        <div class="import-field"><label>To</label>
-          <input type="email" data-email-to value="${esc(email.to_address)}" /></div>
-        <div class="import-field"><label>From</label>
-          <input type="text" value="${esc(email.from_name ? email.from_name + " <" + email.from_address + ">" : email.from_address)}" disabled /></div>
-        <div class="import-field"><label>Subject</label>
-          <input type="text" data-email-subject value="${esc(email.subject)}" /></div>
-        <div class="import-field import-email-message"><label>Message</label>
-          <textarea data-email-body rows="16">${esc(email.body)}</textarea></div>
+          <span class="import-hint" data-email-template-reason>${esc(templateReasonText(data))}</span>
+        </div>
+        <label for="import-email-to">To</label>
+        <input id="import-email-to" type="email" data-email-to value="${esc(email.to_address)}" />
+        <label for="import-email-from">From</label>
+        <input id="import-email-from" type="text" value="${esc(from || "")}" disabled />
+        <label for="import-email-subject">Subject</label>
+        <input id="import-email-subject" type="text" data-email-subject value="${esc(email.subject)}" />
+        <label for="import-email-body" class="is-top">Message</label>
+        <textarea id="import-email-body" data-email-body rows="14">${esc(email.body)}</textarea>
       </div>
-      <div class="import-actions">
-        <p class="import-actions-status" data-email-status></p>
-        <button type="button" class="import-restart" data-email-skip>Skip — don't send</button>
+      <div class="import-mail-actions">
+        <p class="import-foot-status" data-email-status></p>
+        <button type="button" class="import-ghost" data-email-skip>Skip e-mail</button>
         <button type="button" class="import-primary" data-email-send ${blockers.length ? "disabled" : ""}>Send e-mail</button>
       </div>`;
 
@@ -1727,7 +1816,7 @@
           button.textContent = "Send e-mail";
           return;
         }
-        host.innerHTML = `<p class="import-sent">&#10003; Confirmation e-mail sent to ${esc(data2.to_address)}.</p>`;
+        host.innerHTML = `<p class="import-sent">✓ Confirmation e-mail sent to ${esc(data2.to_address)}.</p>`;
         window.SAMSToast?.show("Confirmation e-mail sent.", "success");
       } catch (_e) {
         status.textContent = "The e-mail could not be sent. The import itself is unaffected.";
