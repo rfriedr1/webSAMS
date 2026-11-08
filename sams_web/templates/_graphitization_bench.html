@@ -129,8 +129,10 @@
       {{ ctx_item(field_label("graph_batch"), "graph_batch", graph_target.graph_batch) }}
       {#- Extra analyses: the material may have to be shared out, so say
           it up front, yes or no. -#}
-      {{ ctx_flag(field_label("c_n_isotop_a"), graph_sample.c_n_isotop_a, hook="data-graph-bench-cn-isotope") }}
-      {{ ctx_flag(field_label("dendro_a"), graph_sample.dendro_a, hook="data-graph-bench-dendro") }}
+      <span class="bench-analysis" role="group" aria-label="Extra analyses">
+        {{ ctx_flag(field_label("c_n_isotop_a"), graph_sample.c_n_isotop_a, hook="data-graph-bench-cn-isotope") }}
+        {{ ctx_flag(field_label("dendro_a"), graph_sample.dendro_a, hook="data-graph-bench-dendro") }}
+      </span>
       {% if graph_prep.stop %}<span class="bench-chip is-danger">Prep discarded</span>{% endif %}
     </div>
 

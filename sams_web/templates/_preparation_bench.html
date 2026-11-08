@@ -103,8 +103,10 @@
       {{ ctx_item(field_label("fraction"), "fraction", bench_sample.fraction) }}
       {#- Extra analyses: the material may have to be shared out, so say
           it up front, yes or no. -#}
-      {{ ctx_flag(field_label("c_n_isotop_a"), bench_sample.c_n_isotop_a, hook="data-prep-bench-cn-isotope") }}
-      {{ ctx_flag(field_label("dendro_a"), bench_sample.dendro_a, hook="data-prep-bench-dendro") }}
+      <span class="bench-analysis" role="group" aria-label="Extra analyses">
+        {{ ctx_flag(field_label("c_n_isotop_a"), bench_sample.c_n_isotop_a, hook="data-prep-bench-cn-isotope") }}
+        {{ ctx_flag(field_label("dendro_a"), bench_sample.dendro_a, hook="data-prep-bench-dendro") }}
+      </span>
     </div>
 
     <form method="post" action="/lab/preparation/bench/save" class="bench-form" data-prep-bench-save-form>

@@ -43,16 +43,27 @@
 {% endmacro %}
 
 {#- A yes/no fact about the sample in the context line (C/N isotope or
-    dendro analysis): always shown with the word Yes or No, so "no" is an
-    answer and never a missing value. Yes is an amber pill, because part
-    of the material has to go to that analysis. (A disabled checkbox was
-    tried first: browsers grey it out and the tick was too faint to read
-    at a glance.) Read-only: set in the import wizard or on the sample
-    page. -#}
+    dendro analysis), as a chip that is always shown, so "no" is an answer
+    and never a missing value. Yes: solid amber chip with a check mark,
+    because part of the material has to go to that analysis. No: quiet
+    dashed chip with a minus. The label and icon carry the state, the
+    colour only draws the eye; screen readers hear "yes" / "no".
+    (Tried before: a disabled checkbox — greyed out, tick unreadable — and
+    a plain "Yes/No" word, which the lab found too easy to overlook.)
+    Read-only: set in the import wizard or on the sample page. -#}
 {% macro ctx_flag(label, checked, hook="") %}
-<span class="bench-ctx-item bench-ctx-flag{% if checked %} is-on{% endif %}" title="Set on the sample (import wizard or sample page)"{% if hook %} {{ hook }}="{{ 'yes' if checked else 'no' }}"{% endif %}>
-  <span class="bench-ctx-label">{{ label }}</span>
-  <span class="bench-ctx-flag-value">{{ 'Yes' if checked else 'No' }}</span>
+{%- set state = 'yes' if checked else 'no' -%}
+<span class="bench-analysis-chip is-{{ state }}" title="{{ label }}: {{ state }} (set on the sample: import wizard or sample page)"{% if hook %} {{ hook }}="{{ state }}"{% endif %}>
+  <svg class="bench-analysis-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    {%- if checked %}
+    <circle cx="8" cy="8" r="7.25" fill="currentColor" />
+    <path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="var(--surface-solid)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+    {%- else %}
+    <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+    <path d="M5 8h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    {%- endif %}
+  </svg>
+  <span>{{ label }}</span><span class="sr-only">: {{ state }}</span>
 </span>
 {% endmacro %}
 
