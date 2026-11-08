@@ -198,13 +198,12 @@ a.dash-bar:hover .dash-bar-label {
 }
 
 /* The track of a standard with a threshold rule shows its zones: faint
-   red below `red_below`, faint yellow over the yellow range, and the bar
-   is full at the first green count (build_dashboard_view). */
+   red below the yellow range, faint yellow over it, and the bar is full
+   at the first green count (build_dashboard_view). */
 .dash-bar-track.has-zones {
   background: linear-gradient(
     90deg,
-    rgba(184, 74, 74, 0.2) 0 var(--red-end),
-    var(--line-soft) var(--red-end) var(--yellow-start),
+    rgba(184, 74, 74, 0.2) 0 var(--yellow-start),
     rgba(209, 163, 58, 0.26) var(--yellow-start) var(--yellow-end),
     var(--line-soft) var(--yellow-end) 100%
   );

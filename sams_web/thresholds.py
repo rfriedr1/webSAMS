@@ -18,41 +18,47 @@ STANDARD_LABELS: tuple[tuple[str, str], ...] = (
     ("IAEA-C7", "iaea_c7"),
     ("IAEA-C8", "iaea_c8"),
 )
+STANDARD_LABEL_BY_KEY: dict[str, str] = {key: label for label, key in STANDARD_LABELS}
 
 THRESHOLD_FIELDS: tuple[tuple[str, str], ...] = (
-    ("red_below", "Red if <"),
     ("yellow_min", "Yellow from"),
     ("yellow_max", "Yellow to"),
-    ("green_above", "Green if >"),
 )
+
+# Keys of the old four-number rule (Delphi). Red ended where yellow began
+# and green began where yellow ended, so only the yellow range carries
+# information; a stored rule with these keys is rewritten without them.
+LEGACY_THRESHOLD_KEYS = ("red_below", "green_above")
 
 
 @dataclass(frozen=True)
 class ThresholdRule:
-    red_below: int
+    """Stock status of one standard, from its yellow range alone: red
+    below `yellow_min`, yellow from `yellow_min` to `yellow_max`, green
+    above. Every count has a colour; there is no gap and no overlap.
+    (The Delphi rule had four independent numbers, and a count that fell
+    between them, such as 1 IAEA-C6 with red below 1 and yellow from 2,
+    got no colour at all.)"""
+
     yellow_min: int
     yellow_max: int
-    green_above: int
 
     def classify(self, value: int) -> str:
-        if value < self.red_below:
+        if value < self.yellow_min:
             return "critical"
-        if self.yellow_min <= value <= self.yellow_max:
+        if value <= self.yellow_max:
             return "warning"
-        if value > self.green_above:
-            return "good"
-        # Preserve Delphi behavior for uncovered values (e.g. value=1 for C6/C7/C8/Pferde).
-        return "neutral"
+        return "good"
 
 
 def default_threshold_rules() -> dict[str, ThresholdRule]:
     return {
-        "oxas": ThresholdRule(red_below=9, yellow_min=9, yellow_max=14, green_above=14),
-        "blanks": ThresholdRule(red_below=5, yellow_min=5, yellow_max=8, green_above=8),
-        "pferde": ThresholdRule(red_below=1, yellow_min=2, yellow_max=3, green_above=3),
-        "iaea_c6": ThresholdRule(red_below=1, yellow_min=2, yellow_max=3, green_above=3),
-        "iaea_c7": ThresholdRule(red_below=1, yellow_min=2, yellow_max=3, green_above=3),
-        "iaea_c8": ThresholdRule(red_below=1, yellow_min=2, yellow_max=3, green_above=3),
+        "oxas": ThresholdRule(yellow_min=9, yellow_max=14),
+        "blanks": ThresholdRule(yellow_min=5, yellow_max=8),
+        "pferde": ThresholdRule(yellow_min=2, yellow_max=3),
+        "iaea_c6": ThresholdRule(yellow_min=2, yellow_max=3),
+        "iaea_c7": ThresholdRule(yellow_min=2, yellow_max=3),
+        "iaea_c8": ThresholdRule(yellow_min=2, yellow_max=3),
     }
 
 
@@ -110,12 +116,14 @@ class ThresholdStore:
             row = payload.get(key)
             if row is None:
                 raise ValueError(f"Missing threshold values for '{key}'.")
-            updated[key] = ThresholdRule(
-                red_below=self._to_non_negative_int(row.get("red_below"), f"{key}: red_below"),
-                yellow_min=self._to_non_negative_int(row.get("yellow_min"), f"{key}: yellow_min"),
-                yellow_max=self._to_non_negative_int(row.get("yellow_max"), f"{key}: yellow_max"),
-                green_above=self._to_non_negative_int(row.get("green_above"), f"{key}: green_above"),
-            )
+            label = STANDARD_LABEL_BY_KEY.get(key, key)
+            yellow_min = self._to_non_negative_int(row.get("yellow_min"), f"{label}: Yellow from")
+            yellow_max = self._to_non_negative_int(row.get("yellow_max"), f"{label}: Yellow to")
+            if yellow_min > yellow_max:
+                raise ValueError(
+                    f"{label}: 'Yellow from' ({yellow_min}) must not be above 'Yellow to' ({yellow_max})."
+                )
+            updated[key] = ThresholdRule(yellow_min=yellow_min, yellow_max=yellow_max)
 
         self.save(updated)
         return updated
@@ -173,12 +181,15 @@ class ThresholdStore:
                 continue
             parsed_values[field] = coerced
 
+        if parsed_values["yellow_min"] > parsed_values["yellow_max"]:
+            return fallback, True
+        if any(key in value for key in LEGACY_THRESHOLD_KEYS):
+            changed = True
+
         return (
             ThresholdRule(
-                red_below=parsed_values["red_below"],
                 yellow_min=parsed_values["yellow_min"],
                 yellow_max=parsed_values["yellow_max"],
-                green_above=parsed_values["green_above"],
             ),
             changed,
         )

@@ -17,7 +17,7 @@ def _data(**overrides):
         "standards": {"oxas": 20, "blanks": 10, "pferde": 1, "iaea_c6": 0, "iaea_c7": 5, "iaea_c8": 5},
         "standard_statuses": {"oxas": "good", "pferde": "critical", "blanks": "warning"},
         "standard_thresholds": {
-            "pferde": {"red_below": 3, "yellow_min": 3, "yellow_max": 6, "green_above": 6},
+            "pferde": {"yellow_min": 3, "yellow_max": 6},
         },
         "tables": {
             "waiting_express": [{"sample_nr": 1, "user_nr": 7, "last_name": "Meier", "project_nr": 3}],
@@ -62,7 +62,7 @@ def test_standard_bars_carry_status_tag_and_rule():
     assert bars["blanks"]["tag"] == "Getting low"
     assert bars["oxas"]["tag"] == ""
     assert bars["iaea_c6"]["status"] == "neutral"
-    assert "Red below 3" in bars["pferde"]["rule_summary"]
+    assert bars["pferde"]["rule_summary"] == "Red below 3 · Yellow 3–6 · Green above 6"
     assert view["standards_total"] == 41
 
 
@@ -74,11 +74,11 @@ def test_empty_counts_do_not_divide_by_zero():
 
 
 def test_standard_bar_is_full_only_at_the_first_green_count():
-    rule = {"red_below": 9, "yellow_min": 9, "yellow_max": 14, "green_above": 14}
+    rule = {"yellow_min": 9, "yellow_max": 14}
     data = _data(
         standards={"oxas": 11, "blanks": 30},
         standard_statuses={"oxas": "warning", "blanks": "good"},
-        standard_thresholds={"oxas": rule, "blanks": {"red_below": 5, "yellow_min": 5, "yellow_max": 8, "green_above": 8}},
+        standard_thresholds={"oxas": rule, "blanks": {"yellow_min": 5, "yellow_max": 8}},
     )
     bars = {bar["key"]: bar for bar in build_dashboard_view(data)["standard_bars"]}
     oxas = bars["oxas"]
@@ -86,7 +86,7 @@ def test_standard_bar_is_full_only_at_the_first_green_count():
     # not look full. Green starts at 15, so that is the end of the scale.
     assert oxas["target"] == 15
     assert oxas["pct"] == 73.3
-    assert oxas["zones"] == {"red_end": 60.0, "yellow_start": 60.0, "yellow_end": 100.0}
+    assert oxas["zones"] == {"yellow_start": 60.0, "yellow_end": 100.0}
     # Above the green threshold the bar is full, never longer.
     assert bars["blanks"]["pct"] == 100.0
     # No rule: relative to the largest stock, no target shown.
