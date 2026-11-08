@@ -290,21 +290,45 @@
   white-space: nowrap;
 }
 
-/* A yes/no sample fact in the context line (`ctx_flag`): label, then the
-   word Yes or No, like every other fact in the line. Yes is an amber pill,
-   since part of the material is needed elsewhere; No stays plain. */
-.bench-ctx-flag-value {
-  color: var(--ink-strong);
-  font-weight: 650;
+/* C/N isotope / dendro analysis (`ctx_flag`): a chip that is always in
+   the sample line. Yes is solid amber with a check mark, so it is seen
+   before any material is used; No is a quiet dashed chip with a minus.
+   Icon and label carry the state, colour only draws the eye. */
+/* The two chips wrap as one unit, never split across lines. */
+.bench-analysis {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-self: center;
+  gap: 0.4rem;
 }
 
-.bench-ctx-flag.is-on .bench-ctx-flag-value {
-  padding: 0.04rem 0.5rem;
-  border: 1px solid var(--warn-line);
+.bench-analysis-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.38rem;
+  min-height: 1.75rem;
+  padding: 0 0.7rem 0 0.45rem;
+  border: 1px dashed var(--line-strong);
   border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bench-analysis-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+.bench-analysis-chip.is-yes {
+  border: 1px solid var(--warn-line);
   background: var(--warn-bg);
   color: var(--warn-text);
   font-weight: 700;
+  box-shadow: 0 0 0 1px var(--warn-line) inset;
 }
 
 .bench-chip.is-danger {
