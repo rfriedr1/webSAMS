@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
@@ -88,7 +90,7 @@ def preparation_detail_page(
     return response
 
 
-@router.post("/samples/{sample_nr}/preparations/{prep_nr}/save")
+@router.post("/samples/{sample_nr}/preparations/{prep_nr}/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def save_preparation_detail_page(
     request: Request,
     sample_nr: int,

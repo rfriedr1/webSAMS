@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from sams_web.access import Permission, guarded
 from sams_web.dependencies import get_service
 from sams_web.qc_signoff import QcSignoffs, signoff_subjects
 from sams_web.routers.pages_ea_checks import redirect_with, safe_return_url
@@ -18,7 +19,7 @@ from sams_web.services import SamsService
 router = APIRouter()
 
 
-@router.post("/qc/signoffs")
+@router.post("/qc/signoffs", dependencies=guarded(Permission.SIGN_OFF_QC))
 async def qc_signoff_create(request: Request, service: SamsService = Depends(get_service)):
     form = await request.form()
     subject_type = str(form.get("subject_type") or "")

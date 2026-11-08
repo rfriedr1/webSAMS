@@ -6,6 +6,8 @@ import traceback
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import RedirectResponse
 
 from sams_web.config import get_settings
@@ -140,7 +142,7 @@ def submitter_name_lookup(
     return RedirectResponse(url=f"/submitters?{urlencode({'q': last_name})}", status_code=303)
 
 
-@router.post("/submitters/new")
+@router.post("/submitters/new", dependencies=guarded(Permission.EDIT_RECORDS))
 def create_submitter_form(
     last_name: str = Form(...),
     first_name: str | None = Form(default=None),
@@ -199,7 +201,7 @@ def submitter_detail_page(
     )
 
 
-@router.post("/submitters/{user_nr}/save")
+@router.post("/submitters/{user_nr}/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def save_submitter_detail_page(
     request: Request,
     user_nr: int,
@@ -356,7 +358,7 @@ def project_detail_page(
     )
 
 
-@router.post("/projects/{project_nr}/save")
+@router.post("/projects/{project_nr}/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def save_project_detail_page(
     request: Request,
     project_nr: int,
@@ -397,7 +399,7 @@ async def save_project_detail_page(
     )
 
 
-@router.post("/projects/new")
+@router.post("/projects/new", dependencies=guarded(Permission.EDIT_RECORDS))
 def create_project_form(
     user_nr: int = Form(...),
     project: str = Form(...),

@@ -234,6 +234,7 @@ def _startup_summary() -> str:
     return (
         f"webSAMS {__version__} ready - database {settings.database_name} on {db_host}"
         f" - settings {settings.setup_data_file}"
+        f" - access role {settings.access_role.value} (no login yet)"
     )
 
 
@@ -315,6 +316,17 @@ def create_app() -> FastAPI:
         """Render the styled `not_found.html` for any 404. Falls through
         to a JSON response for non-page routes (API endpoints) so machine
         clients still get a useful payload."""
+        accept = (request.headers.get("accept") or "").lower()
+        wants_html = "text/html" in accept and not (request.url.path or "/").startswith("/api/")
+        if isinstance(exc, HTTPException) and exc.status_code == 403 and wants_html:
+            # A view-only user reaching a write route (sams_web/access.py).
+            context = {
+                "request": request,
+                "title": "Not allowed",
+                "message": exc.detail,
+                "requested_path": request.url.path,
+            }
+            return templates.TemplateResponse(request, "forbidden.html", context, status_code=403)
         if isinstance(exc, HTTPException) and exc.status_code != 404:
             # Forward every other HTTPException untouched.
             return JSONResponse(

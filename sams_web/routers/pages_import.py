@@ -18,6 +18,8 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import FileResponse, JSONResponse
 
 from sams_web.dependencies import get_service
@@ -70,7 +72,7 @@ def sample_import_template():
     )
 
 
-@router.post("/samples/import/parse")
+@router.post("/samples/import/parse", dependencies=guarded(Permission.EDIT_RECORDS))
 async def sample_import_parse(
     file: UploadFile = File(...),
     service: SamsService = Depends(get_service),
@@ -103,7 +105,7 @@ async def sample_import_parse(
     return JSONResponse(payload)
 
 
-@router.post("/samples/import/commit")
+@router.post("/samples/import/commit", dependencies=guarded(Permission.EDIT_RECORDS))
 async def sample_import_commit(
     request: Request,
     service: SamsService = Depends(get_service),
@@ -172,7 +174,7 @@ def sample_import_projects(
     )
 
 
-@router.post("/samples/import/email/preview")
+@router.post("/samples/import/email/preview", dependencies=guarded(Permission.EDIT_RECORDS))
 async def sample_import_email_preview(
     request: Request,
     service: SamsService = Depends(get_service),
@@ -221,7 +223,7 @@ async def sample_import_email_preview(
     )
 
 
-@router.post("/samples/import/email/send")
+@router.post("/samples/import/email/send", dependencies=guarded(Permission.EDIT_RECORDS))
 async def sample_import_email_send(
     request: Request,
     service: SamsService = Depends(get_service),

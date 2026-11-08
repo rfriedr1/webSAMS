@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import FileResponse, RedirectResponse
 
 from sams_web.dependencies import get_sample_photos, get_service
@@ -65,7 +67,7 @@ def samples_landing_page(
     )
 
 
-@router.post("/samples/new")
+@router.post("/samples/new", dependencies=guarded(Permission.EDIT_RECORDS))
 def create_sample_form(
     project_nr: int = Form(...),
     user_label: str = Form(...),
@@ -193,7 +195,7 @@ def sample_photo_file(
     )
 
 
-@router.post("/samples/{sample_nr}/add-preparation")
+@router.post("/samples/{sample_nr}/add-preparation", dependencies=guarded(Permission.EDIT_RECORDS))
 def create_new_preparation_for_sample(
     sample_nr: int,
     return_to: str | None = Form(default=None),
@@ -214,7 +216,7 @@ def create_new_preparation_for_sample(
     )
 
 
-@router.post("/samples/{sample_nr}/add-target")
+@router.post("/samples/{sample_nr}/add-target", dependencies=guarded(Permission.EDIT_RECORDS))
 def create_new_target_for_sample_prep(
     sample_nr: int,
     prep_nr: int = Form(...),
@@ -236,7 +238,7 @@ def create_new_target_for_sample_prep(
     )
 
 
-@router.post("/samples/{sample_nr}/save")
+@router.post("/samples/{sample_nr}/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def save_sample_detail_page(
     request: Request,
     sample_nr: int,

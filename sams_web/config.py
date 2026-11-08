@@ -6,10 +6,14 @@ from dataclasses import dataclass
 from functools import lru_cache
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
+
+if TYPE_CHECKING:
+    from sams_web.access import Role
 
 
 def _load_local_env_files() -> None:
@@ -52,6 +56,8 @@ class Settings:
     setup_data_file: Path
     debug: bool
     sql_echo: bool
+    # Role every request is served with until login exists (sams_web/access.py).
+    access_role: "Role"
 
     @property
     def database_name(self) -> str:
@@ -59,6 +65,9 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        # Imported here: access.py imports get_settings from this module.
+        from sams_web.access import parse_role
+
         default_setup_file = Path(__file__).resolve().parent / "setup_data.json"
         setup_file_env = os.getenv("SAMS_SETUP_DATA_FILE")
         if setup_file_env:
@@ -77,6 +86,7 @@ class Settings:
             setup_data_file=setup_data_file,
             debug=_env_flag("SAMS_DEBUG", default=False),
             sql_echo=_env_flag("SAMS_SQL_ECHO", default=False),
+            access_role=parse_role(os.getenv("SAMS_ACCESS_ROLE")),
         )
 
 

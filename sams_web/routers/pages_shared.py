@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi.templating import Jinja2Templates
+from jinja2 import pass_context
 
 from sams_web import __version__
+from sams_web.access import request_can
 from sams_web.config import get_settings
 from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_COMMAND_LABELS,
@@ -84,6 +86,19 @@ templates.env.globals["field_label"] = field_label
 templates.env.globals["format_table_cell_value"] = format_table_cell_value
 # Which table cells link to which record: one rule for every table.
 templates.env.globals["row_link"] = fk_based_link
+
+
+@pass_context
+def _template_can(context: Any, permission: str) -> bool:
+    """`{% if can("edit_records") %}` — hide write controls a user may not use.
+
+    The route's `require()` guard is the real check; this only spares a
+    view-only user a button that would answer 403.
+    """
+    return request_can(context.get("request"), permission)
+
+
+templates.env.globals["can"] = _template_can
 templates.env.globals["main_navigation_items"] = MAIN_NAV_ITEMS
 templates.env.globals["sub_navigation_items"] = SUB_NAV_ITEMS
 templates.env.globals["navigation_command_entries"] = NAVIGATION_COMMAND_ENTRIES
