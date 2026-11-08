@@ -67,11 +67,15 @@ _METHOD_FIELDS: frozenset[str] = frozenset(
 
 
 def _derive_weight_end(prep_updates: dict[str, Any], preparation: Preparation) -> dict[str, Any]:
-    """If the operator hasn't supplied `weight_end` but both intermediate
-    weights are known, derive it: `weight_end = weight_medium - weight_medium_2`.
+    """If the operator hasn't supplied `weight_end` but both container
+    weights are known, derive it: `weight_end = weight_medium_2 - weight_medium`.
 
-    The two intermediate weights are the wet vial-with-sample and the
-    dry vial weight; their difference is the dry sample mass.
+    `weight_medium` is the empty container, `weight_medium_2` the container
+    with the sample in it ("Container Empty" / "Container Full"); their
+    difference is the sample mass. The stored data agrees: 8 303 of 8 313
+    preparations with all three weights have end = full - empty. (This
+    used to subtract the other way round, after the legacy Delphi hints,
+    which named the two fields back to front.)
     """
     effective_end = prep_updates.get("weight_end", preparation.weight_end)
     if "weight_end" in prep_updates and effective_end is not None:
@@ -81,7 +85,7 @@ def _derive_weight_end(prep_updates: dict[str, Any], preparation: Preparation) -
     if medium is None or medium_2 is None:
         return prep_updates
     try:
-        derived = float(Decimal(str(medium)) - Decimal(str(medium_2)))
+        derived = float(Decimal(str(medium_2)) - Decimal(str(medium)))
     except (InvalidOperation, ValueError):
         return prep_updates
     revised = dict(prep_updates)

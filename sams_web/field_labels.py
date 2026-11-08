@@ -140,8 +140,11 @@ FIELD_LABELS: dict[str, str] = {
     "prep_comment": "Prep Comment",
     "stop": "Discarded",
     "weight_start": "Weight Start",
-    "weight_medium": "Weight Mid",
-    "weight_medium_2": "Weight Mid 2",
+    # The vial weighed empty, then full; Weight End = full − empty. (The
+    # legacy Delphi hints had the two the other way round; 8 303 of 8 313
+    # stored preparations confirm empty = weight_medium.)
+    "weight_medium": "Container Empty",
+    "weight_medium_2": "Container Full",
     "weight_end": "Weight End",
     "yield_percent": "Yield (%)",
     "cn_ratio": "C/N Ratio",
