@@ -42,6 +42,20 @@
 </span>
 {% endmacro %}
 
+{#- A yes/no fact about the sample in the context line (C/N isotope or
+    dendro analysis): always shown with the word Yes or No, so "no" is an
+    answer and never a missing value. Yes is an amber pill, because part
+    of the material has to go to that analysis. (A disabled checkbox was
+    tried first: browsers grey it out and the tick was too faint to read
+    at a glance.) Read-only: set in the import wizard or on the sample
+    page. -#}
+{% macro ctx_flag(label, checked, hook="") %}
+<span class="bench-ctx-item bench-ctx-flag{% if checked %} is-on{% endif %}" title="Set on the sample (import wizard or sample page)"{% if hook %} {{ hook }}="{{ 'yes' if checked else 'no' }}"{% endif %}>
+  <span class="bench-ctx-label">{{ label }}</span>
+  <span class="bench-ctx-flag-value">{{ 'Yes' if checked else 'No' }}</span>
+</span>
+{% endmacro %}
+
 {#- A labelled input. The posted value wins over the stored one, so a
     rejected save refills what the operator typed. `kind` is number | date |
     text. Anything passed as a call body (warnings) renders under the input. -#}
