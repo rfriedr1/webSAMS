@@ -79,22 +79,22 @@ def _format_threshold_rule(rule: dict[str, int]) -> str:
     if not rule:
         return ""
     return (
-        f"Red below {rule['red_below']}"
+        f"Red below {rule['yellow_min']}"
         f" · Yellow {rule['yellow_min']}–{rule['yellow_max']}"
-        f" · Green above {rule['green_above']}"
+        f" · Green above {rule['yellow_max']}"
     )
 
 
 def _standard_scale(value: int, rule: dict[str, int], max_standard: int) -> dict[str, Any]:
     """Bar geometry for one standard. A full bar means "enough": the scale
-    ends at the first green count (`green_above + 1`), so 11 Oxas against
-    a green threshold of 14 fill 73 % of the bar, not 100 % because they
+    ends at the first green count (`yellow_max + 1`), so 11 Oxas against
+    a yellow range ending at 14 fill 73 % of the bar, not 100 % because they
     happen to be the largest stock. The red and yellow ranges are drawn as
     faint zones in the track. Without a rule the bar falls back to the
     largest stock, and there is no target to show."""
     if not rule:
         return {"pct": _percent_of(value, max_standard), "target": None, "zones": None}
-    target = int(rule["green_above"]) + 1
+    target = int(rule["yellow_max"]) + 1
 
     def at(count: int) -> float:
         return round(min(max(count, 0) / target, 1) * 100, 1)
@@ -103,7 +103,6 @@ def _standard_scale(value: int, rule: dict[str, int], max_standard: int) -> dict
         "pct": at(value),
         "target": target,
         "zones": {
-            "red_end": at(int(rule["red_below"])),
             "yellow_start": at(int(rule["yellow_min"])),
             "yellow_end": at(int(rule["yellow_max"]) + 1),
         },

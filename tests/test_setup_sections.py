@@ -60,13 +60,24 @@ def test_unknown_section_is_a_404(client):
 
 def test_standard_thresholds_round_trip(client, store):
     page = client.get("/setup?section=standard_inventory_thresholds").text
-    names = sorted(set(re.findall(r'name="([a-z0-9_]+_(?:red_below|yellow_min|yellow_max|green_above))"', page)))
-    assert names, "threshold inputs not rendered"
+    names = sorted(set(re.findall(r'name="([a-z0-9_]+_(?:yellow_min|yellow_max))"', page)))
+    assert len(names) == 12, "two threshold inputs per standard"
+    assert "red_below" not in page and "green_above" not in page
     form = {name: "4" for name in names}
-    form[next(n for n in names if n.startswith("oxas_") and n.endswith("green_above"))] = "17"
+    form["oxas_yellow_max"] = "17"
     response = _post(client, "standard_inventory_thresholds", form)
     assert response.status_code == 303
-    assert _saved(store)["standard_inventory_thresholds"]["oxas"]["green_above"] == 17
+    assert _saved(store)["standard_inventory_thresholds"]["oxas"] == {"yellow_min": 4, "yellow_max": 17}
+
+
+def test_standard_thresholds_reject_an_inverted_yellow_range(client, store):
+    page = client.get("/setup?section=standard_inventory_thresholds").text
+    names = set(re.findall(r'name="([a-z0-9_]+_(?:yellow_min|yellow_max))"', page))
+    form = {name: "4" for name in names}
+    form["oxas_yellow_min"] = "15"
+    response = _post(client, "standard_inventory_thresholds", form)
+    assert response.status_code != 303
+    assert "must not be above" in response.text
 
 
 def test_graphitization_systems_round_trip_and_rejection(client, store):

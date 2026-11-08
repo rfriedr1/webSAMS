@@ -90,7 +90,7 @@
               zones in the track show where the thresholds sit. -#}
           <span
             class="dash-bar-track{% if bar.zones %} has-zones{% endif %}"
-            {% if bar.zones %}style="--red-end: {{ bar.zones.red_end }}%; --yellow-start: {{ bar.zones.yellow_start }}%; --yellow-end: {{ bar.zones.yellow_end }}%;"{% endif %}
+            {% if bar.zones %}style="--yellow-start: {{ bar.zones.yellow_start }}%; --yellow-end: {{ bar.zones.yellow_end }}%;"{% endif %}
             aria-hidden="true"
           ><span class="dash-bar-fill" style="width: {{ bar.pct }}%;"></span></span>
           <span class="dash-bar-value">{{ bar.value }}{% if bar.target and bar.value < bar.target %}<span class="dash-bar-target" title="Green from {{ bar.target }}"> / {{ bar.target }}</span>{% endif %}</span>

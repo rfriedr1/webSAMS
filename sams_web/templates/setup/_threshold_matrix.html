@@ -1,8 +1,7 @@
 {#- Setup editor for sections of kind "threshold_matrix" (see setup_handlers.py). Included by setup.html. -#}
 <form method="post" action="{{ active_section.form_action }}">
   <p class="setup-note">
-    Card and mini-bar colors use this logic: red if count is below red threshold, yellow if within yellow range,
-    green if above green threshold, otherwise neutral.
+    A stock below <em>Yellow from</em> is red, from <em>Yellow from</em> to <em>Yellow to</em> yellow, and above <em>Yellow to</em> green.
   </p>
 
   <section data-table-filter data-table-search-placeholder="Filter standards by name or value">

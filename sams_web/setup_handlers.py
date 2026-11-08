@@ -80,10 +80,7 @@ def build_threshold_rows(payload: Mapping[str, Mapping[str, Any]]) -> list[dict[
             {
                 "label": label,
                 "key": key,
-                "red_below": values.get("red_below", ""),
-                "yellow_min": values.get("yellow_min", ""),
-                "yellow_max": values.get("yellow_max", ""),
-                "green_above": values.get("green_above", ""),
+                **{field: values.get(field, "") for field, _ in THRESHOLD_FIELDS},
             }
         )
     return rows
