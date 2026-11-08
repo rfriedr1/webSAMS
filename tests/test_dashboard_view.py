@@ -35,9 +35,15 @@ def test_queue_bars_follow_the_lab_path_and_link_to_their_table():
     view = build_dashboard_view(_data())
     bars = view["queue_bars"]
     assert [bar["key"] for bar in bars] == [
-        "planned", "in_prep", "waiting_for_graph", "waiting_for_meas", "waiting_express",
+        "planned", "to_prep_bone", "to_prep_tooth",
+        "in_prep", "waiting_for_graph", "waiting_for_meas", "waiting_express",
     ]
     by_key = {bar["key"]: bar for bar in bars}
+    # The bone / tooth queues are parts of To prep all, drawn under it.
+    assert [by_key[k]["label"] for k in ("planned", "to_prep_bone", "to_prep_tooth")] == [
+        "To prep all", "To prep bone", "To prep tooth",
+    ]
+    assert [bar["key"] for bar in bars if bar["subset"]] == ["to_prep_bone", "to_prep_tooth"]
     assert by_key["in_prep"]["value"] == 100
     assert by_key["waiting_express"]["label"] == "Express"
     assert by_key["planned"]["anchor"] == "tbl-planned"

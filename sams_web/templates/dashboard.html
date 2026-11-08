@@ -14,7 +14,7 @@
     <div class="panel-bar">
       <h2 id="dash-queues-title" class="panel-bar-title is-small">Lab queues</h2>
       <form method="get" action="/" class="dash-held-form panel-bar-actions">
-        <label class="dash-toggle" title="Count and list samples on hold in Planned">
+        <label class="dash-toggle" title="Count and list samples on hold in the To prep queues">
           <input type="checkbox" name="show_on_hold" value="true" {% if show_on_hold %}checked{% endif %} onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" />
           Include held samples
         </label>
@@ -29,7 +29,7 @@
     <ul class="dash-bars" role="list">
       {% for bar in queue_bars %}
       <li>
-        <a class="dash-bar dash-bar-queue" href="#{{ bar.anchor }}" title="{{ bar.title }} · show the table">
+        <a class="dash-bar dash-bar-queue{% if bar.subset %} is-subset{% endif %}" href="#{{ bar.anchor }}" title="{{ bar.title }} · show the table">
           <span class="dash-bar-label">{{ bar.label }}</span>
           <span class="dash-bar-track dash-bar-split" aria-hidden="true">
             {%- for segment in bar.segments -%}

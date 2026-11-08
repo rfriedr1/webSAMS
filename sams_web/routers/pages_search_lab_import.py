@@ -384,9 +384,7 @@ def lab_analysis_page(
         {
             "request": request,
             "title": "Analysis",
-            "table_key": "waiting_for_meas",
-            "table_title": "Waiting for measurement",
-            "rows": rows,
+            "queue_tables": [{"key": "waiting_for_meas", "title": "Waiting for measurement", "rows": rows}],
             "show_on_hold": False,
             "magazine_lookup_enabled": True,
             "magazine_query": magazine_query,

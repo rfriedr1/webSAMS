@@ -8,7 +8,7 @@ This repository now includes a Python web application that migrates the Delphi S
 - OOP domain model for core entities:
   - `user_t`, `project_t`, `sample_t`, `preparation_t`, `target_t`
 - Service/repository layer mirroring key `_dm.pas` methods:
-  - queue dashboards (`planned`, `in prep`, `waiting for graph`, `waiting for measurement`, `express`)
+  - queue dashboards (`to prep all` + bone / tooth, `in prep`, `waiting for graph`, `waiting for measurement`, `express`)
   - global table search (`users`, `projects`, `samples`, `preparations`, `targets`)
   - user/project/sample drill-down
   - create user, create project, create sample (+ blank prep + blank target)

@@ -22,6 +22,7 @@ from sams_web.import_settings import (
 from sams_web.sample_import.mailer import EmailError, RenderedEmail, send_email
 from sams_web.setup_handlers import handler_for
 from sams_web.setup_sections import SETUP_SECTION_MAP
+from sams_web.repositories import TO_PREP_MATERIAL_QUEUES
 from sams_web.thresholds import STANDARD_LABELS
 
 from sams_web.magic_nav import build_magic_nav_rules
@@ -35,14 +36,24 @@ logger = logging.getLogger(__name__)
 # for both the counts and the tables (`SamsRepository.get_dashboard_*`).
 DASHBOARD_QUEUE_LABELS: dict[str, str] = {
     "waiting_express": "Express",
-    "planned": "Planned",
+    "planned": "To prep all",
+    "to_prep_bone": "To prep bone",
+    "to_prep_tooth": "To prep tooth",
     "in_prep": "In prep",
     "waiting_for_graph": "Waiting for graph",
     "waiting_for_meas": "Waiting for meas",
 }
 # Bar order in the Lab queues panel: the sample's path through the lab,
-# with Express (a priority flag, not a step) last.
-DASHBOARD_QUEUE_BAR_ORDER = ("planned", "in_prep", "waiting_for_graph", "waiting_for_meas", "waiting_express")
+# with Express (a priority flag, not a step) last. The bone / tooth
+# queues are parts of To prep all and sit indented under it.
+DASHBOARD_QUEUE_BAR_ORDER = (
+    "planned",
+    *TO_PREP_MATERIAL_QUEUES,
+    "in_prep",
+    "waiting_for_graph",
+    "waiting_for_meas",
+    "waiting_express",
+)
 # Columns a queue table needs only to build its links, never shown.
 DASHBOARD_HELPER_COLUMNS = ("project_nr", "user_nr")
 DASHBOARD_HELPER_COLUMNS_BY_QUEUE = {"waiting_for_meas": ("sample_nr", "prep_nr", "target_nr")}
@@ -171,6 +182,8 @@ def _queue_bar(key: str, count: int, rows: list[dict[str, Any]], today: date) ->
         "segments": segments,
         "title": f"{label}: {count}" + (f" ({details})" if details else ""),
         "anchor": queue_anchor(key),
+        # A part of To prep all (one material), drawn indented under it.
+        "subset": key in TO_PREP_MATERIAL_QUEUES,
     }
 
 
