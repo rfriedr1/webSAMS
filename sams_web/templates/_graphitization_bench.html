@@ -4,8 +4,8 @@
     router puts in the lab_queue context is available here.
 
     Two panels side by side: the target being worked on (lookup, one line of
-    sample facts, the entry fields, Save / Save & next) and the graph batch
-    being built. Same pieces as the preparation bench (_bench_macros.html). -#}
+    sample facts, the entry fields as lab-flow stages, Save / Save & next)
+    and the graph batch being built — the next step for the target. Same pieces as the preparation bench (_bench_macros.html). -#}
 {% from "_bench_macros.html" import stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
 <div
   class="bench-layout{% if not graph_bench_entry %} is-single{% endif %}"
@@ -125,8 +125,6 @@
       {{ ctx_item(field_label("user_label"), "user_label", graph_sample.user_label) }}
       {% if format_table_cell_value("user_label_nr", graph_sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", graph_sample.user_label_nr) }}{% endif %}
       {{ ctx_item(field_label("material"), "material", graph_sample.material) }}
-      {{ ctx_item("Prep Weight End", "weight_end", graph_prep.weight_end) }}
-      {{ ctx_item(field_label("graph_batch"), "graph_batch", graph_target.graph_batch) }}
       {#- Extra analyses: the material may have to be shared out, so say
           it up front, yes or no. -#}
       <span class="bench-analysis" role="group" aria-label="Extra analyses">
@@ -136,6 +134,8 @@
       {% if graph_prep.stop %}<span class="bench-chip is-danger">Prep discarded</span>{% endif %}
     </div>
 
+    {#- The target's graph batch is said once, here: a target in a batch
+        cannot join another one, so it is a warning, not a fact. -#}
     {% if graph_target.graph_batch %}
     <p class="bench-alert" role="note">
       Already in graph batch <code>{{ graph_target.graph_batch }}</code>: it cannot be added to another batch.
@@ -147,28 +147,68 @@
       <input type="hidden" name="graphbench__prep_nr" value="{{ graph_prep.prep_nr }}" />
       <input type="hidden" name="graphbench__target_nr" value="{{ graph_target.target_nr }}" />
 
-      <div class="bench-fields">
-        {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", field_label("weight_combustion"), graph_values, graph_target.weight_combustion, graph_errors) }}
-        {% call bench_input("graphbench-prep-storage-loc", "graphbench__prep_storage_loc", field_label("prep_storage_loc"), graph_values, graph_prep_storage_value, graph_errors, kind="text", hook="data-graph-bench-prep-storage", placeholder="—") %}
-        <p class="bench-field-warning" data-graph-bench-storage-warning hidden></p>
-        {% endcall %}
+      {#- The form follows the lab, like the preparation bench: one stage
+          per group on a thin rail — the material weighed for combustion,
+          what goes to C/N analysis, what happens to the leftover prep'd
+          material, the outcome. The graph batch panel beside it is the
+          next step. -#}
+      {% set graph_cn_wanted = graph_sample.c_n_isotop_a|string in ['1', 'True', 'true'] %}
+      {% set graph_cn_moved_raw = (graph_values['graphbench__c_n_isotop_a_moved'] if 'graphbench__c_n_isotop_a_moved' in graph_values else graph_sample.c_n_isotop_a_moved)|string %}
+      {% set graph_cn_moved = graph_cn_moved_raw in ['1', 'True', 'true', 'on', 'yes'] %}
+      <div class="bench-flow">
+        <section class="bench-stage" aria-labelledby="graph-stage-material">
+          <h3 class="bench-stage-title" id="graph-stage-material">Material</h3>
+          <div class="bench-stage-row">
+            <div class="bench-field is-readout" title="From the preparation">
+              <span class="bench-field-label">Prep {{ field_label('weight_end') }}</span>
+              <output class="bench-readout">{{ format_table_cell_value("weight_end", graph_prep.weight_end) if graph_prep.weight_end is not none else '—' }}</output>
+            </div>
+            {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", field_label("weight_combustion"), graph_values, graph_target.weight_combustion, graph_errors) }}
+          </div>
+        </section>
 
-        <div class="bench-flags-row">
-          <span class="bench-flags-label" id="graph-bench-flags-label">Flags</span>
-          <div class="bench-flags" role="group" aria-labelledby="graph-bench-flags-label">
+        <section class="bench-stage" aria-labelledby="graph-stage-cn">
+          <h3 class="bench-stage-title" id="graph-stage-cn">C/N Analysis</h3>
+          <div class="bench-stage-flags">
+            {{ bench_flag("graphbench__c_n_isotop_a_moved", field_label("c_n_isotop_a_moved"), graph_values, graph_sample.c_n_isotop_a_moved, graph_errors, hook="data-graph-bench-cn-moved") }}
+            {#- Wanted (sample) against done (this flag), in words: the
+                lab has to see both "not moved yet" and "not wanted". -#}
+            <p class="bench-stage-note{% if graph_cn_wanted != graph_cn_moved %} is-warn{% endif %}" data-graph-bench-cn-note data-cn-wanted="{{ '1' if graph_cn_wanted else '0' }}" aria-live="polite">
+              {%- if graph_cn_wanted and graph_cn_moved %}Wanted · moved
+              {%- elif graph_cn_wanted %}Wanted · not moved yet
+              {%- elif graph_cn_moved %}Moved, but not wanted for this sample
+              {%- else %}Not wanted for this sample{% endif -%}
+            </p>
+          </div>
+        </section>
+
+        <section class="bench-stage" aria-labelledby="graph-stage-leftover">
+          <h3 class="bench-stage-title" id="graph-stage-leftover">Leftover Prep</h3>
+          <div class="bench-stage-flags">
             {{ bench_flag("graphbench__p_no_leftover", field_label("p_no_leftover"), graph_values, graph_prep.p_no_leftover, graph_errors, hook="data-graph-bench-no-leftover") }}
-            {{ bench_flag("graphbench__c_n_isotop_a_moved", field_label("c_n_isotop_a_moved"), graph_values, graph_sample.c_n_isotop_a_moved, graph_errors) }}
             {{ bench_flag_readonly(field_label("prep_return_to_sender"), graph_project and (graph_project.prep_return_to_sender or 0), hook="data-graph-bench-return-to-sender", title="Set on the project") }}
-            {{ bench_flag_readonly("Prep'd Archived", graph_prep_storage_value|string|trim, hook="data-graph-bench-prep-archived", title="Ticked while a prep storage location is filled in") }}
+          </div>
+          <div class="bench-stage-row">
+            {% call bench_input("graphbench-prep-storage-loc", "graphbench__prep_storage_loc", field_label("prep_storage_loc"), graph_values, graph_prep_storage_value, graph_errors, kind="text", hook="data-graph-bench-prep-storage", placeholder="—", extra_class="is-span-2") %}
+            <p class="bench-field-warning" data-graph-bench-storage-warning hidden></p>
+            {% endcall %}
+            <div class="bench-stage-cell is-flag">
+              {{ bench_flag_readonly("Prep'd Archived", graph_prep_storage_value|string|trim, hook="data-graph-bench-prep-archived", title="Ticked while a prep storage location is filled in") }}
+            </div>
+          </div>
+        </section>
+
+        <section class="bench-stage" aria-labelledby="graph-stage-outcome">
+          <h3 class="bench-stage-title" id="graph-stage-outcome">Outcome</h3>
+          <div class="bench-stage-flags">
             {{ bench_flag("graphbench__stop", field_label("stop"), graph_values, graph_target.stop, graph_errors) }}
           </div>
-        </div>
-
-        <div class="bench-field is-full{% if graph_errors.get('graphbench__target_comment') %} has-error{% endif %}">
-          <label for="graphbench-target-comment">{{ field_label('target_comment') }}</label>
-          <textarea id="graphbench-target-comment" name="graphbench__target_comment" rows="3" placeholder="Add graphitization notes">{{ graph_values['graphbench__target_comment'] if 'graphbench__target_comment' in graph_values else (graph_target.target_comment or '') }}</textarea>
-          {% if graph_errors.get('graphbench__target_comment') %}<p class="bench-field-error">{{ graph_errors['graphbench__target_comment'] }}</p>{% endif %}
-        </div>
+          <div class="bench-field{% if graph_errors.get('graphbench__target_comment') %} has-error{% endif %}">
+            <label for="graphbench-target-comment">{{ field_label('target_comment') }}</label>
+            <textarea id="graphbench-target-comment" name="graphbench__target_comment" rows="3" placeholder="Add graphitization notes">{{ graph_values['graphbench__target_comment'] if 'graphbench__target_comment' in graph_values else (graph_target.target_comment or '') }}</textarea>
+            {% if graph_errors.get('graphbench__target_comment') %}<p class="bench-field-error">{{ graph_errors['graphbench__target_comment'] }}</p>{% endif %}
+          </div>
+        </section>
       </div>
 
       <div class="bench-actions" data-graph-bench-target-actions>
