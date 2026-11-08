@@ -71,7 +71,9 @@ class SampleRead(BaseModel):
 
 
 class DashboardCounts(BaseModel):
-    planned: int
+    planned: int  # "To prep all" in the UI
+    to_prep_bone: int
+    to_prep_tooth: int
     in_prep: int
     waiting_for_graph: int
     waiting_for_meas: int

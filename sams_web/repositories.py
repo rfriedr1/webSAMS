@@ -23,6 +23,15 @@ from sams_web.models import (
 )
 
 
+# Narrowed *To prep* queues: dashboard / table key -> `sample_t.material`
+# (exact value from `material_t`; "cremated bone" is a material of its own
+# and is not in *To prep bone*). Shown under *To prep all* (`planned`).
+TO_PREP_MATERIAL_QUEUES: dict[str, str] = {
+    "to_prep_bone": "bone",
+    "to_prep_tooth": "tooth",
+}
+
+
 class SamsRepository:
     """DB repository mirroring core `_dm.pas` data functions."""
 
@@ -311,6 +320,19 @@ class SamsRepository:
     def list_planned_queue_rows(self, show_on_hold: bool = False) -> list[dict[str, Any]]:
         return self._fetch_rows(self._sql_planned(show_on_hold=show_on_hold))
 
+    def list_to_prep_queues(self, show_on_hold: bool = False) -> dict[str, list[dict[str, Any]]]:
+        """The *To prep* queues: all unprepared samples (`planned`) and,
+        under it, the same query narrowed to one material per
+        `TO_PREP_MATERIAL_QUEUES` entry. Held samples follow the same
+        switch in all of them."""
+        queues = {"planned": self.list_planned_queue_rows(show_on_hold=show_on_hold)}
+        for key, material in TO_PREP_MATERIAL_QUEUES.items():
+            queues[key] = self._fetch_rows(
+                self._sql_planned(show_on_hold=show_on_hold, by_material=True),
+                {"material": material},
+            )
+        return queues
+
     def list_waiting_for_graph_queue_rows(self) -> list[dict[str, Any]]:
         return self._fetch_rows(self._sql_waiting_for_graph_table())
 
@@ -485,8 +507,9 @@ class SamsRepository:
         return {int(prep_nr): int(count) for prep_nr, count in self.session.execute(stmt).all()}
 
     def get_dashboard_counts(self, show_on_hold: bool = False) -> dict[str, int]:
+        to_prep = self.list_to_prep_queues(show_on_hold=show_on_hold)
         return {
-            "planned": self._count_rows(self._sql_planned(show_on_hold=show_on_hold)),
+            **{key: len(rows) for key, rows in to_prep.items()},
             "in_prep": self._count_rows(self._sql_in_prep()),
             "waiting_for_graph": self._count_rows(self._sql_waiting_for_graph()),
             "waiting_for_meas": self._count_rows(self._sql_waiting_for_meas()),
@@ -498,7 +521,7 @@ class SamsRepository:
         # panels): express first, because those samples jump the queue.
         return {
             "waiting_express": self._fetch_rows(self._sql_waiting_express()),
-            "planned": self._fetch_rows(self._sql_planned(show_on_hold=show_on_hold)),
+            **self.list_to_prep_queues(show_on_hold=show_on_hold),
             "in_prep": self._fetch_rows(self._sql_in_prep()),
             "waiting_for_graph": self._fetch_rows(self._sql_waiting_for_graph_table()),
             "waiting_for_meas": self._fetch_rows(self._sql_waiting_for_meas()),
@@ -856,8 +879,8 @@ class SamsRepository:
         value = self.session.scalar(text(sql), params or {})
         return int(value or 0)
 
-    def _fetch_rows(self, sql: str) -> list[dict[str, Any]]:
-        result = self.session.execute(text(sql)).mappings().all()
+    def _fetch_rows(self, sql: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        result = self.session.execute(text(sql), params or {}).mappings().all()
         return [dict(row) for row in result]
 
     @staticmethod
@@ -878,7 +901,9 @@ class SamsRepository:
         """
 
     @staticmethod
-    def _sql_planned(show_on_hold: bool = False, material: str = "none") -> str:
+    def _sql_planned(show_on_hold: bool = False, by_material: bool = False) -> str:
+        """Unprepared samples (*To prep all*). With `by_material` the query
+        also filters on the bound `:material` parameter (*To prep bone*, …)."""
         sql = """
         SELECT sample_t.sample_nr, preparation_t.prep_nr, user_label, project_t.project, sample_t.material, user_t.last_name,
                project_t.desired_date, project_t.project_nr, user_t.user_nr
@@ -895,8 +920,8 @@ class SamsRepository:
           AND preparation_t.prep_start IS NULL
         """
         sql += " AND sample_t.not_tobedated = 1" if show_on_hold else " AND sample_t.not_tobedated = 0"
-        if material != "none":
-            sql += f" AND sample_t.material = '{material}'"
+        if by_material:
+            sql += " AND sample_t.material = :material"
         sql += " ORDER BY sample_t.sample_nr, preparation_t.prep_nr"
         return sql
 

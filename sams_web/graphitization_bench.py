@@ -112,9 +112,7 @@ class GraphitizationBench:
 
         return {
             "title": "Graphitization",
-            "table_key": "waiting_for_graph",
-            "table_title": "Waiting For Graph",
-            "rows": rows,
+            "queue_tables": [{"key": "waiting_for_graph", "title": "Waiting For Graph", "rows": rows}],
             "show_on_hold": False,
             "graph_bench_entry_enabled": True,
             "graph_bench_entry": bench_entry,

@@ -172,11 +172,14 @@ class PreparationBench:
         """Build the template context for `lab_queue.html` (without `request`).
 
         Default cursor: when `sample_nr_raw` is empty, fall through to the
-        first row of the planned-queue table the dashboard returns.
+        first row of *To prep all* (the `planned` queue). The page lists the
+        To prep queues the dashboard shows: all, then bone and tooth.
         """
+        from sams_web.routers.pages_dashboard_setup_help import DASHBOARD_QUEUE_LABELS
         from sams_web.routers.pages_shared import parse_positive_int
 
-        rows = self.service.get_dashboard(show_on_hold=show_on_hold)["tables"].get("planned", [])
+        to_prep = self.repo.list_to_prep_queues(show_on_hold=show_on_hold)
+        rows = to_prep["planned"]
 
         form_values = form_values or {}
         field_errors = field_errors or {}
@@ -201,9 +204,10 @@ class PreparationBench:
 
         return {
             "title": "Preparation",
-            "table_key": "planned",
-            "table_title": "Planned",
-            "rows": rows,
+            "queue_tables": [
+                {"key": key, "title": DASHBOARD_QUEUE_LABELS.get(key, key), "rows": queue_rows}
+                for key, queue_rows in to_prep.items()
+            ],
             "show_on_hold": show_on_hold,
             "bench_entry_enabled": True,
             "bench_entry": bench_entry,

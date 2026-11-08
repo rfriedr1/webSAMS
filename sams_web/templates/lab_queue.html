@@ -20,7 +20,7 @@
 {% from "_table_macros.html" import table_cell %}
 {% block content %}
 {#- Lab pages carry no page header: the breadcrumb and the Lab sub-nav
-    already say where you are. The bench comes first, then the queue table
+    already say where you are. The bench comes first, then the queue tables
     (and on Analysis the magazine lookup under it). -#}
 {% if bench_entry_enabled %}
 {% include "_preparation_bench.html" %}
@@ -31,16 +31,20 @@
 {% include "_graphitization_bench.html" %}
 {% endif %}
 
-<section class="panel" id="tbl-{{ table_key|replace('_', '-') }}">
-  <details class="table-collapsible" open data-table-filter>
+{#- One fold-away panel per queue: Preparation lists To prep all, bone
+    and tooth; Graphitization and Analysis one queue each. -#}
+{% for queue in queue_tables %}
+{% set rows = queue.rows %}
+<section class="panel" id="tbl-{{ queue.key|replace('_', '-') }}">
+  <details class="table-collapsible" open data-table-filter data-table-download-name="{{ queue.title }}">
     <summary class="table-summary">
-      <span class="table-summary-title">{{ table_title }}</span>
+      <span class="table-summary-title">{{ queue.title }}</span>
       <span class="badge table-summary-count">{{ rows|length }} rows</span>
     </summary>
     {% if rows %}
     {% set ns = namespace(visible_keys=[]) %}
     {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
-    {% if table_key == 'waiting_for_meas' %}
+    {% if queue.key == 'waiting_for_meas' %}
       {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
     {% endif %}
     {% for key in rows[0].keys() %}
@@ -74,6 +78,7 @@
     {% endif %}
   </details>
 </section>
+{% endfor %}
 
 {% if magazine_lookup_enabled %}
 {#- Analysis: look up one magazine's targets, below the queue (the queue

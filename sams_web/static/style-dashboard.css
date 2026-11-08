@@ -140,6 +140,18 @@ a.dash-bar:hover .dash-bar-label {
   grid-template-columns: 9.5rem minmax(0, 1fr) 2.8rem 4.4rem;
 }
 
+/* A part of the queue above it (To prep bone / tooth under To prep all):
+   indented label, a lighter number, so it never reads as a lab step. */
+.dash-bar-queue.is-subset .dash-bar-label {
+  padding-left: var(--space-4);
+  font-weight: 500;
+}
+
+.dash-bar-queue.is-subset .dash-bar-value {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
 .dash-bar-split {
   display: flex;
   gap: 2px;
