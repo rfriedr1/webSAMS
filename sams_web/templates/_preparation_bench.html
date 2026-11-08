@@ -7,7 +7,7 @@
     (weights + yield, dates + storage, methods), flag chips, comment and
     Save / Save & next. Same pieces as the graphitization bench
     (_bench_macros.html). -#}
-{% from "_bench_macros.html" import stepper_buttons, ctx_item, bench_input, bench_flag, bench_flag_readonly %}
+{% from "_bench_macros.html" import stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
 <div
   class="bench-layout is-single"
   data-page-label="Preparation bench"
@@ -101,9 +101,10 @@
       {% if format_table_cell_value("user_label_nr", bench_sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", bench_sample.user_label_nr) }}{% endif %}
       {{ ctx_item(field_label("material"), "material", bench_sample.material) }}
       {{ ctx_item(field_label("fraction"), "fraction", bench_sample.fraction) }}
-      {#- Extra analyses: the material has to be shared out, so say it up front. -#}
-      {% if bench_sample.c_n_isotop_a %}<span class="bench-chip is-notice">{{ field_label("c_n_isotop_a") }}</span>{% endif %}
-      {% if bench_sample.dendro_a %}<span class="bench-chip is-notice">{{ field_label("dendro_a") }}</span>{% endif %}
+      {#- Extra analyses: the material may have to be shared out, so say
+          it up front, yes or no. -#}
+      {{ ctx_flag(field_label("c_n_isotop_a"), bench_sample.c_n_isotop_a, hook="data-prep-bench-cn-isotope") }}
+      {{ ctx_flag(field_label("dendro_a"), bench_sample.dendro_a, hook="data-prep-bench-dendro") }}
     </div>
 
     <form method="post" action="/lab/preparation/bench/save" class="bench-form" data-prep-bench-save-form>

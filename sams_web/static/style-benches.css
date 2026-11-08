@@ -290,13 +290,21 @@
   white-space: nowrap;
 }
 
-/* An extra analysis (C/N isotope, dendro) needs part of the material:
-   tinted so it is seen before the material is used up. The word carries
-   the meaning, the tint only draws the eye. */
-.bench-chip.is-notice {
-  border-color: var(--warn-line);
+/* A yes/no sample fact in the context line (`ctx_flag`): label, then the
+   word Yes or No, like every other fact in the line. Yes is an amber pill,
+   since part of the material is needed elsewhere; No stays plain. */
+.bench-ctx-flag-value {
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+
+.bench-ctx-flag.is-on .bench-ctx-flag-value {
+  padding: 0.04rem 0.5rem;
+  border: 1px solid var(--warn-line);
+  border-radius: 999px;
   background: var(--warn-bg);
   color: var(--warn-text);
+  font-weight: 700;
 }
 
 .bench-chip.is-danger {
