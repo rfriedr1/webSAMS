@@ -101,7 +101,9 @@
       {% if format_table_cell_value("user_label_nr", bench_sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", bench_sample.user_label_nr) }}{% endif %}
       {{ ctx_item(field_label("material"), "material", bench_sample.material) }}
       {{ ctx_item(field_label("fraction"), "fraction", bench_sample.fraction) }}
-      {% if bench_sample.c_n_isotop_a %}<span class="bench-chip">C/N isotope analysis</span>{% endif %}
+      {#- Extra analyses: the material has to be shared out, so say it up front. -#}
+      {% if bench_sample.c_n_isotop_a %}<span class="bench-chip is-notice">{{ field_label("c_n_isotop_a") }}</span>{% endif %}
+      {% if bench_sample.dendro_a %}<span class="bench-chip is-notice">{{ field_label("dendro_a") }}</span>{% endif %}
     </div>
 
     <form method="post" action="/lab/preparation/bench/save" class="bench-form" data-prep-bench-save-form>
@@ -151,6 +153,8 @@
           <span class="bench-flags-label" id="prep-bench-flags-label">Flags</span>
           <div class="bench-flags" role="group" aria-labelledby="prep-bench-flags-label">
             {{ bench_flag("bench__s_no_leftover", field_label("s_no_leftover"), bench_values, bench_sample.s_no_leftover, bench_errors, hook="data-prep-bench-no-leftover") }}
+            {{ bench_flag_readonly(field_label("c_n_isotop_a"), bench_sample.c_n_isotop_a, hook="data-prep-bench-cn-isotope", title="Set on the sample (import wizard or sample page): its material is needed for this analysis") }}
+            {{ bench_flag_readonly(field_label("dendro_a"), bench_sample.dendro_a, hook="data-prep-bench-dendro", title="Set on the sample (import wizard or sample page): its material is needed for this analysis") }}
             {{ bench_flag_readonly(field_label("return_to_sender"), bench_project and (bench_project.return_to_sender or 0), hook="data-prep-bench-return-to-sender", title="Set on the project") }}
             {{ bench_flag_readonly("Sample Archived", bench_storage_value|string|trim, hook="data-prep-bench-sample-archived", title="Ticked while a sample storage location is filled in") }}
             {{ bench_flag("bench__stop", field_label("stop"), bench_values, bench_prep.stop, bench_errors) }}
