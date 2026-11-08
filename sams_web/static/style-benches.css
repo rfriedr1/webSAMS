@@ -290,6 +290,15 @@
   white-space: nowrap;
 }
 
+/* An extra analysis (C/N isotope, dendro) needs part of the material:
+   tinted so it is seen before the material is used up. The word carries
+   the meaning, the tint only draws the eye. */
+.bench-chip.is-notice {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
 .bench-chip.is-danger {
   border-color: var(--danger-line);
   background: var(--danger-bg-strong);
