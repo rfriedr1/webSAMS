@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
+{% from "_table_macros.html" import table_cell %}
 {% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
@@ -47,26 +48,18 @@
       <table data-project-samples-table>
         <thead>
           <tr>
-            <th>Sample #</th>
-            <th>User Label</th>
-            <th>Type</th>
-            <th>Material</th>
-            <th>C14 Age</th>
+            {% for key in sample_columns %}<th>{{ field_label(key) }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
-          {% for sample in samples %}
+          {% for row in sample_rows %}
           <tr>
-            <td><a href="/samples/{{ sample.sample_nr }}">{{ sample.sample_nr }}</a></td>
-            <td>{{ sample.user_label }}</td>
-            <td>{{ sample.type }}</td>
-            <td>{{ sample.material }}</td>
-            <td>{{ format_c14_integer(sample.c14_age) if sample.c14_age is not none else '' }}</td>
+            {% for key in sample_columns %}<td>{{ table_cell(key, row) }}</td>{% endfor %}
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" class="table-empty-row">
-              No samples linked to this project yet. New samples are created via project intake.
+            <td colspan="{{ sample_columns|length }}" class="table-empty-row">
+              No samples linked to this project yet. Add them with <a href="/samples/import">Samples › Import</a>.
             </td>
           </tr>
           {% endfor %}

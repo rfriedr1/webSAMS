@@ -29,10 +29,10 @@ from typing import Any
 from sqlalchemy import Date, DateTime, Float, Integer
 from sqlalchemy.inspection import inspect as sa_inspect
 
+from sams_web.field_labels import field_label
 from sams_web.models import Sample
 from sams_web.sample_import.vocabulary import (
     SAMPLE_COLUMN_SYNONYMS,
-    SAMPLE_FIELD_LABELS,
     merge_synonyms,
     normalize_label,
 )
@@ -129,7 +129,7 @@ def _build_target_columns() -> dict[str, TargetColumn]:
         column = attr.columns[0]
         columns[name] = TargetColumn(
             name=name,
-            label=SAMPLE_FIELD_LABELS.get(name, name.replace("_", " ").title()),
+            label=field_label(name),
             kind=_kind_for(column),
             max_length=getattr(column.type, "length", None),
             is_lookup=name in LOOKUP_BACKED_COLUMNS,
@@ -221,7 +221,7 @@ def build_registry(custom_fields: list[dict[str, Any]] | None = None,
         fields[key] = ImportField(
             key=key,
             target=key,
-            label=SAMPLE_FIELD_LABELS.get(key, key.replace("_", " ").title()),
+            label=field_label(key),
             kind=target.kind if target else KIND_TEXT,
             headings=tuple(headings),
             builtin=True,

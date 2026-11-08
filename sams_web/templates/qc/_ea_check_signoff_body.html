@@ -4,7 +4,7 @@
 {{ charts(signoff.body.chart) }}
 <h3 class="qc-print-sub">Checks covered</h3>
 <table class="qc-print-table" data-table-plain>
-  <thead><tr><th>Date</th><th>Time</th><th>Lot</th><th>Weight (mg)</th><th>C %</th><th>N %</th><th>Result</th><th>By</th><th>Comment</th></tr></thead>
+  <thead><tr><th>Date</th><th>Time</th><th>Lot</th><th>Weight (mg)</th><th>{{ field_label('conc_c') }}</th><th>{{ field_label('conc_n') }}</th><th>Result</th><th>By</th><th>Comment</th></tr></thead>
   <tbody>
     {% for r in signoff.body.rows %}
     <tr class="{% if not r.passed %}is-fail{% endif %}">

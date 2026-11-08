@@ -394,6 +394,8 @@ def lab_analysis_page(
                 "prep_nr",
                 "target_nr",
                 "user_label",
+                "c14_age",
+                "c14_age_sig",
                 "project",
                 "user_last_name",
             ),

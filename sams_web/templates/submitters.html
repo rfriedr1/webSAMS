@@ -33,18 +33,18 @@
     below filters every one of them.
   </p>
 
-  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Search all {{ total_count }} submitters by name, organisation, town or e-mail"{% if q %} data-table-search-initial="{{ q }}" data-table-search-column="Last Name"{% endif %}>
+  <div class="submitters-table-region" data-table-filter data-table-search-placeholder="Search all {{ total_count }} submitters by name, organisation, town or e-mail"{% if q %} data-table-search-initial="{{ q }}" data-table-search-column="{{ field_label('last_name') }}"{% endif %}>
     <div class="table-wrap submitters-table-wrap">
       <table data-submitters-table>
         <thead>
           <tr>
-            <th>Submitter #</th>
-            <th>Last Name</th>
-            <th>First Name</th>
-            <th>Organisation</th>
-            <th>Institute</th>
-            <th>Town</th>
-            <th>E-mail</th>
+            <th>{{ field_label('user_nr') }}</th>
+            <th>{{ field_label('last_name') }}</th>
+            <th>{{ field_label('first_name') }}</th>
+            <th>{{ field_label('organisation') }}</th>
+            <th>{{ field_label('institute') }}</th>
+            <th>{{ field_label('town') }}</th>
+            <th>{{ field_label('email') }}</th>
           </tr>
         </thead>
         <tbody>

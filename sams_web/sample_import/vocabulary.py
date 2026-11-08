@@ -18,6 +18,8 @@ import unicodedata
 from difflib import SequenceMatcher
 from typing import Iterable
 
+from sams_web.field_labels import field_label
+
 # --- Canonical field names -------------------------------------------------
 #
 # Metadata fields (vertical "label | value" rows above the sample table).
@@ -182,40 +184,24 @@ SAMPLE_COLUMN_SYNONYMS: dict[str, tuple[str, ...]] = {
     "sampling_date": ("sampling date", "probenahmedatum", "probennahme datum", "date sampled"),
 }
 
-# Human labels for the review UI.
+# Human labels for the review UI: the app-wide field labels
+# (sams_web/field_labels.py), so the wizard names a column exactly as the
+# sample page and every table do.
 SAMPLE_FIELD_LABELS: dict[str, str] = {
-    "user_label": "Sample Label",
-    "user_label_nr": "Sample Label #",
-    "user_desc1": "Description 1",
-    "user_desc2": "Description 2",
-    "weight": "Weight (mg)",
-    "material": "Material",
-    "type": "Type",
-    "fraction": "Fraction",
-    "user_comment": "Comment",
-    "pre_sub_treat": "Pre-sub Treatment",
-    "sampling_date": "Sampling Date",
+    key: field_label(key)
+    for key in (
+        "user_label", "user_label_nr", "user_desc1", "user_desc2", "weight", "material",
+        "type", "fraction", "user_comment", "pre_sub_treat", "sampling_date",
+    )
 }
 
 CONTACT_FIELD_LABELS: dict[str, str] = {
-    "salutation": "Salutation",
-    "title": "Title",
-    "first_name": "First Name",
-    "last_name": "Last Name",
-    "organisation": "Organisation",
-    "institute": "Institute",
-    "address_1": "Address 1",
-    "address_2": "Address 2",
-    "town": "Town",
-    "postcode": "Postcode",
-    "country": "Country",
-    "phone_1": "Phone 1",
-    "phone_2": "Phone 2",
-    "fax": "Fax",
-    "email": "Email",
-    "www": "Website",
-    "language": "Language",
-    "user_comment": "Comment",
+    key: field_label(key)
+    for key in (
+        "salutation", "title", "first_name", "last_name", "organisation", "institute",
+        "address_1", "address_2", "town", "postcode", "country", "phone_1", "phone_2",
+        "fax", "email", "www", "language", "user_comment",
+    )
 }
 
 #: Contact fields the operator can edit when creating a NEW submitter.

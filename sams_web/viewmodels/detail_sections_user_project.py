@@ -10,6 +10,7 @@ from sams_web.detail_update import (
     RuleContext,
     RuleOutcome,
 )
+from sams_web.field_labels import field_label
 from sams_web.models import Project, Submitter
 from sams_web.viewmodels.detail_sections_common import (
     SectionSpec,
@@ -18,30 +19,16 @@ from sams_web.viewmodels.detail_sections_common import (
     is_empty_display_value,
 )
 
-USER_FIELD_LABELS = {
-    "user_nr": "Submitter #",
-    "first_name": "First Name",
-    "last_name": "Last Name",
-    "organisation": "Organisation",
-    "institute": "Institute",
-    "address_1": "Address 1",
-    "address_2": "Address 2",
-    "town": "Town",
-    "postcode": "Postcode",
-    "country": "Country",
-    "phone_1": "Phone 1",
-    "phone_2": "Phone 2",
-    "fax": "Fax",
-    "email": "Email",
-    "www": "Website",
-    "account": "Account",
-    "invoice": "Invoice",
-    "correspondance": "Correspondence",
-    "user_comment": "Comment",
-    "title": "Title",
-    "language": "Language",
-    "salutation": "Salutation",
-}
+
+# Columns of the related-records tables, by key. Head and cells come from
+# `field_label` / `table_cell`, so they read like every other table.
+SUBMITTER_PROJECT_COLUMNS: tuple[str, ...] = (
+    "project_nr", "project", "status", "in_date", "desired_date", "out_date",
+)
+PROJECT_SAMPLE_COLUMNS: tuple[str, ...] = (
+    "sample_nr", "user_label", "user_label_nr", "user_desc1", "material", "c14_age",
+)
+
 
 USER_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Identity", "", ("title", "salutation", "first_name", "last_name", "language")),
@@ -87,7 +74,6 @@ def format_user_value(key: str, value: Any) -> Any:
 def build_user_sections(user: Any) -> list[dict[str, Any]]:
     sections = build_sections(
         user,
-        field_labels=USER_FIELD_LABELS,
         section_specs=USER_SECTION_SPECS,
         kind_resolver=user_field_kind,
         value_formatter=format_user_value,
@@ -99,36 +85,6 @@ def build_user_sections(user: Any) -> list[dict[str, Any]]:
     return arrange_sections(sections, wide=USER_WIDE_SECTIONS, stacked=USER_STACKED_FIELDS)
 
 
-PROJECT_FIELD_LABELS = {
-    "project_nr": "Project #",
-    "project": "Project Name",
-    "user_nr": "Submitter #",
-    "invoice_nr": "Invoice Submitter #",
-    "in_date": "In Date",
-    "out_date": "Out Date",
-    "desired_date": "Desired Date",
-    "priority": "Priority",
-    "report_type": "Report Type",
-    "letter": "Letter",
-    "project_comment": "Project Comment",
-    "status": "Status",
-    "price": "Price",
-    "project_type": "Project Type",
-    "research": "Research",
-    "report": "Report",
-    "invoice": "Invoice",
-    "auftrags_nr": "Order ID (AuftragsNr)",
-    "invoice_date": "Invoice Date",
-    "advisor": "Advisor",
-    "sample_storage_loc": "Sample Storage Location",
-    "free_of_charge": "Free Of Charge",
-    "order_nr": "Order Number",
-    "supervisor": "Supervisor",
-    "return_to_sender": "Return To Sender",
-    "returned_to_sender": "Returned To Sender",
-    "prep_return_to_sender": "Prep Return To Sender",
-    "prep_returned_to_sender": "Prep Returned To Sender",
-}
 
 PROJECT_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Core", "", ("project", "status", "priority", "project_type", "research", "report_type")),
@@ -184,7 +140,6 @@ def format_project_value(key: str, value: Any) -> Any:
 def build_project_sections(project: Any) -> list[dict[str, Any]]:
     sections = build_sections(
         project,
-        field_labels=PROJECT_FIELD_LABELS,
         section_specs=PROJECT_SECTION_SPECS,
         kind_resolver=project_field_kind,
         value_formatter=format_project_value,
@@ -223,9 +178,9 @@ def validate_project_date_ordering(ctx: RuleContext) -> RuleOutcome:
 
     errors: dict[str, str] = {}
     if in_date is not None and desired is not None and desired < in_date:
-        errors["desired_date"] = "Desired Date must be on or after In Date."
+        errors["desired_date"] = f"{field_label('desired_date')} must be on or after {field_label('in_date')}."
     if in_date is not None and out_date is not None and out_date < in_date:
-        errors["out_date"] = "Out Date must be on or after In Date."
+        errors["out_date"] = f"{field_label('out_date')} must be on or after {field_label('in_date')}."
     return RuleOutcome(field_errors=errors)
 
 
@@ -242,7 +197,7 @@ def apply_auto_close_on_out_date(ctx: RuleContext) -> RuleOutcome:
     closed_status = _pick_closed_project_status(statuses)
     if closed_status is None:
         return RuleOutcome(
-            field_errors={"out_date": "Out Date requires a closing status configured in projectstatus_t."}
+            field_errors={"out_date": f"{field_label('out_date')} requires a closing status configured in projectstatus_t."}
         )
 
     revised = dict(ctx.updates)

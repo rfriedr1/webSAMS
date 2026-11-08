@@ -22,7 +22,8 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from sams_web.sample_import.fields import SAMPLE_TARGET_COLUMNS, available_targets
-from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS, SAMPLE_FIELD_LABELS
+from sams_web.field_labels import field_label
+from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS
 from sams_web.setup_store import SetupStore
 
 SETUP_SECTION_IMPORT_HEADINGS = "import_column_headings"
@@ -199,7 +200,7 @@ class ImportHeadingStore:
         return [
             {
                 "key": field_name,
-                "label": SAMPLE_FIELD_LABELS.get(field_name, field_name),
+                "label": field_label(field_name),
                 "builtin": list(SAMPLE_COLUMN_SYNONYMS[field_name]),
                 "custom": stored.get(field_name, []),
                 "custom_text": "\n".join(stored.get(field_name, [])),
