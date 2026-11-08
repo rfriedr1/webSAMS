@@ -22,7 +22,7 @@
           {{ card.state_label }}
         </span>
         {% if card.overdue %}<span class="ea-line-overdue">Sign-off overdue</span>{% endif %}
-        <button type="button" class="ea-line-open" data-ea-open aria-controls="ea-card-{{ card.key }}" aria-expanded="{{ 'true' if ea_check_error else 'false' }}">{% if card.state == "passed" %}Details{% else %}Log check{% endif %}</button>
+        <button type="button" class="ea-line-open" data-ea-open aria-controls="ea-card-{{ card.key }}" aria-expanded="{{ 'true' if ea_check_error else 'false' }}">{% if card.state == "passed" or not can("edit_records") %}Details{% else %}Log check{% endif %}</button>
       </li>
       {% endfor %}
     </ul>
@@ -105,12 +105,13 @@
       </ol>
       {% endif %}
 
-      {% if card.state == "passed" %}
+      {% if card.state == "passed" and can("edit_records") %}
       <button type="button" class="ea-another" data-ea-another aria-expanded="false">
         <span aria-hidden="true">+</span> Another check
       </button>
       {% endif %}
 
+      {% if can("edit_records") %}
       <form method="post" action="/lab/ea-checks" class="ea-entry" data-ea-entry {% if card.state == "passed" %}hidden{% endif %}>
         <input type="hidden" name="ea" value="{{ card.key }}" />
         <input type="hidden" name="next" value="{{ ea_return_url }}" />
@@ -173,6 +174,7 @@
           </button>
         </div>
       </form>
+      {% endif %}
 
       {% if card.overdue %}
       <a class="ea-overdue" href="/lab/ea-checks#ea-{{ card.key }}-{{ cfg.default_standard | replace('.', '-') }}">Sign-off overdue — checks since {{ card.oldest_unsigned.strftime("%d.%m.%Y") }}</a>

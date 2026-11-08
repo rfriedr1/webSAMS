@@ -138,6 +138,9 @@ class SamsService:
         submitted_fields: dict[str, str],
     ) -> tuple[bool, dict[str, str], str | None]:
         # Thin shim: deep module flushes; this method commits on success.
+        # Every detail-page save passes here, and the browser posts only
+        # the changed fields — so this is where the change log (who, when,
+        # field, old → new) will hook in once login exists (ADR-0006).
         result = apply_detail_update(config, entity_nr, submitted_fields, self.repo)
         if result.saved:
             try:

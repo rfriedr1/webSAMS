@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
 {% from "_table_macros.html" import table_cell %}
-{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
 
 {% block content %}
-<section class="panel submitter-detail-panel" data-edit-scope data-edit-initial-mode="{{ submitter_edit_initial_mode or 'view' }}">
+<section class="panel submitter-detail-panel" data-edit-scope>
   {% set nav %}{{ render_detail_quick_nav(
     entity='submitter',
     current=submitter.user_nr,
@@ -31,12 +31,14 @@
     entity='user',
     css_prefix='user',
     form_id=submitter_edit_form_id,
+    can_edit=submitter_can_edit,
     read_only_fields=submitter_read_only_fields,
     editor_value_overrides=submitter_form_values,
     select_options_by_field=submitter_select_options,
     required_fields=submitter_required_fields,
     field_errors=submitter_field_errors
   ) }}
+  {% if submitter_can_edit %}{{ render_pending_bar(submitter_edit_form_id) }}{% endif %}
 </section>
 
 <section class="panel record-related">

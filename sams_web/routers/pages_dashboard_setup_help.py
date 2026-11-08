@@ -7,6 +7,8 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from sams_web.ea_checks import EaCheckLog
@@ -288,7 +290,7 @@ def help_page(request: Request):
     )
 
 
-@router.post("/setup/email/test")
+@router.post("/setup/email/test", dependencies=guarded(Permission.MANAGE_SETUP))
 async def setup_email_test(
     request: Request,
     service: SamsService = Depends(get_service),
@@ -377,7 +379,7 @@ async def setup_email_test(
     return JSONResponse({"sent": True, "to_address": to_address})
 
 
-@router.post("/setup/{section_key}")
+@router.post("/setup/{section_key}", dependencies=guarded(Permission.MANAGE_SETUP))
 async def setup_section_submit(
     request: Request,
     section_key: str,

@@ -6,6 +6,8 @@ import json
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
@@ -152,7 +154,7 @@ def lab_preparation_page(
     return templates.TemplateResponse(request, "lab_queue.html", context)
 
 
-@router.post("/lab/preparation/bench/save")
+@router.post("/lab/preparation/bench/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def lab_preparation_bench_save(
     request: Request,
     service: SamsService = Depends(get_service),
@@ -243,7 +245,7 @@ def lab_graphitization_page(
     return templates.TemplateResponse(request, "lab_queue.html", context)
 
 
-@router.post("/lab/graphitization/bench/save")
+@router.post("/lab/graphitization/bench/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def lab_graphitization_bench_save(
     request: Request,
     service: SamsService = Depends(get_service),
@@ -305,7 +307,7 @@ async def lab_graphitization_bench_save(
     )
 
 
-@router.post("/lab/graphitization/bench/save-batch")
+@router.post("/lab/graphitization/bench/save-batch", dependencies=guarded(Permission.EDIT_RECORDS))
 async def lab_graphitization_bench_save_batch(
     request: Request,
     service: SamsService = Depends(get_service),

@@ -10,6 +10,8 @@ from __future__ import annotations
 from urllib.parse import urlencode, urlsplit
 
 from fastapi import APIRouter, Depends, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
@@ -88,7 +90,7 @@ def ea_checks_page(
     return templates.TemplateResponse(request, "ea_checks.html", context)
 
 
-@router.post("/lab/ea-checks")
+@router.post("/lab/ea-checks", dependencies=guarded(Permission.EDIT_RECORDS))
 async def ea_check_record(request: Request, service: SamsService = Depends(get_service)):
     form = await request.form()
     submitted = {key: str(form.get(key) or "") for key in form.keys()}
@@ -100,7 +102,7 @@ async def ea_check_record(request: Request, service: SamsService = Depends(get_s
     return redirect_with(next_url, params, "ea-check-strip")
 
 
-@router.post("/lab/ea-checks/{check_id}/void")
+@router.post("/lab/ea-checks/{check_id}/void", dependencies=guarded(Permission.EDIT_RECORDS))
 async def ea_check_void(check_id: int, request: Request, service: SamsService = Depends(get_service)):
     form = await request.form()
     next_url = safe_return_url(str(form.get("next") or ""))

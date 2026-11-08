@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel not-found-panel">
+  <div class="panel-bar">
+    <h2>{{ message or "You are not allowed to do that." }}</h2>
+  </div>
+  <p>
+    Nothing was changed. Your account can view records but not change them;
+    an administrator can grant you the right.
+  </p>
+  <p>
+    <a href="/" data-history-back data-fallback="/">Go back</a>
+  </p>
+  {% if requested_path %}
+  <p class="not-found-meta">Requested: <code>{{ requested_path }}</code></p>
+  {% endif %}
+</section>
+{% endblock %}

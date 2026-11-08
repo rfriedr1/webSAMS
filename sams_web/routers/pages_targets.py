@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
+from sams_web.access import Permission, guarded
 from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
@@ -95,7 +97,7 @@ def target_detail_page(
     return response
 
 
-@router.post("/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}/save")
+@router.post("/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}/save", dependencies=guarded(Permission.EDIT_RECORDS))
 async def save_target_detail_page(
     request: Request,
     sample_nr: int,
@@ -141,7 +143,6 @@ async def save_target_detail_page(
                 save_error=save_error,
                 field_errors=field_errors,
                 form_values=submitted_fields,
-                edit_initial_mode="editing",
             ),
             service=service,
             lab_warning_thresholds=service.get_lab_warning_thresholds(),

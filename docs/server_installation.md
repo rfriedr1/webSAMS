@@ -131,6 +131,11 @@ SAMS_SQL_ECHO=false
 
 # Optional: name in the browser tab/header
 # SAMS_APP_TITLE=SAMS Web
+
+# Optional: what every user may do until SAMS has a login (section 13).
+# admin (default) = everything · editor = records + QC sign-off, Setup read-only
+# viewer = look only
+# SAMS_ACCESS_ROLE=admin
 ```
 
 **Choosing the database.** Development runs against `db_dmams_test2`. The
@@ -477,6 +482,11 @@ The intended shape, so today's setup already fits:
 - SAMS then listens on localhost only: set `SAMS_HOST=127.0.0.1` for the service
   (`nssm set webSAMS AppEnvironmentExtra SAMS_HOST=127.0.0.1`) and remove the
   port-8502 firewall rule, so nothing can bypass IIS.
+- Permissions are already in place (`sams_web/access.py`, ADR-0006): every write
+  is checked against the user's role (*viewer*, *editor*, *admin*). Until login
+  exists, every request gets the role in `SAMS_ACCESS_ROLE` (default `admin`).
+  With login, `access.current_user()` reads the forwarded Windows identity and
+  looks up its role instead.
 
 ---
 

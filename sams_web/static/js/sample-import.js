@@ -180,17 +180,20 @@
     }
   };
 
-  fileInput.addEventListener("change", () => uploadFile(fileInput.files[0]));
-  ["dragenter", "dragover"].forEach((t) =>
-    dropzone.addEventListener(t, (e) => { e.preventDefault(); dropzone.classList.add("is-dragging"); })
-  );
-  ["dragleave", "drop"].forEach((t) =>
-    dropzone.addEventListener(t, (e) => { e.preventDefault(); dropzone.classList.remove("is-dragging"); })
-  );
-  dropzone.addEventListener("drop", (e) => {
-    const file = e.dataTransfer?.files?.[0];
-    if (file) uploadFile(file);
-  });
+  // No upload box for a view-only user (sams_web/access.py).
+  if (fileInput && dropzone) {
+    fileInput.addEventListener("change", () => uploadFile(fileInput.files[0]));
+    ["dragenter", "dragover"].forEach((t) =>
+      dropzone.addEventListener(t, (e) => { e.preventDefault(); dropzone.classList.add("is-dragging"); })
+    );
+    ["dragleave", "drop"].forEach((t) =>
+      dropzone.addEventListener(t, (e) => { e.preventDefault(); dropzone.classList.remove("is-dragging"); })
+    );
+    dropzone.addEventListener("drop", (e) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) uploadFile(file);
+    });
+  }
 
   $("[data-restart]").addEventListener("click", () => {
     window.removeEventListener("beforeunload", guardUnload);

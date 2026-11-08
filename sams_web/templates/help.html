@@ -80,25 +80,36 @@
   <div class="card" id="help-edit">
     <h3>Edit</h3>
     <p>
-      All detail pages (sample, preparation, target, project, submitter) follow the same edit model.
+      All detail pages (sample, preparation, target, project, submitter) work the same way. There is no edit mode: you change a value where you see it.
     </p>
     <ul>
       <li>
-        <strong>Quick-edit one field</strong>:
-        double-click a field's value to edit just that field. Press Enter to save (or Ctrl/⌘ Enter for comments), Esc to cancel.
+        <strong>Change a value</strong>:
+        click it (a pencil shows on hover) or reach it with <kbd>Tab</kbd>. It turns into its input in place.
+        <kbd>Esc</kbd> undoes the change in that field. Values shown without a pencil (numbers, results owned by BATS, calculated values) cannot be changed here.
       </li>
       <li>
-        <strong>Batch edit</strong>:
-        click <strong>Edit</strong> (or press <kbd>e</kbd>) to open every field at once. Make your changes, click <strong>Save</strong> (<kbd>Ctrl/⌘ S</kbd>) or <strong>Cancel</strong> (<kbd>Esc</kbd>).
-        While editing, the toolbar shows <em>N fields changed</em> so you know exactly what's pending.
+        <strong>Change several values, save once</strong>:
+        changed fields stay open with a dot next to their label, and a bar at the foot of the record counts them
+        (<em>3 unsaved changes</em>). <strong>Save</strong> (<kbd>Ctrl/⌘ S</kbd>) stores them all together; <strong>Cancel</strong> drops them all.
+        Only the fields you changed are sent.
+      </li>
+      <li>
+        <strong>Empty fields</strong>:
+        fields without a value are folded away under <em>N empty fields hidden</em>. Click that line to show them, then click one to fill it in.
       </li>
       <li>
         <strong>Unsaved changes</strong>:
-        if you try to leave or cancel while you have edits, SAMS asks whether to <em>Discard</em>, <em>Save</em>, or <em>Keep editing</em> — your work is never lost silently.
+        if you try to leave the record with changes, SAMS asks whether to <em>Discard</em>, <em>Save</em>, or <em>Keep editing</em> — your work is never lost silently.
+        If a save is refused, your changes stay on the page, still marked, next to the reason.
       </li>
       <li>
         <strong>Save status</strong>:
-        after a save, the toolbar shows a green <em>Saved · just now</em> hint that updates relative time as you keep working.
+        after a save, the record header shows a green <em>Saved · just now</em> hint that updates relative time as you keep working.
+      </li>
+      <li>
+        <strong>View only</strong>:
+        an account that may only view sees the same page without pencils or the save bar.
       </li>
       <li>
         <strong>Warnings</strong>:
@@ -110,9 +121,9 @@
       All keyboard shortcuts on a detail page:
     </p>
     <ul>
-      <li><kbd>e</kbd> — toggle edit mode</li>
-      <li><kbd>Esc</kbd> — cancel edit mode (or close the unsaved-changes prompt)</li>
-      <li><kbd>Ctrl/⌘ S</kbd> — save</li>
+      <li>Click or <kbd>Tab</kbd> — open a field to change it</li>
+      <li><kbd>Esc</kbd> — undo the change in the open field (or close the unsaved-changes prompt)</li>
+      <li><kbd>Ctrl/⌘ S</kbd> — save all changes</li>
       <li><kbd>[</kbd> / <kbd>j</kbd> — previous record</li>
       <li><kbd>]</kbd> / <kbd>k</kbd> — next record</li>
       <li><kbd>?</kbd> — open the cheat-sheet overlay (same content, on top of the current page)</li>

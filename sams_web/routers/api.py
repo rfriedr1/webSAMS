@@ -6,6 +6,8 @@ from datetime import date, datetime, time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from sams_web.access import Permission, guarded
 from sqlalchemy.inspection import inspect
 
 from sams_web.dependencies import get_sample_photos, get_service
@@ -106,7 +108,7 @@ def list_submitters(
     return [SubmitterRead.model_validate(submitter) for submitter in service.list_submitters(query=query)]
 
 
-@router.post("/submitters", response_model=SubmitterRead, status_code=status.HTTP_201_CREATED)
+@router.post("/submitters", dependencies=guarded(Permission.EDIT_RECORDS), response_model=SubmitterRead, status_code=status.HTTP_201_CREATED)
 def create_submitter(payload: SubmitterCreate, service: SamsService = Depends(get_service)) -> SubmitterRead:
     submitter = service.create_submitter(payload.model_dump())
     return SubmitterRead.model_validate(submitter)
@@ -120,7 +122,7 @@ def list_submitter_projects(user_nr: int, service: SamsService = Depends(get_ser
     return [ProjectRead.model_validate(project) for project in data["projects"]]
 
 
-@router.post("/projects", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
+@router.post("/projects", dependencies=guarded(Permission.EDIT_RECORDS), response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 def create_project(payload: ProjectCreate, service: SamsService = Depends(get_service)) -> ProjectRead:
     project = service.create_project(payload.model_dump())
     return ProjectRead.model_validate(project)
@@ -134,7 +136,7 @@ def list_project_samples(project_nr: int, service: SamsService = Depends(get_ser
     return [SampleRead.model_validate(sample) for sample in data["samples"]]
 
 
-@router.post("/samples", response_model=SampleRead, status_code=status.HTTP_201_CREATED)
+@router.post("/samples", dependencies=guarded(Permission.EDIT_RECORDS), response_model=SampleRead, status_code=status.HTTP_201_CREATED)
 def create_sample(payload: SampleCreate, service: SamsService = Depends(get_service)) -> SampleRead:
     sample = service.create_sample(payload.model_dump(exclude_none=True), with_blank_records=True)
     return SampleRead.model_validate(sample)
@@ -148,13 +150,13 @@ def sample_details(sample_nr: int, service: SamsService = Depends(get_service)) 
     return _serialize_details(data)
 
 
-@router.post("/samples/{sample_nr}/set-running")
+@router.post("/samples/{sample_nr}/set-running", dependencies=guarded(Permission.EDIT_RECORDS))
 def set_project_running(sample_nr: int, service: SamsService = Depends(get_service)) -> dict[str, Any]:
     changed = service.set_project_running(sample_nr)
     return {"updated": changed}
 
 
-@router.post("/samples/{sample_nr}/transfer-age")
+@router.post("/samples/{sample_nr}/transfer-age", dependencies=guarded(Permission.EDIT_RECORDS))
 def transfer_age(
     sample_nr: int,
     prep_nr: int = 1,
@@ -165,7 +167,7 @@ def transfer_age(
     return {"updated": changed}
 
 
-@router.post("/maintenance/check-project-status")
+@router.post("/maintenance/check-project-status", dependencies=guarded(Permission.MANAGE_SETUP))
 def check_project_status(service: SamsService = Depends(get_service)) -> dict[str, int]:
     closed = service.check_project_status()
     return {"closed_projects": closed}
@@ -189,7 +191,7 @@ def get_setup_section(section_key: str, service: SamsService = Depends(get_servi
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/setup/{section_key}")
+@router.put("/setup/{section_key}", dependencies=guarded(Permission.MANAGE_SETUP))
 def update_setup_section(
     section_key: str,
     payload: dict[str, Any],
