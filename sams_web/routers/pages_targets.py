@@ -143,7 +143,6 @@ async def save_target_detail_page(
                 save_error=save_error,
                 field_errors=field_errors,
                 form_values=submitted_fields,
-                edit_initial_mode="editing",
             ),
             service=service,
             lab_warning_thresholds=service.get_lab_warning_thresholds(),

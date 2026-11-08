@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
-{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
 
 {% block content %}
-<section class="panel" data-edit-scope data-edit-initial-mode="{{ target_edit_initial_mode or 'view' }}">
+<section class="panel" data-edit-scope>
   {% set target_back_url = '/samples/' ~ sample.sample_nr ~ '/preparations/' ~ preparation.prep_nr %}
   {% set target_base_url = target_back_url ~ '/targets/' %}
   {% set nav %}{{ render_detail_quick_nav(
@@ -17,6 +17,7 @@
     jump_name='jump_target',
   ) }}{% endset %}
   {% set actions %}
+  {% if target_can_edit %}
   <form
     method="post"
     action="/samples/{{ sample.sample_nr }}/add-target"
@@ -32,6 +33,7 @@
     </select>
     <button type="submit" class="record-action" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
   </form>
+  {% endif %}
   {% endset %}
   <div class="panel-head">
     {% call render_record_head('Target ' ~ target.target_nr, 'Sample ' ~ sample.sample_nr ~ ' · Prep ' ~ preparation.prep_nr, target_edit_form_id, quick_nav=nav, actions=actions) %}
@@ -61,6 +63,7 @@
     entity='target',
     css_prefix='sample',
     form_id=target_edit_form_id,
+    can_edit=target_can_edit,
     read_only_fields=target_read_only_fields,
     editor_value_overrides=target_form_values,
     select_options_by_field=target_select_options,
@@ -68,5 +71,6 @@
     field_errors=target_field_errors,
     field_warnings=target_warnings_by_field
   ) }}
+  {% if target_can_edit %}{{ render_pending_bar(target_edit_form_id) }}{% endif %}
 </section>
 {% endblock %}

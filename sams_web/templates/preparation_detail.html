@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
-{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
 
 {% block content %}
-<section class="panel" data-edit-scope data-edit-initial-mode="{{ preparation_edit_initial_mode or 'view' }}">
+<section class="panel" data-edit-scope>
   {% set prep_base_url = '/samples/' ~ sample.sample_nr ~ '/preparations/' %}
   {% set nav %}{{ render_detail_quick_nav(
     entity='preparation',
@@ -16,6 +16,7 @@
     jump_name='jump_prep',
   ) }}{% endset %}
   {% set actions %}
+  {% if preparation_can_edit %}
   <form
     method="post"
     action="/samples/{{ sample.sample_nr }}/add-preparation"
@@ -25,6 +26,7 @@
     <input type="hidden" name="return_to" value="preparation" />
     <button type="submit" class="record-action">+ Prep</button>
   </form>
+  {% endif %}
   {% endset %}
   <div class="panel-head">
     {% call render_record_head('Preparation ' ~ preparation.prep_nr, 'Sample ' ~ sample.sample_nr ~ (' · ' ~ sample.user_label if sample.user_label else ''), preparation_edit_form_id, quick_nav=nav, actions=actions) %}
@@ -50,6 +52,7 @@
     entity='preparation',
     css_prefix='sample',
     form_id=preparation_edit_form_id,
+    can_edit=preparation_can_edit,
     read_only_fields=preparation_read_only_fields,
     editor_value_overrides=preparation_form_values,
     select_options_by_field=preparation_select_options,
@@ -57,6 +60,7 @@
     field_errors=preparation_field_errors,
     field_warnings=preparation_warnings_by_field
   ) }}
+  {% if preparation_can_edit %}{{ render_pending_bar(preparation_edit_form_id) }}{% endif %}
 </section>
 
 <section class="panel record-related">

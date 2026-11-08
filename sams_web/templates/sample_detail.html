@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
-{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/style-photos.css?v={{ css_v }}" />
@@ -13,7 +13,7 @@
 {% block content %}
 {% set primary_sections = sample_sections | rejectattr('placement', 'equalto', 'more') | list %}
 {% set meta_sections = sample_sections | selectattr('placement', 'equalto', 'more') | list %}
-<section class="panel" data-edit-scope data-edit-initial-mode="{{ sample_edit_initial_mode or 'view' }}">
+<section class="panel" data-edit-scope>
   {% set sample_back_url = '/search' %}
   {% if project %}{% set sample_back_url = '/projects/' ~ project.project_nr %}{% endif %}
   {% set nav %}{{ render_detail_quick_nav(
@@ -50,6 +50,7 @@
     entity='sample',
     css_prefix='sample',
     form_id=sample_edit_form_id,
+    can_edit=sample_can_edit,
     read_only_fields=sample_read_only_fields,
     editor_value_overrides=sample_form_values,
     select_options_by_field=sample_select_options,
@@ -90,6 +91,7 @@
         entity='sample',
         css_prefix='sample',
         form_id=sample_edit_form_id,
+    can_edit=sample_can_edit,
         read_only_fields=sample_read_only_fields,
         editor_value_overrides=sample_form_values,
         select_options_by_field=sample_select_options,
@@ -100,6 +102,7 @@
     </div>
   </details>
   {% endif %}
+  {% if sample_can_edit %}{{ render_pending_bar(sample_edit_form_id) }}{% endif %}
 </section>
 
 {#- Preparations and their targets as one tree: each prep row, then its
@@ -111,6 +114,7 @@
     <h3 class="record-related-title">Preparations &amp; targets
       <span class="record-related-count">{{ preparations|length }} prep{{ '' if preparations|length == 1 else 's' }} · {{ sample_targets_total }} target{{ '' if sample_targets_total == 1 else 's' }}</span>
     </h3>
+    {% if sample_can_edit %}
     <div class="record-related-actions">
       <form
         method="post"
@@ -135,6 +139,7 @@
         <button type="submit" class="record-action" {% if not preparations %}disabled{% endif %}>+ Target</button>
       </form>
     </div>
+    {% endif %}
   </div>
 
   {% if sample_creation_notice %}

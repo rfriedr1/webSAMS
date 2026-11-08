@@ -421,10 +421,8 @@ a:hover {
   gap: 0.5rem;
 }
 
-/* Aggregated dirty / saved status next to the action buttons. Two
-   visual modes: `.is-dirty` (teal — currently changed N fields) and
-   `.is-saved` (green — last saved relative time). Sits left of the
-   buttons via `margin-right: auto`. */
+/* "Saved · x ago" pill on the record's title row (detail-edit-mode.js);
+   the unsaved-change count lives in the pending bar. */
 .detail-edit-status {
   display: inline-flex;
   align-items: center;
@@ -464,11 +462,7 @@ a:hover {
   font-weight: 800;
 }
 
-[data-edit-scope].is-editing .detail-edit-status.is-saved {
-  /* Hide the saved-hint while editing — irrelevant once changes have
-     started; the dirty count is the relevant message in that state. */
-  display: none;
-}
+
 
 /* Back chip — uses the chevron + label pattern, matches the chip
    vocabulary used elsewhere (pin chip, quick-nav pill). */

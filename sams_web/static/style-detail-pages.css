@@ -142,7 +142,6 @@ body.has-command-palette {
   overflow: hidden;
 }
 
-.detail-edit-toggle,
 .detail-edit-cancel,
 .detail-edit-save {
   min-height: 1.95rem;
@@ -152,10 +151,15 @@ body.has-command-palette {
   font-weight: 700;
 }
 
+/* Ghost Cancel, as in every other action bar. */
 .detail-edit-cancel {
-  border-color: var(--line-strong);
-  background: var(--surface-solid);
-  color: var(--brand-deep);
+  border-color: transparent;
+  background: transparent;
+  color: var(--brand);
+}
+
+.detail-edit-cancel:hover {
+  background: var(--brand-tint);
 }
 
 .detail-edit-save {
@@ -164,21 +168,52 @@ body.has-command-palette {
   color: var(--surface-solid);
 }
 
-/* Promote Save to a heavier primary affordance while the scope is actively
-   editing — it's the keystone action in that mode. Edit + Cancel stay
-   visually quiet. Outside edit mode the Save button is not visible anyway
-   (the toolbar swaps to the Edit button), so this rule only fires when
-   Save is on screen and actionable. */
-[data-edit-scope].is-editing .detail-edit-save {
-  min-height: 2.2rem;
-  padding: 0.32rem 1.05rem;
+.detail-edit-save:hover {
+  filter: brightness(1.05);
+}
+
+/* The record's one action bar (render_pending_bar): only on screen while
+   a field holds an unsaved change, sticky at the foot of the record so it
+   stays in reach on a long page. Cancel left, count, Save right. */
+.detail-pending-bar {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 20px rgba(16, 46, 61, 0.1);
+}
+
+.detail-pending-count {
+  color: var(--brand-deep);
   font-size: var(--text-sm);
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-pending-count::before {
+  content: "●";
+  margin-right: 0.35rem;
+  color: var(--brand-accent);
+  font-size: 0.62rem;
+  vertical-align: middle;
+}
+
+.detail-pending-bar .detail-edit-save {
+  margin-left: auto;
+  min-height: 2.2rem;
+  padding: 0.32rem 1.25rem;
   box-shadow: 0 2px 6px rgba(31, 88, 109, 0.18);
 }
 
-[data-edit-scope].is-editing .detail-edit-save:hover {
-  filter: brightness(1.05);
+.detail-pending-bar .detail-edit-cancel {
+  min-height: 2.2rem;
 }
 
 .detail-edit-save.is-saving {
@@ -324,20 +359,52 @@ body.has-command-palette {
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.detail-field-row.is-editable-field:hover .detail-field-shell {
+/* An editable value shows its box and a pencil on hover / keyboard
+   focus: the only sign that a click opens it (there is no edit mode). */
+.detail-field-row.is-editable-field:not(.is-open):hover .detail-field-shell,
+.detail-field-row.is-editable-field:not(.is-open):has(.detail-field-display:focus-visible) .detail-field-shell {
   border-color: var(--line-soft);
   background: var(--surface-tint);
 }
 
-/* Empty rows folded away by detail-empty-fields.js. A dedicated class,
-   not `hidden`, because edit mode must be able to override it: a field
-   you cannot see is a field you cannot fill in. */
-.detail-field-row.is-empty-hidden {
-  display: none;
+.detail-field-pencil {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-left: 0.4rem;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  vertical-align: -0.05rem;
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
 
-[data-edit-scope].is-editing .detail-field-row.is-empty-hidden {
-  display: grid;
+/* A checkbox has no text baseline, so a boolean value lines up with its
+   pencil through flex instead of inline flow. */
+.detail-field-row[data-field-kind="boolean"] .detail-field-display:has(.detail-field-pencil) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.detail-field-row:hover .detail-field-pencil,
+.detail-field-display:focus-visible .detail-field-pencil {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  /* Touch: no hover, so the pencil is always faintly shown. */
+  .detail-field-pencil {
+    opacity: 0.45;
+  }
+}
+
+/* Empty rows folded away by detail-empty-fields.js. A dedicated class,
+   not `hidden`, so a row holding a change or an error can override it:
+   folding the section never hides a pending edit. */
+.detail-field-row.is-empty-hidden:not(.is-open):not(.is-dirty) {
+  display: none;
 }
 
 .detail-empty-toggle {
@@ -357,11 +424,6 @@ body.has-command-palette {
 .detail-empty-toggle:hover {
   color: var(--brand);
   text-decoration-color: currentColor;
-}
-
-/* While editing every field is on show, so the toggle has nothing to do. */
-[data-edit-scope].is-editing .detail-empty-toggle {
-  display: none;
 }
 
 .detail-field-shell.has-error {
@@ -440,8 +502,7 @@ body.has-command-palette {
   font-size: var(--text-xs);
 }
 
-[data-edit-scope].is-editing .detail-field-row.is-editable-field .detail-field-shell,
-[data-edit-scope].is-editing .detail-field-shell.is-editable-field,
+.detail-field-row.is-open .detail-field-shell,
 .detail-field-shell.has-error,
 .detail-field-row.has-warning .detail-field-shell {
   border-color: var(--line-strong);
@@ -449,40 +510,18 @@ body.has-command-palette {
   box-shadow: inset 0 0 0 1px rgba(64, 130, 156, 0.05);
 }
 
-/* Per-field double-click "quick edit" mode — single row temporarily
-   takes editor focus while the rest of the page stays read-only. The
-   accent ring + caption distinguish it from full edit mode. */
-.detail-field-row.is-quick-editing .detail-field-shell {
+/* The field being typed in: accent ring. */
+.detail-field-row.is-open .detail-field-shell:focus-within {
   border-color: var(--brand-accent);
-  background: linear-gradient(180deg, var(--surface-solid), var(--bg-top));
   box-shadow: 0 0 0 2px rgba(47, 127, 154, 0.18);
 }
 
-.is-quick-editing::after {
-  content: "Enter to save · Esc to cancel";
-  display: block;
-  margin-top: 0.22rem;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ink-soft);
-}
-
-/* The cursor signals "double-click me" on view-mode display values that
-   live inside an editable shell. Subtle — we don't underline or change
-   color (those would compete with the established affordances) but the
-   text cursor hint primes the gesture for users who try it. */
+/* A text cursor over an editable value hints that a click opens it. */
 .detail-field-row.is-editable-field .detail-field-display {
   cursor: text;
 }
 
-[data-edit-scope].is-editing .detail-field-row.is-editable-field:hover .detail-field-shell,
-[data-edit-scope].is-editing .detail-field-shell.is-editable-field:hover {
-  border-color: var(--line-strong);
-}
-
-.detail-field-row.is-dirty .detail-field-shell,
-.detail-field-shell.is-dirty {
+.detail-field-row.is-dirty .detail-field-shell {
   border-color: var(--brand-accent);
   background: linear-gradient(180deg, var(--surface-tint), var(--brand-tint));
   box-shadow: inset 3px 0 0 0 var(--brand-accent), 0 0 0 2px rgba(77, 145, 170, 0.08);
@@ -496,18 +535,6 @@ body.has-command-palette {
   font-size: var(--text-sm);
   line-height: 1;
   vertical-align: middle;
-}
-
-.detail-field-shell.is-dirty::after {
-  content: "";
-  position: absolute;
-  top: 0.36rem;
-  right: 0.42rem;
-  width: 0.38rem;
-  height: 0.38rem;
-  border-radius: 999px;
-  background: var(--brand-accent);
-  box-shadow: 0 0 0 2px var(--surface-solid);
 }
 
 .detail-boolean {
@@ -537,7 +564,7 @@ body.has-command-palette {
   accent-color: var(--brand);
 }
 
-[data-edit-scope].is-editing .detail-field-shell {
+.detail-field-row.is-open .detail-field-shell {
   border-color: var(--line-strong);
   background: var(--surface-solid);
   padding: 0.2rem 0.28rem;
@@ -1312,11 +1339,10 @@ button.record-action:disabled {
   display: none;
 }
 
-/* In the fact sheet the field shell *is* the input box while editing:
+/* In the fact sheet the field shell *is* the input box of an open field:
    the control inside drops its own border and padding, so a row grows
    by a few pixels instead of turning into a box inside a box. */
-[data-edit-scope].is-editing .fact-list .detail-field-shell,
-.fact-list .detail-field-row.is-quick-editing .detail-field-shell {
+.fact-list .detail-field-row.is-open .detail-field-shell {
   min-height: 1.95rem;
   padding: 0.1rem 0.3rem;
 }
@@ -1581,6 +1607,15 @@ button.record-action:disabled {
 
   .record-head-tools {
     justify-content: flex-start;
+  }
+
+  .detail-pending-bar {
+    bottom: var(--space-2);
+  }
+
+  .detail-pending-bar .detail-edit-save,
+  .detail-pending-bar .detail-edit-cancel {
+    min-height: 2.75rem;
   }
 
   /* Short values keep label and value on one line on a phone too; the

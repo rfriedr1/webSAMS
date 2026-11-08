@@ -33,7 +33,16 @@
 
       {#- One editor per section kind: templates/setup/_<kind>.html. The kind comes
           from the section's handler in setup_handlers.py. -#}
+      {#- A user without the setup right sees the values but every control
+          (Save included) is disabled by the fieldset. -#}
+      {% if can("manage_setup") %}
       {% include "setup/_" ~ active_section.kind ~ ".html" %}
+      {% else %}
+      <p class="view-only-note">View only: you can't change the setup.</p>
+      <fieldset class="setup-view-only" disabled>
+        {% include "setup/_" ~ active_section.kind ~ ".html" %}
+      </fieldset>
+      {% endif %}
 
       <p class="setup-storage">
         Stored in <code>{{ active_section.storage_file }}</code>, section <code>{{ active_section.storage_section }}</code>.

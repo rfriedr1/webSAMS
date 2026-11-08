@@ -36,6 +36,9 @@
 
   <!-- ============================ STEP 1: UPLOAD ======================= -->
   <section class="panel import-stage" data-stage="upload">
+    {% if not can("edit_records") %}
+    <p class="view-only-note">View only: you can't import samples.</p>
+    {% else %}
     <div class="import-upload">
       <label class="import-dropzone" data-dropzone>
         <input type="file" accept=".xlsx,.xlsm" data-file-input class="sr-only" />
@@ -52,6 +55,7 @@
         <li><strong>Columns can move</strong>Headings are recognised by name, not position.{% if template_available %} <a href="/samples/import/template">Blank template</a>{% endif %}</li>
       </ul>
     </div>
+    {% endif %}
   </section>
 
   <!-- ============================ STEP 2: REVIEW ======================= -->

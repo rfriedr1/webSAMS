@@ -889,7 +889,7 @@ button:focus-visible,
 .landing-start-link:focus-visible,
 .magazine-clear:focus-visible,
 .search-submit:focus-visible,
-[data-detail-edit-button]:focus-visible,
+.detail-field-display[tabindex]:focus-visible,
 [data-history-back]:focus-visible,
 [data-table-clear]:focus-visible,
 [data-pin-current]:focus-visible {

@@ -106,6 +106,15 @@ _Avoid_: Approval, check (the paper log's word), validation.
 Marking a wrongly entered QC record as invalid without deleting it — who, when and why are kept, the record stays visible and is excluded from statistics. Only for entry mistakes; a genuinely failed **EA check** is logged, not voided. A signed-off record cannot be voided.
 _Avoid_: Delete, cancel.
 
+**User**:
+A person signed in to webSAMS (laboratory staff). Not a **Submitter** — see the ambiguity note below. Until login exists every request is one anonymous user whose **Role** comes from `SAMS_ACCESS_ROLE`; with login the identity will come from Windows Authentication via IIS (`sams_web/access.py`).
+
+**Role**:
+What a **User** may do: *viewer* (look only), *editor* (change records, sign off QC), *admin* (also the Setup). A role is a set of **Permissions**.
+
+**Permission**:
+One kind of write the app guards: *edit records* (detail pages, benches, import, EA checks), *manage setup*, *sign off QC*. Reading is open to everyone on the lab network. Who may be *named* as signer of a **QC sign-off** is still decided by Lab Staff → *may sign off*.
+
 ## Relationships
 
 - A **Submitter** owns one or more **Projects**.
@@ -123,7 +132,7 @@ _Avoid_: Delete, cancel.
 
 ## Flagged ambiguities
 
-- "User" in the legacy database (table `user_t`) and Delphi UI refers to a **Submitter**, not a software-login user. The login-user concept does not yet exist in the codebase and is reserved for a future authentication layer.
+- "User" in the legacy database (table `user_t`) and Delphi UI refers to a **Submitter**, not a software-login user. In webSAMS code and UI, **User** means the person using the app (`sams_web/access.py`, `AppUser`); a customer is always a Submitter.
 - `prepaid` is stored as a value of **Project status** but is semantically a billing flag, orthogonal to the lab workflow. It does not affect lab handling. Read `status = 'prepaid'` as "prepaid project, billing already settled" — workflow position must be inferred from the `*_date` fields rather than `status` for these projects.
 - The bare word "batch" is overloaded across **Prep batch**, **Graph batch**, and **Magazine** — three distinct lab events. Always qualify which one is meant.
 - `stop = 1` on **Preparation** always means **workflow termination** — the prep was aborted and no targets will follow. UI labels this as "Discarded".

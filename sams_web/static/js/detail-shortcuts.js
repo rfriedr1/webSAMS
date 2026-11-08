@@ -4,9 +4,9 @@
 // benches don't fight for the same keys.
 //
 // Bindings:
-//   e         → toggle edit mode (click the Edit / Cancel button)
-//   Esc       → cancel edit mode (when in edit mode)
-//   Ctrl/Cmd+S → submit the edit form
+//   Ctrl/Cmd+S → save the pending edits (no edit mode: fields open on
+//                click, see detail-edit-mode.js; Esc inside a field
+//                reverts it, handled there)
 //   [ or j   → previous record (clicks the prev arrow if present)
 //   ] or k   → next record
 //   ?         → open a shortcuts cheat sheet
@@ -16,9 +16,9 @@
 // saves.
 (() => {
   const SHORTCUTS = [
-    { keys: "e", description: "Toggle edit mode" },
-    { keys: "Esc", description: "Cancel edit mode" },
-    { keys: "Ctrl/Cmd + S", description: "Save changes" },
+    { keys: "Click or Tab", description: "Open a field to change it" },
+    { keys: "Esc", description: "Undo the change in the open field" },
+    { keys: "Ctrl/Cmd + S", description: "Save all changes" },
     { keys: "[ or j", description: "Open previous record" },
     { keys: "] or k", description: "Open next record" },
     { keys: "?", description: "Show this cheat sheet" },
@@ -46,7 +46,11 @@
   // selector here silently stopped matching.
   const followQuickNav = (direction) => {
     const link = document.querySelector(`a[data-quick-nav="${direction}"]`);
-    if (link) {
+    if (!link) return;
+    // Unsaved edits: ask first (Discard / Save / Keep editing).
+    if (window.SAMSDetailEdit) {
+      window.SAMSDetailEdit.leaveTo(link.href);
+    } else {
       window.location.assign(link.href);
     }
   };
@@ -54,59 +58,9 @@
   const clickPrevArrow = () => followQuickNav("prev");
   const clickNextArrow = () => followQuickNav("next");
 
-  const toggleEditMode = () => {
-    const scope = editScope();
-    if (!scope) return;
-    const editButton = scope.querySelector(
-      "[data-detail-edit-button-mode='edit'], [data-detail-edit-button], .detail-edit-toggle, button[data-edit-action]"
-    );
-    if (editButton) {
-      editButton.click();
-      return;
-    }
-    // Fallback: toggle the data-edit-mode attribute directly so detail-edit-mode.js
-    // can pick it up. Most pages render the Edit button as a generic button
-    // labelled "Edit" inside the panel head.
-    const buttons = scope.querySelectorAll("button");
-    for (const btn of buttons) {
-      const label = (btn.textContent || "").trim().toLowerCase();
-      if (label === "edit" || label === "cancel" || label === "save" || label === "save changes") {
-        btn.click();
-        return;
-      }
-    }
-  };
-
-  const cancelEditMode = () => {
-    const scope = editScope();
-    if (!scope) return;
-    if (scope.getAttribute("data-edit-initial-mode") !== "editing"
-        && scope.getAttribute("data-edit-mode") !== "editing") {
-      return;
-    }
-    const buttons = scope.querySelectorAll("button");
-    for (const btn of buttons) {
-      const label = (btn.textContent || "").trim().toLowerCase();
-      if (label === "cancel") {
-        btn.click();
-        return;
-      }
-    }
-  };
-
-  const saveEditForm = () => {
-    const scope = editScope();
-    if (!scope) return;
-    const formId = scope.querySelector("form[data-detail-edit-form]")?.id;
-    if (!formId) return;
-    const form = document.getElementById(formId);
-    if (!form) return;
-    if (typeof form.requestSubmit === "function") {
-      form.requestSubmit();
-    } else {
-      form.submit();
-    }
-  };
+  // Ctrl/Cmd+S saves the pending edits (detail-edit-mode.js); without
+  // any it does nothing rather than posting an empty form.
+  const saveEdits = () => window.SAMSDetailEdit?.save();
 
   let cheatSheet = null;
 
@@ -143,11 +97,13 @@
   };
 
   document.addEventListener("keydown", (event) => {
+    // The unsaved-changes modal owns the keyboard while it is open.
+    if (window.SAMSDetailEdit?.isModalOpen()) return;
     // Save (Ctrl/Cmd+S) — always intercept, even when typing in a field.
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
       if (!editScope()) return;
       event.preventDefault();
-      saveEditForm();
+      saveEdits();
       return;
     }
 
@@ -172,16 +128,6 @@
     }
     if (!editScope()) return;
 
-    if (key === "e" || key === "E") {
-      event.preventDefault();
-      toggleEditMode();
-      return;
-    }
-    if (key === "Escape") {
-      event.preventDefault();
-      cancelEditMode();
-      return;
-    }
     if (key === "[" || key === "j") {
       event.preventDefault();
       clickPrevArrow();

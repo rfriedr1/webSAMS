@@ -1,3 +1,24 @@
+// Click-to-edit for detail pages (sample, preparation, target, project,
+// submitter). There is no edit mode: an editable value opens in place when
+// it is clicked (or reached with Tab), changes pile up across as many
+// fields as the user likes, and the pending-changes bar at the foot of the
+// record saves or drops them all together.
+//
+//   - A row is editable when the server rendered an editor for it
+//     (`[data-field-editor]`), i.e. the field is not read-only and the user
+//     may edit records (sams_web/access.py → `can_edit`).
+//   - An unchanged field closes again when focus leaves it; a changed one
+//     stays open with its dirty dot, so every pending edit stays in view.
+//   - Esc inside an open field reverts that field.
+//   - Save posts only the changed fields: every unchanged control is
+//     disabled just before submit, and `apply_detail_update` leaves fields
+//     it did not receive untouched.
+//   - After a rejected save (422) the server renders the submitted values
+//     with `data-initial-value` = the stored value, so the edits come back
+//     still dirty and still open.
+//
+// `window.SAMSDetailEdit` lets detail-shortcuts.js ask before navigating
+// away from unsaved edits and save with Ctrl/Cmd+S.
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
 
@@ -33,16 +54,13 @@
       setTimeout(() => target.classList.remove("is-error-flash"), 1400);
     };
 
-    // Auto-scroll once when the page first lands with errors.
     const firstLink = summary.querySelector("a[data-field-error-jump]");
     if (firstLink) {
       const entity = firstLink.dataset.entity || "";
       const fieldKey = firstLink.dataset.fieldErrorJump || "";
-      // Defer slightly so layout settles after the page paints.
       window.setTimeout(() => scrollToField(`field-${entity}-${fieldKey}`), 80);
     }
 
-    // Click handlers on each summary link.
     summary.querySelectorAll("a[data-field-error-jump]").forEach((a) => {
       a.addEventListener("click", (ev) => {
         ev.preventDefault();
@@ -55,13 +73,12 @@
 
   // -------- In-app "discard / save / keep editing" modal --------------
   //
-  // Replaces the native `window.confirm("…")` that used to prompt when
-  // the user clicked Cancel / Esc / Edit-again on a dirty record. The
-  // native dialog was visually jarring and offered only OK / Cancel —
-  // no way to "save first". This builds a Promise-based modal that
-  // resolves to "discard" | "save" | "keep" so callers can choose.
-  const openDirtyChoiceModal = () =>
+  // Resolves to "discard" | "save" | "keep". Asked before leaving the
+  // record with unsaved edits, and by Cancel when several fields changed.
+  let modalOpen = false;
+  const openDirtyChoiceModal = ({ body, discardLabel } = {}) =>
     new Promise((resolve) => {
+      modalOpen = true;
       const overlay = document.createElement("section");
       overlay.className = "shortcut-cheatsheet dirty-confirm-overlay";
       overlay.setAttribute("role", "dialog");
@@ -74,43 +91,47 @@
             <h3>Unsaved changes</h3>
             <button type="button" class="shortcut-cheatsheet-close" data-dirty-choice="keep" aria-label="Keep editing">×</button>
           </div>
-          <p class="dirty-confirm-body">You have unsaved edits. What would you like to do?</p>
+          <p class="dirty-confirm-body"></p>
           <div class="dirty-confirm-actions">
-            <button type="button" class="dirty-confirm-discard" data-dirty-choice="discard">Discard changes</button>
+            <button type="button" class="dirty-confirm-discard" data-dirty-choice="discard"></button>
             <button type="button" class="dirty-confirm-save" data-dirty-choice="save">Save changes</button>
             <button type="button" class="dirty-confirm-keep" data-dirty-choice="keep">Keep editing</button>
           </div>
           <p class="shortcut-cheatsheet-hint">Esc keeps editing. Enter saves.</p>
         </div>`;
+      overlay.querySelector(".dirty-confirm-body").textContent =
+        body || "You have unsaved edits. What would you like to do?";
+      overlay.querySelector(".dirty-confirm-discard").textContent = discardLabel || "Discard changes";
       document.body.appendChild(overlay);
       const cleanup = (choice) => {
-        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("keydown", onKey, true);
         overlay.remove();
+        modalOpen = false;
         resolve(choice);
       };
+      // Capture phase + stopPropagation: no other shortcut may fire (or
+      // open a second modal) while this one is up.
       const onKey = (ev) => {
         if (ev.key === "Escape") {
           ev.preventDefault();
+          ev.stopPropagation();
           cleanup("keep");
         } else if (ev.key === "Enter") {
           ev.preventDefault();
+          ev.stopPropagation();
           cleanup("save");
+        } else if (ev.key !== "Tab") {
+          ev.stopPropagation();
         }
       };
-      document.addEventListener("keydown", onKey);
+      document.addEventListener("keydown", onKey, true);
       overlay.querySelectorAll("[data-dirty-choice]").forEach((btn) => {
         btn.addEventListener("click", () => cleanup(btn.dataset.dirtyChoice));
       });
-      // Focus the safe default (Keep editing) so Enter via screen reader
-      // doesn't immediately discard.
       overlay.querySelector(".dirty-confirm-keep")?.focus();
     });
 
   // -------- Relative-time formatter for the saved-hint ----------------
-  //
-  // Used to render "Saved · just now" → "Saved · 12 s ago" → "Saved · 2
-  // min ago" etc. without a date library. Crude but adequate for the
-  // sub-hour window where this hint is meaningful.
   const formatSavedAge = (savedAtMs) => {
     const diffSec = Math.max(0, Math.round((Date.now() - savedAtMs) / 1000));
     if (diffSec < 5) return "Saved · just now";
@@ -121,432 +142,358 @@
     return `Saved · ${diffHr} h ago`;
   };
 
+  const isToggle = (control) =>
+    control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio");
+
+  const controlsOf = (editor) => Array.from(editor.querySelectorAll("input, select, textarea"));
+  // The controls that are posted. Change tracking looks only at these: the
+  // searchable-select combobox has no name, and its filter text is not a
+  // change until an option is picked into the native <select>.
+  const valueControlsOf = (editor) => controlsOf(editor).filter((control) => control.name);
+
+  // The control a user types into: the searchable-select combobox when the
+  // native <select> was enhanced (the native one is visually hidden).
+  const visibleControl = (editor) =>
+    controlsOf(editor).find(
+      (control) => !control.classList.contains("searchable-select-native") && control.getClientRects().length > 0,
+    ) || controlsOf(editor)[0];
+
   installers.installDetailEditMode = () => {
-    const scopes = document.querySelectorAll("[data-edit-scope]");
-    scopes.forEach((scope) => {
-      if (scope.dataset.editModeInstalled === "true") {
-        return;
-      }
+    const scope = document.querySelector("[data-edit-scope]");
+    if (!scope || scope.dataset.editModeInstalled === "true") return;
+    scope.dataset.editModeInstalled = "true";
 
-      const toggleButton = scope.querySelector("[data-edit-toggle]");
-      const cancelButton = scope.querySelector("[data-edit-cancel]");
-      const saveButton = scope.querySelector("[data-edit-save]");
-      const statusHost = scope.querySelector("[data-edit-status]");
-      const saveFormId = saveButton?.getAttribute("form");
-      const saveForm =
-        (saveFormId ? document.getElementById(saveFormId) : null) ||
-        scope.querySelector("form[data-detail-edit-form]");
-      if (!toggleButton || !cancelButton) {
-        return;
-      }
+    const statusHost = scope.querySelector("[data-edit-status]");
+    const bar = scope.querySelector("[data-pending-bar]");
+    const barCount = bar?.querySelector("[data-pending-count]");
+    const saveButton = bar?.querySelector("[data-edit-save]");
+    const cancelButton = bar?.querySelector("[data-edit-cancel]");
+    const saveFormId = saveButton?.getAttribute("form");
+    const saveForm =
+      (saveFormId ? document.getElementById(saveFormId) : null) ||
+      scope.querySelector("form[data-detail-edit-form]");
 
-      const rows = Array.from(scope.querySelectorAll("[data-field-key]")).map((row) => ({
+    const items = Array.from(scope.querySelectorAll("[data-field-key]"))
+      .map((row) => ({
         row,
         display: row.querySelector("[data-field-display]"),
         editor: row.querySelector("[data-field-editor]"),
-      }));
-      const validRows = rows.filter((item) => item.display && item.editor);
-      if (validRows.length === 0) {
-        return;
-      }
-      validRows.forEach((item) => {
-        item.row.classList.add("is-editable-field");
-      });
+      }))
+      .filter((item) => item.display && item.editor);
 
-      const allControls = validRows.flatMap((item) =>
-        Array.from(item.editor.querySelectorAll("input, select, textarea")),
-      );
+    // -------- Saved-hint (header pill) --------------------------------
+    // The server redirects to `?saved=true` after a successful save; the
+    // toast module strips that param after promoting it to a toast. Read
+    // it here first (both run on DOMContentLoaded).
+    let savedAt = null;
+    let savedTickId = null;
+    const renderSavedHint = () => {
+      if (!statusHost) return;
+      const show = savedAt !== null && !scope.classList.contains("has-unsaved-changes");
+      statusHost.hidden = !show;
+      statusHost.classList.toggle("is-saved", show);
+      statusHost.textContent = show ? formatSavedAge(savedAt) : "";
+    };
+    const savedKeys = ["saved", "bench_saved", "graph_saved", "graph_batch_saved"];
+    const url = new URL(window.location.href);
+    if (savedKeys.some((k) => url.searchParams.get(k) === "true")) {
+      savedAt = Date.now();
+      savedTickId = window.setInterval(renderSavedHint, 30000);
+    }
 
-      const rememberInitialControlState = (control) => {
-        if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-          control.dataset.initialChecked = control.checked ? "1" : "0";
-          return;
-        }
-        if ("value" in control) {
+    if (items.length === 0) {
+      // View-only user, or a record without editable fields.
+      renderSavedHint();
+      return;
+    }
+    items.forEach((item) => item.row.classList.add("is-editable-field"));
+
+    // The value each control is measured against. The server renders
+    // `data-initial-value` (the stored value) on every named control, so
+    // after a rejected save the submitted values still count as changes.
+    // Controls without it (the searchable-select combobox) take their
+    // current state.
+    items.forEach((item) => {
+      valueControlsOf(item.editor).forEach((control) => {
+        if (isToggle(control)) {
+          if (control.dataset.initialChecked === undefined) {
+            control.dataset.initialChecked = control.checked ? "1" : "0";
+          }
+        } else if (control.dataset.initialValue === undefined) {
           control.dataset.initialValue = control.value;
         }
-      };
-
-      validRows.forEach((item) => {
-        const controls = item.editor.querySelectorAll("input, select, textarea");
-        controls.forEach((control) => rememberInitialControlState(control));
       });
-
-      let editing = false;
-      let suppressBeforeUnload = false;
-      let savedAt = null; // ms timestamp set when the page loads after a save
-      let savedTickId = null;
-      const defaultLabel = toggleButton.dataset.editLabelDefault || "Edit";
-      const activeLabel = toggleButton.dataset.editLabelActive || "View";
-      // Tooltip strings (see _detail_chrome.html). Kept in sync with the
-      // button's label so a hover always describes the *next* action,
-      // not the past one.
-      const defaultTitle =
-        toggleButton.dataset.editTitleDefault ||
-        toggleButton.getAttribute("title") ||
-        "Edit this record";
-      const activeTitle =
-        toggleButton.dataset.editTitleActive ||
-        "Leave edit mode";
-
-      const isControlDirty = (control) => {
-        if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-          return (control.dataset.initialChecked === "1") !== control.checked;
-        }
-        if ("value" in control) {
-          return (control.dataset.initialValue || "") !== control.value;
-        }
-        return false;
-      };
-
-      const countDirtyRows = () =>
-        validRows.reduce((acc, item) => {
-          const controls = Array.from(item.editor.querySelectorAll("input, select, textarea"));
-          return acc + (controls.some(isControlDirty) ? 1 : 0);
-        }, 0);
-
-      const hasUnsavedChanges = () => allControls.some(isControlDirty);
-
-      // -------- Status host: dirty count OR saved-hint ----------------
-      // The same DOM node alternates between two messages depending on
-      // state: in edit mode with dirty fields it shows "N field(s)
-      // changed"; outside edit mode after a save it shows "Saved · …".
-      // Either mode beats silence; together they replace save anxiety
-      // with calm confidence.
-      const renderStatus = () => {
-        if (!statusHost) return;
-        if (editing) {
-          const n = countDirtyRows();
-          if (n === 0) {
-            statusHost.hidden = true;
-            statusHost.textContent = "";
-            statusHost.classList.remove("is-dirty", "is-saved");
-            return;
-          }
-          statusHost.hidden = false;
-          statusHost.classList.add("is-dirty");
-          statusHost.classList.remove("is-saved");
-          statusHost.textContent = `${n} field${n === 1 ? "" : "s"} changed`;
-          return;
-        }
-        if (savedAt !== null) {
-          statusHost.hidden = false;
-          statusHost.classList.add("is-saved");
-          statusHost.classList.remove("is-dirty");
-          statusHost.textContent = formatSavedAge(savedAt);
-          return;
-        }
-        statusHost.hidden = true;
-        statusHost.textContent = "";
-        statusHost.classList.remove("is-dirty", "is-saved");
-      };
-
-      const updateDirtyMarkers = () => {
-        validRows.forEach((item) => {
-          const controls = Array.from(item.editor.querySelectorAll("input, select, textarea"));
-          const rowDirty = controls.some(isControlDirty);
-          item.row.classList.toggle("is-dirty", rowDirty);
-        });
-        scope.classList.toggle("has-unsaved-changes", hasUnsavedChanges());
-        renderStatus();
-      };
-
-      // -------- Dirty-cancel confirmation via in-app modal ------------
-      const confirmDiscardChanges = async () => {
-        if (!hasUnsavedChanges()) return "discard";
-        const choice = await openDirtyChoiceModal();
-        if (choice === "save") {
-          // Trigger the form's submit handler so we run the same
-          // saving/disabling code path as a Save click.
-          if (saveForm) {
-            saveForm.requestSubmit ? saveForm.requestSubmit(saveButton) : saveForm.submit();
-          }
-        }
-        return choice; // "discard" | "save" | "keep"
-      };
-
-      const applyState = (isEditing) => {
-        editing = isEditing;
-        scope.classList.toggle("is-editing", editing);
-        toggleButton.textContent = editing ? activeLabel : defaultLabel;
-        toggleButton.setAttribute("title", editing ? activeTitle : defaultTitle);
-        toggleButton.setAttribute("aria-label", editing ? activeLabel : defaultLabel);
-        toggleButton.setAttribute("aria-pressed", editing ? "true" : "false");
-        cancelButton.hidden = !editing;
-        if (saveButton) {
-          saveButton.hidden = !editing;
-        }
-
-        validRows.forEach((item) => {
-          item.display.hidden = editing;
-          item.display.setAttribute("aria-hidden", editing ? "true" : "false");
-          item.editor.hidden = !editing;
-          item.editor.setAttribute("aria-hidden", editing ? "false" : "true");
-          const controls = item.editor.querySelectorAll("input, select, textarea");
-          controls.forEach((control) => {
-            if (control.dataset.readonly === "1") {
-              control.disabled = true;
-              return;
-            }
-            control.disabled = !editing;
-          });
-        });
-        if (!editing) {
-          validRows.forEach((item) => item.row.classList.remove("is-dirty"));
-          scope.classList.remove("has-unsaved-changes");
-        }
-        renderStatus();
-        if (editing) updateDirtyMarkers();
-      };
-
-      const resetEditors = () => {
-        validRows.forEach((item) => {
-          const controls = item.editor.querySelectorAll("input, select, textarea");
-          controls.forEach((control) => {
-            if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-              control.checked = control.dataset.initialChecked === "1";
-              return;
-            }
-            if ("value" in control) {
-              control.value = control.dataset.initialValue || "";
-            }
-          });
-        });
-        updateDirtyMarkers();
-      };
-
-      allControls.forEach((control) => {
-        const syncDirty = () => updateDirtyMarkers();
-        control.addEventListener("input", syncDirty);
-        control.addEventListener("change", syncDirty);
-      });
-
-      toggleButton.addEventListener("click", async () => {
-        if (editing) {
-          const choice = await confirmDiscardChanges();
-          if (choice === "keep") return;
-          if (choice === "save") return; // form submit handles the rest
-          resetEditors();
-          applyState(false);
-          return;
-        }
-        applyState(true);
-      });
-
-      cancelButton.addEventListener("click", async () => {
-        const choice = await confirmDiscardChanges();
-        if (choice === "keep") return;
-        if (choice === "save") return;
-        resetEditors();
-        applyState(false);
-      });
-
-      if (saveForm) {
-        saveForm.addEventListener("submit", () => {
-          suppressBeforeUnload = true;
-          scope.classList.add("is-saving");
-          toggleButton.disabled = true;
-          cancelButton.disabled = true;
-          if (saveButton) {
-            saveButton.disabled = true;
-            saveButton.classList.add("is-saving");
-            if (!saveButton.dataset.defaultLabel) {
-              saveButton.dataset.defaultLabel = saveButton.textContent || "Save";
-            }
-            saveButton.textContent = "Saving";
-          }
-        });
-      }
-
-      window.addEventListener("beforeunload", (event) => {
-        if (!editing || suppressBeforeUnload || !hasUnsavedChanges()) {
-          return;
-        }
-        event.preventDefault();
-        event.returnValue = "";
-      });
-
-      scope.addEventListener("keydown", async (event) => {
-        if (!editing) {
-          return;
-        }
-        if (event.key === "Enter") {
-          const target = event.target;
-          if (
-            target instanceof HTMLInputElement ||
-            target instanceof HTMLSelectElement
-          ) {
-            event.preventDefault();
-            target.blur();
-            return;
-          }
-        }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          const choice = await confirmDiscardChanges();
-          if (choice === "keep") return;
-          if (choice === "save") return;
-          resetEditors();
-          applyState(false);
-        }
-      });
-
-      // -------- Saved-hint bootstrap ---------------------------------
-      // The server redirects to `?saved=true` after a successful save;
-      // the toast module strips that param after promoting it to a
-      // toast. Here we read it before the strip happens (the toast
-      // module fires on DOMContentLoaded too — we both run then) and
-      // record the timestamp so the relative-time hint can persist.
-      const url = new URL(window.location.href);
-      const savedKeys = ["saved", "bench_saved", "graph_saved", "graph_batch_saved"];
-      const savedHit = savedKeys.some((k) => url.searchParams.get(k) === "true");
-      if (savedHit) {
-        savedAt = Date.now();
-      }
-      renderStatus();
-      // Re-render the relative time every 30 s so "just now" → "30 s"
-      // → "1 min" ages in place without a page reload.
-      if (savedAt !== null) {
-        savedTickId = window.setInterval(() => {
-          if (editing) return; // dirty status takes priority
-          renderStatus();
-        }, 30000);
-      }
-      // Editing voids the saved-hint — once the user starts changing
-      // values again, "Saved" stops being the relevant message.
-      allControls.forEach((control) => {
-        control.addEventListener("input", () => {
-          savedAt = null;
-          if (savedTickId !== null) {
-            window.clearInterval(savedTickId);
-            savedTickId = null;
-          }
-        });
-      });
-
-      // -------- Per-field double-click "quick edit" -------------------
-      //
-      // Double-clicking a field's display value swaps just that field
-      // into its editor, while the rest of the page stays in view mode.
-      // Commits on Enter / blur (or Ctrl+Enter for textareas), reverts
-      // on Esc. Cheap for the common case "I just want to fix this one
-      // date" — no need to enter full edit mode, change the field, then
-      // hunt for Save / Cancel. The full Edit button stays for batch
-      // edits across many fields in one pass.
-      //
-      // When the scope is already in full edit mode this gesture is
-      // disabled (the field is already an editor — double-clicking text
-      // inside an input is the standard "select word" gesture and we
-      // shouldn't hijack it).
-      let activeQuickEdit = null;
-
-      const exitQuickEdit = (commit) => {
-        if (!activeQuickEdit) return;
-        const { item, control, initialValue, initialChecked } = activeQuickEdit;
-        if (!commit) {
-          // Revert and tear down.
-          if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
-            control.checked = initialChecked;
-          } else if ("value" in control) {
-            control.value = initialValue;
-          }
-        }
-        item.display.hidden = false;
-        item.display.setAttribute("aria-hidden", "false");
-        item.editor.hidden = true;
-        item.editor.setAttribute("aria-hidden", "true");
-        control.disabled = true;
-        item.row.classList.remove("is-quick-editing");
-        activeQuickEdit = null;
-      };
-
-      const commitQuickEdit = () => {
-        if (!activeQuickEdit) return;
-        const { control, initialValue, initialChecked } = activeQuickEdit;
-        const changed =
-          control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")
-            ? control.checked !== initialChecked
-            : ("value" in control && control.value !== initialValue);
-        if (!changed) {
-          exitQuickEdit(false);
-          return;
-        }
-        // Submit the form — the disabled inputs of every OTHER field stay
-        // out of the form submission, so the server receives just the
-        // single edited field, plus any related-rule required fields.
-        suppressBeforeUnload = true;
-        if (saveForm) {
-          saveForm.requestSubmit ? saveForm.requestSubmit() : saveForm.submit();
-        }
-      };
-
-      validRows.forEach((item) => {
-        // Only fact-sheet rows that are editable should
-        // listen. `data-readonly="1"` on the input means the field is
-        // server-side read-only — no quick-edit there either.
-        const controls = item.editor.querySelectorAll("input, select, textarea");
-        const editableControl = Array.from(controls).find(
-          (c) => c.dataset.readonly !== "1",
-        );
-        if (!editableControl) return;
-        item.display.addEventListener("dblclick", (ev) => {
-          if (editing) return; // full edit mode owns interaction
-          if (activeQuickEdit) exitQuickEdit(false);
-          ev.preventDefault();
-          item.row.classList.add("is-quick-editing");
-          item.display.hidden = true;
-          item.display.setAttribute("aria-hidden", "true");
-          item.editor.hidden = false;
-          item.editor.setAttribute("aria-hidden", "false");
-          editableControl.disabled = false;
-          activeQuickEdit = {
-            item,
-            control: editableControl,
-            initialValue: "value" in editableControl ? editableControl.value : "",
-            initialChecked:
-              editableControl instanceof HTMLInputElement && (editableControl.type === "checkbox" || editableControl.type === "radio")
-                ? editableControl.checked
-                : false,
-          };
-          // Focus the control. For text inputs, select all so the user
-          // can overwrite immediately; for textareas, just place the
-          // caret at the end.
-          editableControl.focus();
-          if (editableControl instanceof HTMLInputElement && editableControl.type !== "checkbox") {
-            editableControl.select?.();
-          }
-        });
-
-        editableControl.addEventListener("keydown", (ev) => {
-          if (!activeQuickEdit || activeQuickEdit.control !== editableControl) return;
-          if (ev.key === "Escape") {
-            ev.preventDefault();
-            exitQuickEdit(false);
-            return;
-          }
-          // Textareas use Ctrl/Cmd+Enter to commit (plain Enter inserts a newline).
-          const isTextarea = editableControl.tagName === "TEXTAREA";
-          if (ev.key === "Enter") {
-            if (isTextarea && !(ev.ctrlKey || ev.metaKey)) return;
-            ev.preventDefault();
-            commitQuickEdit();
-          }
-        });
-
-        editableControl.addEventListener("blur", () => {
-          // Defer slightly so a click on a related label/dropdown option
-          // doesn't trigger immediate teardown.
-          window.setTimeout(() => {
-            if (activeQuickEdit && activeQuickEdit.control === editableControl) {
-              commitQuickEdit();
-            }
-          }, 120);
-        });
-      });
-
-      const initialMode = (scope.dataset.editInitialMode || "view").toLowerCase();
-      applyState(initialMode === "editing");
-      scope.dataset.editModeInstalled = "true";
     });
+
+    const isControlDirty = (control) => {
+      if (isToggle(control)) {
+        return (control.dataset.initialChecked === "1") !== control.checked;
+      }
+      return (control.dataset.initialValue || "") !== control.value;
+    };
+    const isItemDirty = (item) => valueControlsOf(item.editor).some(isControlDirty);
+    const dirtyItems = () => items.filter(isItemDirty);
+    const hasUnsavedChanges = () => items.some(isItemDirty);
+
+    const renderBar = () => {
+      const n = dirtyItems().length;
+      scope.classList.toggle("has-unsaved-changes", n > 0);
+      if (bar) {
+        bar.hidden = n === 0;
+        if (barCount) {
+          barCount.textContent = `${n} unsaved change${n === 1 ? "" : "s"}`;
+        }
+      }
+      renderSavedHint();
+    };
+
+    const updateDirtyMarkers = () => {
+      items.forEach((item) => item.row.classList.toggle("is-dirty", isItemDirty(item)));
+      renderBar();
+    };
+
+    // -------- Opening and closing one field ---------------------------
+    const isOpen = (item) => item.row.classList.contains("is-open");
+
+    const openItem = (item, { focus = true } = {}) => {
+      if (scope.classList.contains("is-saving")) return;
+      if (!isOpen(item)) {
+        item.row.classList.add("is-open");
+        item.display.hidden = true;
+        item.display.setAttribute("aria-hidden", "true");
+        item.editor.hidden = false;
+        item.editor.setAttribute("aria-hidden", "false");
+        controlsOf(item.editor).forEach((control) => {
+          control.disabled = false;
+        });
+      }
+      if (!focus) return;
+      const control = visibleControl(item.editor);
+      if (!control) return;
+      control.focus();
+      if (control instanceof HTMLInputElement && !isToggle(control) && control.type !== "date") {
+        control.select?.();
+      } else if (control instanceof HTMLTextAreaElement) {
+        // Comments are added to more often than replaced: caret at the end.
+        control.setSelectionRange(control.value.length, control.value.length);
+      }
+    };
+
+    const closeItem = (item) => {
+      if (!isOpen(item)) return;
+      // Drop filter text typed into a searchable-select combobox without
+      // picking an option: it re-reads its native <select> on "change".
+      item.editor.querySelectorAll("select").forEach((select) => {
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      item.row.classList.remove("is-open");
+      item.display.hidden = false;
+      item.display.setAttribute("aria-hidden", "false");
+      item.editor.hidden = true;
+      item.editor.setAttribute("aria-hidden", "true");
+      controlsOf(item.editor).forEach((control) => {
+        control.disabled = true;
+      });
+    };
+
+    // A field stays open while it holds a change or an error: closing it
+    // would show the old display value next to a pending edit.
+    const mayClose = (item) => !isItemDirty(item) && !item.row.querySelector(".has-error");
+
+    const revertItem = (item) => {
+      valueControlsOf(item.editor).forEach((control) => {
+        if (isToggle(control)) {
+          control.checked = control.dataset.initialChecked === "1";
+        } else {
+          control.value = control.dataset.initialValue || "";
+          // Let a searchable-select combobox re-read its native select.
+          if (control instanceof HTMLSelectElement) {
+            control.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+      });
+    };
+
+    const discardAll = () => {
+      items.forEach((item) => {
+        revertItem(item);
+        closeItem(item);
+      });
+      updateDirtyMarkers();
+    };
+
+    let refocusing = false;
+    items.forEach((item) => {
+      const { row, display, editor } = item;
+      // Focusable so Tab walks the fields. No role="button": a display may
+      // hold a link (e-mail, website, related record).
+      display.tabIndex = 0;
+
+      display.addEventListener("click", (ev) => {
+        // A link inside the value (e-mail, website, related record) keeps
+        // working; dragging to select text copies without opening.
+        if (ev.target.closest("a")) return;
+        const selection = window.getSelection?.();
+        if (selection && !selection.isCollapsed && display.contains(selection.anchorNode)) return;
+        openItem(item);
+      });
+      // Tab walks the fields: a display reached by keyboard opens. A mouse
+      // press focuses it too, but must not open before the click (that
+      // would make selecting text impossible), hence :focus-visible.
+      display.addEventListener("focus", () => {
+        if (refocusing) return;
+        if (display.matches(":focus-visible")) openItem(item);
+      });
+      display.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          openItem(item);
+        }
+      });
+
+      row.addEventListener("focusout", () => {
+        window.setTimeout(() => {
+          if (row.contains(document.activeElement)) return;
+          if (mayClose(item)) closeItem(item);
+        }, 120);
+      });
+
+      editor.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          revertItem(item);
+          updateDirtyMarkers();
+          closeItem(item);
+          // Keep the keyboard user in place without re-opening the field.
+          refocusing = true;
+          display.focus({ preventScroll: true });
+          refocusing = false;
+          return;
+        }
+        if (ev.key === "Enter") {
+          const target = ev.target;
+          if (target instanceof HTMLTextAreaElement) {
+            if (ev.ctrlKey || ev.metaKey) {
+              ev.preventDefault();
+              save();
+            }
+            return;
+          }
+          if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement) {
+            // Enter confirms the field, it does not submit the record:
+            // the edits are saved together from the bar.
+            if (target.classList.contains("searchable-select-input")) return;
+            ev.preventDefault();
+            target.blur();
+          }
+        }
+      });
+
+      controlsOf(editor).forEach((control) => {
+        control.addEventListener("input", updateDirtyMarkers);
+        control.addEventListener("change", updateDirtyMarkers);
+      });
+    });
+
+    // -------- Save / Cancel -------------------------------------------
+    let submitting = false;
+
+    const save = () => {
+      if (!saveForm || !hasUnsavedChanges() || submitting) return;
+      saveForm.requestSubmit ? saveForm.requestSubmit(saveButton || undefined) : saveForm.submit();
+    };
+
+    if (saveForm) {
+      saveForm.addEventListener("submit", (ev) => {
+        if (!hasUnsavedChanges()) {
+          ev.preventDefault();
+          return;
+        }
+        submitting = true;
+        // Only the changed fields travel: a disabled control is not posted.
+        items.forEach((item) => {
+          const dirty = isItemDirty(item);
+          valueControlsOf(item.editor).forEach((control) => {
+            control.disabled = !(dirty && isControlDirty(control));
+          });
+        });
+        scope.classList.add("is-saving");
+        if (cancelButton) cancelButton.disabled = true;
+        if (saveButton) {
+          saveButton.disabled = true;
+          saveButton.classList.add("is-saving");
+          saveButton.textContent = "Saving";
+        }
+      });
+    }
+
+    cancelButton?.addEventListener("click", async () => {
+      if (dirtyItems().length > 1) {
+        const choice = await openDirtyChoiceModal({
+          body: `Discard all ${dirtyItems().length} unsaved changes on this record?`,
+          discardLabel: "Discard all",
+        });
+        if (choice === "keep") return;
+        if (choice === "save") {
+          save();
+          return;
+        }
+      }
+      discardAll();
+    });
+
+    // -------- Leaving the record with unsaved edits -------------------
+    window.addEventListener("beforeunload", (event) => {
+      if (submitting || !hasUnsavedChanges()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
+    let leaving = false;
+    const leaveTo = async (href) => {
+      if (!hasUnsavedChanges()) {
+        window.location.assign(href);
+        return;
+      }
+      if (modalOpen) return;
+      const choice = await openDirtyChoiceModal({
+        body: "This record has unsaved changes. Save them before you leave?",
+      });
+      if (choice === "save") {
+        save();
+      } else if (choice === "discard") {
+        leaving = true;
+        discardAll();
+        window.location.assign(href);
+      }
+    };
+
+    // Same-tab links anywhere on the page ask through the in-app modal
+    // instead of the browser's bare "Leave site?" prompt.
+    document.addEventListener("click", (ev) => {
+      if (leaving || !hasUnsavedChanges()) return;
+      if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+      const link = ev.target.closest?.("a[href]");
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      if (link.closest("[data-field-display]")) return; // mailto / website inside a value
+      const href = link.getAttribute("href") || "";
+      if (href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("javascript:")) return;
+      ev.preventDefault();
+      leaveTo(link.href);
+    });
+
+    // Rows that come back dirty or with an error (rejected save) start open.
+    items.forEach((item) => {
+      if (!mayClose(item)) openItem(item, { focus: false });
+    });
+    updateDirtyMarkers();
+
+    window.SAMSDetailEdit = {
+      hasUnsavedChanges,
+      isModalOpen: () => modalOpen,
+      save,
+      leaveTo,
+    };
   };
 })();

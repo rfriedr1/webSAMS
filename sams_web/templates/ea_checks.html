@@ -61,7 +61,9 @@
         ({{ sec.review_range }})
         {% if sec.overdue %}<span class="badge ea-overdue-badge">overdue</span>{% endif %}
       </span>
+      {% if can("sign_off_qc") %}
       <button type="button" class="ea-review-open" data-ea-review-open="review-{{ sec.dom_id }}">Review &amp; sign off</button>
+      {% endif %}
       {% else %}
       <span class="ea-all-signed">✓ All checks signed off</span>
       {% endif %}
@@ -170,7 +172,7 @@
             <td>{{ r.comment }}{% if r.voided %} <span class="ea-muted">[voided by {{ r.voided_by }}: {{ r.void_reason }}]</span>{% endif %}</td>
             <td>{% if r.signoff_id %}<a class="table-link" href="/qc/signoffs/{{ r.signoff_id }}">#{{ r.signoff_id }}</a>{% endif %}</td>
             <td>
-              {% if not r.voided and not r.signoff_id %}
+              {% if not r.voided and not r.signoff_id and can("edit_records") %}
               <button type="button" class="ea-void-open" data-ea-void-open="{{ r.id }}"
                       data-ea-void-label="{{ r.date }} {{ r.time }} · {{ r.ea_label }} · {{ r.values_text }}"
                       title="Void this check (mistyped entry)" aria-label="Void check of {{ r.date }} {{ r.time }}">

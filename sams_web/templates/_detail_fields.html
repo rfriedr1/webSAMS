@@ -1,8 +1,10 @@
 {#- ---------------------------------------------------------------------
     Detail-page field macros.
 
-    `render_detail_field_row` renders one label/value row that switches in
-    place between display and editor (edit mode, quick edit).
+    `render_detail_field_row` renders one label/value row. For a user who
+    may edit (`can_edit`) and a field that is not read-only, it also renders
+    the editor, which detail-edit-mode.js swaps in when the value is
+    clicked (there is no edit mode; changes are saved together).
 
     `render_detail_sections` renders a list of sections as a fact sheet:
     "column" sections side by side, separated by one rule, then "wide"
@@ -22,7 +24,8 @@
   select_options_by_field=None,
   required_fields=(),
   field_errors=None,
-  field_warnings=None
+  field_warnings=None,
+  can_edit=false
 ) -%}
 {% set kind = row.kind or 'text' %}
 {% set row_classes = 'detail-field-row' %}
@@ -48,9 +51,19 @@
 {% if is_read_only %}
 {% set row_classes = row_classes ~ ' is-read-only' %}
 {% endif %}
+{% set has_editor = can_edit and not is_read_only %}
 {% set editor_value = row.raw_value if row.raw_value is defined else row.value %}
-{% if editor_value_overrides is not none and field_name in editor_value_overrides %}
-{% set editor_value = editor_value_overrides[field_name] %}
+{#- After a rejected save the editor shows what was submitted, and
+    `data-initial-value` carries the stored value, so the field still
+    counts as changed (detail-edit-mode.js). Without an override the
+    script reads the control's own value. -#}
+{% set has_override = editor_value_overrides is not none and field_name in editor_value_overrides %}
+{% set stored_text = '' %}
+{% if has_override %}
+{%   set stored = editor_value %}
+{%   if kind == 'date' and stored is not none and stored.strftime is defined %}{% set stored = stored.strftime('%Y-%m-%d') %}{% endif %}
+{%   set stored_text = (stored if stored is not none else '') | string %}
+{%   set editor_value = editor_value_overrides[field_name] %}
 {% endif %}
 {% set date_input_value = editor_value %}
 {% if kind == 'date' and editor_value is not none and editor_value.strftime is defined %}
@@ -78,8 +91,8 @@
 {%   set row_classes = row_classes ~ ' is-long-value' %}
 {% endif %}
 {#- Empty rows are collapsed behind a per-section "N empty" toggle by
-    detail-empty-fields.js; edit mode always shows them (CSS override), so
-    nothing becomes uneditable. -#}
+    detail-empty-fields.js; revealing them is how an empty field is filled
+    in, and a changed or failing row is never hidden (CSS). -#}
 {% if row.value is none %}
 {%   set row_classes = row_classes ~ ' is-empty-value' %}
 {% endif %}
@@ -123,12 +136,16 @@
         {%- if action_url -%}
         <a href="{{ action_url }}" class="detail-field-action-link" title="{{ action_title }}" aria-label="{{ action_title }}">&#128269;</a>
         {%- endif -%}
+        {%- if has_editor -%}
+        <svg class="detail-field-pencil" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 2.3a1.4 1.4 0 0 1 2 2L5.6 12 2.5 13l1-3.1z" /></svg>
+        {%- endif -%}
       </div>
-      {% if not is_read_only %}
+      {% if has_editor %}
       <div class="detail-field-editor" data-field-editor hidden aria-hidden="true">
         {% if select_options %}
         <select
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
           {% if field_error %}aria-invalid="true"{% endif %}
@@ -143,6 +160,7 @@
         {% elif kind == "multiline" %}
         <textarea
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           rows="3"
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
@@ -152,6 +170,7 @@
         {% elif kind == "boolean" %}
         <select
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
           {% if field_error %}aria-invalid="true"{% endif %}
@@ -165,6 +184,7 @@
         <input
           type="date"
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           value="{{ date_input_value if date_input_value is not none else '' }}"
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
@@ -175,6 +195,7 @@
         <input
           type="email"
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           value="{{ editor_value if editor_value is not none else '' }}"
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
@@ -185,6 +206,7 @@
         <input
           type="url"
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           value="{{ editor_value if editor_value is not none else '' }}"
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
@@ -195,6 +217,7 @@
         <input
           type="text"
           name="{{ field_name }}"
+          {% if has_override %}data-initial-value="{{ stored_text }}"{% endif %}
           value="{{ editor_value if editor_value is not none else '' }}"
           {% if form_id %}form="{{ form_id }}"{% endif %}
           {% if is_required %}required{% endif %}
@@ -221,7 +244,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) -%}
+{% macro _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings, can_edit) -%}
 {% for row in section.rows %}
 {{ render_detail_field_row(
   row,
@@ -233,7 +256,8 @@
   select_options_by_field=select_options_by_field,
   required_fields=required_fields,
   field_errors=field_errors,
-  field_warnings=field_warnings
+  field_warnings=field_warnings,
+  can_edit=can_edit
 ) }}
 {% endfor %}
 {%- endmacro %}
@@ -274,7 +298,8 @@
   required_fields=(),
   field_errors=None,
   field_warnings=None,
-  id_prefix=None
+  id_prefix=None,
+  can_edit=false
 ) -%}
 {% set columns = sections | rejectattr('layout', 'equalto', 'wide') | list %}
 {% set bands = sections | selectattr('layout', 'equalto', 'wide') | list %}
@@ -289,7 +314,7 @@
       {% if section.readout is defined and section.readout %}{{ _render_readout(section.readout) }}{% endif %}
       {% if section.rows %}
       <dl class="fact-list {{ css_prefix }}-field-list">
-        {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) }}
+        {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings, can_edit) }}
       </dl>
       {% endif %}
     </section>
@@ -300,7 +325,7 @@
   <section class="fact-group fact-band"{% if id_prefix %} id="{{ id_prefix }}-{{ section.title | lower | replace(' & ', '-') | replace(' ', '-') }}"{% endif %}>
     <h3 class="fact-group-title">{{ section.title }}</h3>
     <dl class="fact-list fact-list-band {{ css_prefix }}-field-list">
-      {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings) }}
+      {{ _render_section_rows(section, entity, css_prefix, form_id, read_only_fields, editor_value_overrides, select_options_by_field, required_fields, field_errors, field_warnings, can_edit) }}
     </dl>
   </section>
   {% endfor %}

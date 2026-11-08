@@ -211,6 +211,7 @@
         </section>
       </div>
 
+      {% if can("edit_records") %}
       <div class="bench-actions" data-graph-bench-target-actions>
         <button type="reset" class="bench-button is-ghost">Cancel</button>
         <div class="bench-actions-main">
@@ -218,6 +219,9 @@
           <button type="submit" name="graphbench__action" value="save_next" class="bench-button is-primary">Save &amp; next</button>
         </div>
       </div>
+      {% else %}
+      <p class="view-only-note">View only: you can't change records.</p>
+      {% endif %}
     </form>
     {% else %}
     <p class="bench-empty">Scan or type a sample number to load its target.</p>
@@ -301,11 +305,13 @@
           </tbody>
         </table>
       </div>
+      {% if can("edit_records") %}
       <div class="bench-actions">
         <div class="bench-actions-main">
           <button type="submit" class="bench-button is-primary">Save batch</button>
         </div>
       </div>
+      {% endif %}
     </section>
   </form>
   {% endif %}

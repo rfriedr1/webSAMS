@@ -2,9 +2,10 @@
   Detail-page chrome macros.
 
     render_detail_action_toolbar(form_id)
-      → the Edit/Save/Cancel buttons + dirty/saved status pill. Renders
-        inside the title row, right-aligned next to the h2 (modern apps
-        put the primary action on the title line, not under it).
+      → the "Saved · …" status pill on the title row.
+
+    render_pending_bar(form_id)
+      → the Cancel / N unsaved changes / Save bar at the foot of the record.
 
     render_detail_notice_block(...)
       → the saved-banner / save-error / field-error-summary. Renders
@@ -17,7 +18,7 @@
 {#- Record header shared by every detail page: title (+ lighter
     subtitle), the context line passed as the call body (back link,
     parent records, status), and on the right any page actions, the
-    quick-nav pill and the Edit toolbar.
+    quick-nav pill and the saved-status pill.
 
       {% call render_record_head('Sample 48211', 'EIL R-EVA 3521', form_id, quick_nav=nav) %}
         <a …>‹ Back</a> · Project <a …>…</a>
@@ -40,36 +41,24 @@
 {%- endmacro %}
 
 
+{#- There is no edit mode: fields open on click and are saved together
+    from `render_pending_bar`. The header only keeps the "Saved · …" pill. -#}
 {% macro render_detail_action_toolbar(form_id) -%}
   <div class="detail-edit-toolbar">
-    {# Aggregated dirty-state / saved-just-now status. JS toggles `hidden`
-       and updates the message; see detail-edit-mode.js. #}
     <span class="detail-edit-status" data-edit-status hidden></span>
-    <button
-      type="button"
-      class="detail-edit-toggle"
-      data-edit-toggle
-      data-edit-label-default="Edit"
-      data-edit-label-active="View"
-      data-edit-title-default="Edit this record (E). Double-click any field for single-field quick edit."
-      data-edit-title-active="Leave edit mode (E). You'll be asked before discarding unsaved changes."
-      title="Edit this record (E). Double-click any field for single-field quick edit."
-    >Edit</button>
-    <button
-      type="submit"
-      class="detail-edit-save"
-      data-edit-save
-      form="{{ form_id }}"
-      title="Save changes (Ctrl/Cmd + S). Works even while typing in a field."
-      hidden
-    >Save</button>
-    <button
-      type="button"
-      class="detail-edit-cancel"
-      data-edit-cancel
-      title="Cancel edit (Esc). You'll be asked before discarding unsaved changes."
-      hidden
-    >Cancel</button>
+  </div>
+{%- endmacro %}
+
+
+{#- The record's one action bar, shown only while a field holds an
+    unsaved change: count, ghost Cancel left, primary Save right. Sticky at
+    the foot of the record so it stays in reach on a long page. Rendered
+    only for a user who may edit (`can_edit`). See detail-edit-mode.js. -#}
+{% macro render_pending_bar(form_id) -%}
+  <div class="detail-pending-bar" data-pending-bar hidden role="region" aria-label="Unsaved changes">
+    <button type="button" class="detail-edit-cancel" data-edit-cancel title="Drop every unsaved change on this record">Cancel</button>
+    <span class="detail-pending-count" data-pending-count aria-live="polite"></span>
+    <button type="submit" class="detail-edit-save" data-edit-save form="{{ form_id }}" title="Save all changes (Ctrl/Cmd + S)">Save</button>
   </div>
 {%- endmacro %}
 

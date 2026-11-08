@@ -277,7 +277,6 @@ async def save_sample_detail_page(
                 save_error=save_error,
                 field_errors=field_errors,
                 form_values=submitted_fields,
-                edit_initial_mode="editing",
             ),
             service=service,
             sections_kwargs={"project": overview["project"]},

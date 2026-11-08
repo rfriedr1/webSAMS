@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
 {% from "_table_macros.html" import table_cell %}
-{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
+{% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
 
 {% block content %}
-<section class="panel" data-edit-scope data-edit-initial-mode="{{ project_edit_initial_mode or 'view' }}">
+<section class="panel" data-edit-scope>
   {% set nav %}{{ render_detail_quick_nav(
     entity='project',
     current=project.project_nr,
@@ -33,12 +33,14 @@
     entity='project',
     css_prefix='project',
     form_id=project_edit_form_id,
+    can_edit=project_can_edit,
     read_only_fields=project_read_only_fields,
     editor_value_overrides=project_form_values,
     select_options_by_field=project_select_options,
     required_fields=project_required_fields,
     field_errors=project_field_errors
   ) }}
+  {% if project_can_edit %}{{ render_pending_bar(project_edit_form_id) }}{% endif %}
 </section>
 
 <section class="panel record-related">

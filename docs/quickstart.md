@@ -47,6 +47,10 @@ SAMS_DATABASE_URL=mysql+pymysql://<USER>:<PASSWORD>@192.168.123.30/db_dmams_test
 - `db_dmams` is the **live lab database**, shared with BATS. Imports write to it
   immediately and cannot be undone from the app; switch only when you mean it.
 
+SAMS has no login yet, so everyone who can reach it may change records. To try the
+app the way a view-only account will see it, add `SAMS_ACCESS_ROLE=viewer`
+(`editor` = records but not Setup; the default is `admin`).
+
 Windows: `copy .env.example .env` · macOS/Linux: `cp .env.example .env`
 
 ## 4. Start it

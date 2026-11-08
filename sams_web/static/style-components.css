@@ -133,3 +133,19 @@
     width: 100%;
   }
 }
+
+/* A user who may only view (sams_web/access.py) gets this one line where
+   an action bar would be, instead of buttons that would answer 403. */
+.view-only-note {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+.setup-view-only {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}

@@ -22,6 +22,7 @@ from typing import Any, Callable, TYPE_CHECKING
 
 from fastapi import Request
 
+from sams_web.access import Permission, request_can
 from sams_web.detail_update import DetailUpdateConfig
 
 if TYPE_CHECKING:
@@ -78,7 +79,6 @@ class EditFormState:
     save_error: str | None = None
     field_errors: dict[str, str] | None = None
     form_values: dict[str, str] | None = None
-    edit_initial_mode: str = "view"
 
 
 def _read_only_fields_for_template(update_config: DetailUpdateConfig) -> tuple[str, ...]:
@@ -122,7 +122,8 @@ def build_detail_page_context(
     - `<n>_sections`, `<n>_edit_form_id`
     - `<n>_read_only_fields`, `<n>_required_fields`, `<n>_select_options`
     - `<n>_field_errors`, `<n>_form_values`
-    - `<n>_save_error`, `<n>_saved`, `<n>_edit_initial_mode`
+    - `<n>_save_error`, `<n>_saved`, `<n>_can_edit` (may this user change
+      the record: editors are rendered only then, see sams_web/access.py)
     - `previous_<n>_nr`, `next_<n>_nr`, `<n>_count`, `max_<n>_nr`
 
     Merges `extra` (page-specific keys: related entities, display
@@ -162,7 +163,7 @@ def build_detail_page_context(
         f"{name}_form_values": edit_state.form_values or {},
         f"{name}_save_error": edit_state.save_error,
         f"{name}_saved": edit_state.saved,
-        f"{name}_edit_initial_mode": edit_state.edit_initial_mode,
+        f"{name}_can_edit": request_can(request, Permission.EDIT_RECORDS),
         f"{name}_warnings": warnings,
         f"{name}_warnings_by_field": warnings_by_field,
         f"previous_{name}_nr": cursor.previous_nr,
