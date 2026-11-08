@@ -1,7 +1,7 @@
 /* Lab benches (Lab → Preparation, Lab → Graphitization). Loaded only on the
    bench pages (extra_styles). Both benches are built from the same pieces
-   (_bench_macros.html): a lookup row, one line of sample facts, a field
-   grid, flag chips and one action bar with Save / Save & next on the right.
+   (_bench_macros.html): a lookup row, one line of sample facts, the entry
+   fields as lab-flow stages on a rail, flag chips and one action bar with Save / Save & next on the right.
    Redesigned 2026-11 to the fact-sheet density of the detail pages. */
 
 /* ---- Layout ----------------------------------------------------------- */
@@ -359,23 +359,12 @@
 
 /* ---- Fields ----------------------------------------------------------- */
 
-.bench-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3) var(--space-4);
-}
-
 .bench-field {
   position: relative;
   display: grid;
   gap: 0.22rem;
   align-content: start;
   min-width: 0;
-}
-
-.bench-field.is-full,
-.bench-flags-row {
-  grid-column: 1 / -1;
 }
 
 .bench-field.is-span-2 {
@@ -396,7 +385,11 @@
   gap: var(--space-5);
 }
 
-.prep-flow-main {
+/* The stage column: `.prep-flow-main` on the preparation bench, the whole
+   target form (`.bench-flow`) on the graphitization bench. The gap is what
+   the rail line below is measured against. */
+.prep-flow-main,
+.bench-flow {
   display: grid;
   gap: var(--space-4);
   align-content: start;
@@ -468,6 +461,28 @@
   gap: var(--space-2);
 }
 
+/* A stage's status in words beside its flags (C/N Analysis: wanted
+   against moved). Muted when they agree, warning-tinted when not, and
+   always a word, never colour alone. */
+.panel .bench-stage-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.panel .bench-stage-note.is-warn {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--warn-line);
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+.bench-stage-flags:has(.bench-stage-note) {
+  align-items: center;
+}
+
 /* A flag beside an input (Sample Archived next to the storage location):
    on the input's baseline, not the label's. */
 .bench-stage-cell.is-flag {
@@ -477,8 +492,7 @@
 }
 
 .bench-field > label,
-.bench-field-label,
-.bench-flags-label {
+.bench-field-label {
   color: var(--muted);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -559,17 +573,6 @@
 }
 
 /* ---- Flag chips ------------------------------------------------------- */
-
-.bench-flags-row {
-  display: grid;
-  gap: 0.3rem;
-}
-
-.bench-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
 
 .bench-flag {
   position: relative;
@@ -815,10 +818,6 @@
 
   .bench-open-link {
     margin-left: 0;
-  }
-
-  .bench-fields {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .bench-stage-row,

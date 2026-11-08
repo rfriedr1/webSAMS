@@ -51,6 +51,29 @@
         const noLeftoverCheckbox = targetForm.querySelector("[data-graph-bench-no-leftover]");
         const returnToSenderCheckbox = targetForm.querySelector("[data-graph-bench-return-to-sender]");
         const storageWarning = targetForm.querySelector("[data-graph-bench-storage-warning]");
+        const cnMovedCheckbox = targetForm.querySelector("[data-graph-bench-cn-moved]");
+        const cnNote = targetForm.querySelector("[data-graph-bench-cn-note]");
+
+        // C/N Analysis stage: what the sample wants (set on the sample)
+        // against what was done (the Moved flag), in words. Mirrors the
+        // server-rendered text in _graphitization_bench.html.
+        const renderCnNote = () => {
+          if (!(cnNote instanceof HTMLElement) || !(cnMovedCheckbox instanceof HTMLInputElement)) {
+            return;
+          }
+          const wanted = cnNote.dataset.cnWanted === "1";
+          const moved = cnMovedCheckbox.checked;
+          let text = "Not wanted for this sample";
+          if (wanted && moved) {
+            text = "Wanted · moved";
+          } else if (wanted) {
+            text = "Wanted · not moved yet";
+          } else if (moved) {
+            text = "Moved, but not wanted for this sample";
+          }
+          cnNote.textContent = text;
+          cnNote.classList.toggle("is-warn", wanted !== moved);
+        };
 
         const syncPrepArchived = () => {
           if (!(prepStorage instanceof HTMLInputElement) || !(prepArchived instanceof HTMLInputElement)) {
@@ -141,6 +164,9 @@
         if (noLeftoverCheckbox instanceof HTMLInputElement) {
           noLeftoverCheckbox.addEventListener("change", renderStorageWarning);
         }
+        if (cnMovedCheckbox instanceof HTMLInputElement) {
+          cnMovedCheckbox.addEventListener("change", renderCnNote);
+        }
         if (returnToSenderCheckbox instanceof HTMLInputElement) {
           returnToSenderCheckbox.addEventListener("change", renderStorageWarning);
         }
@@ -181,12 +207,14 @@
           window.setTimeout(() => {
             syncPrepArchived();
             renderStorageWarning();
+            renderCnNote();
             dirtyMarkers.refresh();
           }, 0);
         });
 
         syncPrepArchived();
         renderStorageWarning();
+        renderCnNote();
         dirtyMarkers.refresh();
       }
 

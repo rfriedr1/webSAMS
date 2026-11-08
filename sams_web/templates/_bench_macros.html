@@ -69,10 +69,11 @@
 
 {#- A labelled input. The posted value wins over the stored one, so a
     rejected save refills what the operator typed. `kind` is number | date |
-    text. Anything passed as a call body (warnings) renders under the input. -#}
-{% macro bench_input(id, name, label, values, fallback, errors, kind="number", hook="", placeholder="") %}
+    text. Anything passed as a call body (warnings) renders under the input.
+    `extra_class` adds a layout class (`is-span-2` in a stage row). -#}
+{% macro bench_input(id, name, label, values, fallback, errors, kind="number", hook="", placeholder="", extra_class="") %}
 {%- set value = values[name] if name in values else ("" if fallback is none else fallback) -%}
-<div class="bench-field{% if errors.get(name) %} has-error{% endif %}">
+<div class="bench-field{% if extra_class %} {{ extra_class }}{% endif %}{% if errors.get(name) %} has-error{% endif %}">
   <label for="{{ id }}">{{ label }}</label>
   <input
     id="{{ id }}"
