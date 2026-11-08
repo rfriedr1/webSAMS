@@ -8,6 +8,7 @@ from typing import Any, Iterable
 from urllib.parse import quote_plus
 
 from sams_web.detail_page import DetailPageConfig
+from sams_web.field_labels import field_label
 from sams_web.detail_update import DetailUpdateConfig, RelatedEntityRule
 from sams_web.models import Preparation, Sample, Target
 from sams_web.viewmodels.detail_sections_user_project import PROJECT_DETAIL
@@ -31,51 +32,6 @@ from sams_web.viewmodels.detail_sections_common import (
     mapped_values,
 )
 
-SAMPLE_FIELD_LABELS = {
-    "sample_nr": "Sample #",
-    "project_nr": "Project #",
-    "project_in_date": "Project In Date",
-    "project_desired_date": "Project Desired Date",
-    "project_out_date": "Project Out Date",
-    "user_label": "Sample Label",
-    "user_label_nr": "Sample Label #",
-    "type": "Type",
-    "material": "Material",
-    "fraction": "Fraction",
-    "sampling_date": "Sampling Date",
-    "photo": "Photo",
-    "user_desc1": "Description 1",
-    "user_desc2": "Description 2",
-    "user_comment": "Submitter Comment",
-    "pre_sub_treat": "Pre-sub Treatment",
-    "preparation": "Preparation",
-    "editable": "Editable",
-    "not_tobedated": "Not To Be Dated",
-    "residue": "Residue",
-    "lab_comment": "Lab Comment",
-    "weight": "Weight",
-    "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Age Sigma",
-    "av_fm": "Average Fm",
-    "av_fm_sig": "Average Fm Sigma",
-    "av_dc13": "Average d13C",
-    "av_dc13_sig": "Average d13C Sigma",
-    "delta_r": "Delta R",
-    "calib": "Calibration",
-    "cal1s_min": "Cal 1s Min",
-    "cal1s_max": "Cal 1s Max",
-    "cal2s_min": "Cal 2s Min",
-    "cal2s_max": "Cal 2s Max",
-    "storage": "Storage",
-    "s_storage_loc": "Sample Storage Location",
-    "prep_storage_loc": "Prep Storage Location",
-    "left_over": "Leftover",
-    "s_no_leftover": "No Leftover",
-    "ma_nr": "MA #",
-    "old_info": "Old Info",
-    "c_n_isotop_a": "CN Isotop A",
-    "c_n_isotop_a_moved": "CN Isotop A Moved",
-}
 
 # One list of sections per entity: the first ones form the fact sheet at
 # the top of the page, the rest fold into "More details" (see
@@ -148,7 +104,7 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
         return [
             {
                 "key": f"project_{project_key}",
-                "label": SAMPLE_FIELD_LABELS.get(f"project_{project_key}", f"Project {project_key.replace('_', ' ').title()}"),
+                "label": field_label(f"project_{project_key}"),
                 "kind": "date",
                 "raw_value": project_values.get(project_key),
                 "value": format_sample_value(project_key, project_values.get(project_key)),
@@ -158,7 +114,6 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
 
     sections = build_sections(
         sample,
-        field_labels=SAMPLE_FIELD_LABELS,
         section_specs=SAMPLE_SECTION_SPECS,
         kind_resolver=sample_field_kind,
         value_formatter=format_sample_value,
@@ -170,7 +125,7 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
         drop_all_empty_sections=True,
     )
     attach_readout(
-        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label="C14 age"
+        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label=field_label("c14_age")
     )
     return arrange_sections(
         sections,
@@ -181,40 +136,6 @@ def build_sample_sections(sample: Any, project: Any | None = None) -> list[dict[
     )
 
 
-PREPARATION_FIELD_LABELS = {
-    "sample_nr": "Sample #",
-    "prep_nr": "Prep #",
-    "batch": "Batch",
-    "prep_start": "Prep Start",
-    "prep_end": "Prep End",
-    "stop": "Discarded",
-    "prep_comment": "Preparation Comment",
-    "weight_start": "Weight Start",
-    "weight_medium": "Weight Mid",
-    "weight_medium_2": "Weight Mid 2",
-    "weight_end": "Weight End",
-    "p_no_leftover": "No Leftover",
-    "cn_ratio": "CN Ratio",
-    "c_percent": "C %",
-    "n_percent": "N %",
-    "yield_percent": "Yield (%)",
-    "step1_method": "Step 1 Method",
-    "step1_start": "Step 1 Start",
-    "step1_end": "Step 1 End",
-    "step2_method": "Step 2 Method",
-    "step2_start": "Step 2 Start",
-    "step2_end": "Step 2 End",
-    "step3_method": "Step 3 Method",
-    "step3_start": "Step 3 Start",
-    "step3_end": "Step 3 End",
-    "step4_method": "Step 4 Method",
-    "step4_start": "Step 4 Start",
-    "step4_end": "Step 4 End",
-    "step5_method": "Step 5 Method",
-    "step5_start": "Step 5 Start",
-    "step5_end": "Step 5 End",
-    "old_info": "Old Info",
-}
 
 PREPARATION_SECTION_SPECS: tuple[SectionSpec, ...] = (
     ("Batch & Timeline", "", ("batch", "prep_start", "prep_end", "stop", "p_no_leftover")),
@@ -288,7 +209,7 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
         return [
             {
                 "key": "yield_percent",
-                "label": PREPARATION_FIELD_LABELS["yield_percent"],
+                "label": field_label("yield_percent"),
                 "kind": "text",
                 "raw_value": yield_value,
                 "value": yield_value,
@@ -298,7 +219,6 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
 
     sections = build_sections(
         preparation,
-        field_labels=PREPARATION_FIELD_LABELS,
         section_specs=PREPARATION_SECTION_SPECS,
         kind_resolver=preparation_field_kind,
         value_formatter=format_preparation_value,
@@ -328,47 +248,6 @@ def build_preparation_sections(preparation: Any) -> list[dict[str, Any]]:
     return arrange_sections(sections, wide=PREPARATION_WIDE_SECTIONS, stacked=PREPARATION_STACKED_FIELDS)
 
 
-TARGET_FIELD_LABELS = {
-    "sample_nr": "Sample #",
-    "prep_nr": "Prep #",
-    "target_nr": "Target #",
-    "target_id": "Target ID",
-    "graph_batch": "Graph Batch",
-    "graph_date": "Graph Date",
-    "graphitized": "Graphitized",
-    "magazine": "Magazine",
-    "position": "Position",
-    "reactor_nr": "Reactor #",
-    "co2_init": "CO2 Init",
-    "co2_final": "CO2 Final",
-    "hydro_init": "Hydrogen Init",
-    "hydro_final": "Hydrogen Final",
-    "react_time": "Reaction Time",
-    "target_comment": "Target Comment",
-    "target_pressed": "Target Pressed",
-    "stop": "Discarded",
-    "meas_comment": "Measurement Comment",
-    "fm": "FM",
-    "fm_sig": "FM Sigma",
-    "dc13": "d13C",
-    "dc13_sig": "d13C Sigma",
-    "calcset": "Calcset",
-    "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Age Sigma",
-    "cal1s_min": "Cal 1s Min",
-    "cal1s_max": "Cal 1s Max",
-    "cal2s_min": "Cal 2s Min",
-    "cal2s_max": "Cal 2s Max",
-    "weight_combustion": "Weight Combustion",
-    "weight": "Weight",
-    "temp": "Temperature",
-    "conc_c": "C (%)",
-    "conc_n": "N (%)",
-    "cn_ratio_calc": "C/N Ratio",
-    "total_c_ug": "Total C (µg)",
-    "le_curr": "LE Current",
-    "he_curr": "HE Current",
-}
 
 # Sample / prep / target numbers and the target ID are in the page title
 # and context line, so the old "Main Info" section is gone.
@@ -449,7 +328,7 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
         return [
             {
                 "key": "cn_ratio_calc",
-                "label": TARGET_FIELD_LABELS["cn_ratio_calc"],
+                "label": field_label("cn_ratio_calc"),
                 "kind": "text",
                 "raw_value": ratio,
                 "value": ratio,
@@ -457,7 +336,7 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
             },
             {
                 "key": "total_c_ug",
-                "label": TARGET_FIELD_LABELS["total_c_ug"],
+                "label": field_label("total_c_ug"),
                 "kind": "text",
                 "raw_value": total_c_ug,
                 "value": total_c_ug,
@@ -467,7 +346,6 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
 
     sections = build_sections(
         target,
-        field_labels=TARGET_FIELD_LABELS,
         section_specs=TARGET_SECTION_SPECS,
         kind_resolver=target_field_kind,
         value_formatter=format_target_value,
@@ -485,7 +363,7 @@ def build_target_sections(target: Any) -> list[dict[str, Any]]:
                 if row.get("key") == "magazine":
                     row["divider_before"] = True
     attach_readout(
-        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label="C14 age"
+        sections, section_title="Results", value_key="c14_age", sigma_key="c14_age_sig", label=field_label("c14_age")
     )
     return arrange_sections(sections, wide=TARGET_WIDE_SECTIONS, stacked=TARGET_STACKED_FIELDS)
 
@@ -567,8 +445,8 @@ SAMPLE_DETAIL = DetailUpdateConfig(
             ),
             missing_error="This sample has no linked project.",
             extra_required_fields=(
-                ("in_date", "Project In Date is required."),
-                ("desired_date", "Project Desired Date is required."),
+                ("in_date", f"{field_label('project_in_date')} is required."),
+                ("desired_date", f"{field_label('project_desired_date')} is required."),
             ),
         ),
     ),

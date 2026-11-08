@@ -23,7 +23,7 @@
          Target #. A <div> rather than a <label> so clicking a stepper does
          not also fire label activation on the input. #}
       <div class="bench-lookup-field is-sample">
-        <label for="graph-bench-sample-nr">Sample #</label>
+        <label for="graph-bench-sample-nr">{{ field_label('sample_nr') }}</label>
         <div class="prep-bench-stepper">
           <input
             id="graph-bench-sample-nr"
@@ -39,7 +39,7 @@
         </div>
       </div>
       <div class="bench-lookup-field">
-        <label for="graph-bench-prep-nr">Prep #</label>
+        <label for="graph-bench-prep-nr">{{ field_label('prep_nr') }}</label>
         <div class="prep-bench-stepper">
           <input
             id="graph-bench-prep-nr"
@@ -60,7 +60,7 @@
       </div>
       <div class="bench-lookup-field">
         <label for="graph-bench-target-nr">
-          Target #
+          {{ field_label('target_nr') }}
           {% if graph_bench_entry and graph_bench_entry.targets %}<small>of {{ graph_bench_entry.targets|length }}</small>{% endif %}
         </label>
         <div class="prep-bench-stepper">
@@ -122,11 +122,11 @@
     <div class="bench-ctx" aria-label="Sample context">
       {{ ctx_item("Submitter", "last_name", graph_user.last_name if graph_user else none, "/submitters/" ~ graph_user.user_nr if graph_user and graph_user.user_nr else none) }}
       {{ ctx_item("Project", "project", graph_project.project if graph_project else none, "/projects/" ~ graph_project.project_nr if graph_project and graph_project.project_nr else none) }}
-      {{ ctx_item("Label", "user_label", graph_sample.user_label) }}
-      {% if format_table_cell_value("user_label_nr", graph_sample.user_label_nr)|string|trim %}{{ ctx_item("Label #", "user_label_nr", graph_sample.user_label_nr) }}{% endif %}
-      {{ ctx_item("Material", "material", graph_sample.material) }}
-      {{ ctx_item("Prep weight end", "weight_end", graph_prep.weight_end) }}
-      {{ ctx_item("Graph batch", "graph_batch", graph_target.graph_batch) }}
+      {{ ctx_item(field_label("user_label"), "user_label", graph_sample.user_label) }}
+      {% if format_table_cell_value("user_label_nr", graph_sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", graph_sample.user_label_nr) }}{% endif %}
+      {{ ctx_item(field_label("material"), "material", graph_sample.material) }}
+      {{ ctx_item("Prep Weight End", "weight_end", graph_prep.weight_end) }}
+      {{ ctx_item(field_label("graph_batch"), "graph_batch", graph_target.graph_batch) }}
       {% if graph_sample.c_n_isotop_a %}<span class="bench-chip">C/N isotope analysis</span>{% endif %}
       {% if graph_prep.stop %}<span class="bench-chip is-danger">Prep discarded</span>{% endif %}
     </div>
@@ -143,24 +143,24 @@
       <input type="hidden" name="graphbench__target_nr" value="{{ graph_target.target_nr }}" />
 
       <div class="bench-fields">
-        {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", "Weight combustion", graph_values, graph_target.weight_combustion, graph_errors) }}
-        {% call bench_input("graphbench-prep-storage-loc", "graphbench__prep_storage_loc", "Prep storage location", graph_values, graph_prep_storage_value, graph_errors, kind="text", hook="data-graph-bench-prep-storage", placeholder="—") %}
+        {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", field_label("weight_combustion"), graph_values, graph_target.weight_combustion, graph_errors) }}
+        {% call bench_input("graphbench-prep-storage-loc", "graphbench__prep_storage_loc", field_label("prep_storage_loc"), graph_values, graph_prep_storage_value, graph_errors, kind="text", hook="data-graph-bench-prep-storage", placeholder="—") %}
         <p class="bench-field-warning" data-graph-bench-storage-warning hidden></p>
         {% endcall %}
 
         <div class="bench-flags-row">
           <span class="bench-flags-label" id="graph-bench-flags-label">Flags</span>
           <div class="bench-flags" role="group" aria-labelledby="graph-bench-flags-label">
-            {{ bench_flag("graphbench__p_no_leftover", "No leftover", graph_values, graph_prep.p_no_leftover, graph_errors, hook="data-graph-bench-no-leftover") }}
-            {{ bench_flag("graphbench__c_n_isotop_a_moved", "Moved to C/N analysis", graph_values, graph_sample.c_n_isotop_a_moved, graph_errors) }}
-            {{ bench_flag_readonly("Prep return to sender", graph_project and (graph_project.prep_return_to_sender or 0), hook="data-graph-bench-return-to-sender", title="Set on the project") }}
-            {{ bench_flag_readonly("Prep'd archived", graph_prep_storage_value|string|trim, hook="data-graph-bench-prep-archived", title="Ticked while a prep storage location is filled in") }}
-            {{ bench_flag("graphbench__stop", "Discarded", graph_values, graph_target.stop, graph_errors) }}
+            {{ bench_flag("graphbench__p_no_leftover", field_label("p_no_leftover"), graph_values, graph_prep.p_no_leftover, graph_errors, hook="data-graph-bench-no-leftover") }}
+            {{ bench_flag("graphbench__c_n_isotop_a_moved", field_label("c_n_isotop_a_moved"), graph_values, graph_sample.c_n_isotop_a_moved, graph_errors) }}
+            {{ bench_flag_readonly(field_label("prep_return_to_sender"), graph_project and (graph_project.prep_return_to_sender or 0), hook="data-graph-bench-return-to-sender", title="Set on the project") }}
+            {{ bench_flag_readonly("Prep'd Archived", graph_prep_storage_value|string|trim, hook="data-graph-bench-prep-archived", title="Ticked while a prep storage location is filled in") }}
+            {{ bench_flag("graphbench__stop", field_label("stop"), graph_values, graph_target.stop, graph_errors) }}
           </div>
         </div>
 
         <div class="bench-field is-full{% if graph_errors.get('graphbench__target_comment') %} has-error{% endif %}">
-          <label for="graphbench-target-comment">Target comment</label>
+          <label for="graphbench-target-comment">{{ field_label('target_comment') }}</label>
           <textarea id="graphbench-target-comment" name="graphbench__target_comment" rows="3" placeholder="Add graphitization notes">{{ graph_values['graphbench__target_comment'] if 'graphbench__target_comment' in graph_values else (graph_target.target_comment or '') }}</textarea>
           {% if graph_errors.get('graphbench__target_comment') %}<p class="bench-field-error">{{ graph_errors['graphbench__target_comment'] }}</p>{% endif %}
         </div>
@@ -229,7 +229,7 @@
            ahead and are not tied to a particular EA check. #}
       </div>
       <div class="bench-field">
-        <label for="graph-batch-name">Batch name</label>
+        <label for="graph-batch-name">Batch Name</label>
         <input id="graph-batch-name" type="text" name="graphbatch__batch_name" value="" placeholder="graph_YYMMDD_system" data-graph-batch-name />
       </div>
       <div class="bench-batch-tools">
@@ -242,10 +242,10 @@
         <table data-table-plain>
           <thead>
             <tr>
-              <th>Sample #</th>
-              <th>Prep</th>
-              <th>Target</th>
-              <th>Label</th>
+              <th>{{ field_label('sample_nr') }}</th>
+              <th>{{ field_label('prep_nr') }}</th>
+              <th>{{ field_label('target_nr') }}</th>
+              <th>{{ field_label('user_label') }}</th>
               <th><span class="sr-only">Remove</span></th>
             </tr>
           </thead>

@@ -109,10 +109,10 @@
           <thead>
             <tr>
               <th>Customer wrote</th>
-              <th data-group-head="type">Type</th>
-              <th data-group-head="material">Material</th>
-              <th data-group-head="fraction">Fraction</th>
-              <th>Prep 1</th><th>Prep 2</th><th>Prep 3</th><th>Prep 4</th><th>Prep 5</th>
+              <th data-group-head="type">{{ field_label('type') }}</th>
+              <th data-group-head="material">{{ field_label('material') }}</th>
+              <th data-group-head="fraction">{{ field_label('fraction') }}</th>
+              {% for n in range(1, 6) %}<th>{{ field_label('step' ~ n ~ '_method') }}</th>{% endfor %}
             </tr>
           </thead>
           <tbody data-groups></tbody>

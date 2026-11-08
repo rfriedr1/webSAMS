@@ -437,6 +437,8 @@ class SamsRepository:
                 Target.prep_nr.label("prep_nr"),
                 Target.target_nr.label("target_nr"),
                 Sample.user_label.label("user_label"),
+                Target.c14_age.label("c14_age"),
+                Target.c14_age_sig.label("c14_age_sig"),
                 Project.project_nr.label("project_nr"),
                 Project.project.label("project"),
                 Submitter.user_nr.label("user_nr"),

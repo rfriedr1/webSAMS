@@ -1409,7 +1409,7 @@
     const headRow = el("tr");
     headRow.append(
       el("th", "import-col-row", "Row"),
-      el("th", "", "Sample label"),
+      el("th", "", "Sample Label"),
       el("th", "", "Lab material")
     );
     EXTRA_FLAGS.forEach(({ key, short }) => {

@@ -23,7 +23,7 @@
          affordance Prep # gets natively, and a <div> rather than a <label>
          so a stepper click does not also activate the input. #}
       <div class="bench-lookup-field is-sample">
-        <label for="prep-bench-sample-nr">Sample #</label>
+        <label for="prep-bench-sample-nr">{{ field_label('sample_nr') }}</label>
         <div class="prep-bench-stepper">
           <input
             id="prep-bench-sample-nr"
@@ -41,7 +41,7 @@
 
       <div class="bench-lookup-field">
         <label for="prep-bench-prep-nr">
-          Prep #
+          {{ field_label('prep_nr') }}
           {% if bench_entry and bench_entry.preparations %}<small>of {{ bench_entry.preparations|length }}</small>{% endif %}
         </label>
         {% set prep_lookup_value = bench_prep_nr_query or (bench_entry.preparation.prep_nr if bench_entry else '') %}
@@ -97,10 +97,10 @@
     <div class="bench-ctx" aria-label="Sample context">
       {{ ctx_item("Submitter", "last_name", bench_user.last_name if bench_user else none, "/submitters/" ~ bench_user.user_nr if bench_user and bench_user.user_nr else none) }}
       {{ ctx_item("Project", "project", bench_project.project if bench_project else none, "/projects/" ~ bench_project.project_nr if bench_project and bench_project.project_nr else none) }}
-      {{ ctx_item("Label", "user_label", bench_sample.user_label) }}
-      {% if format_table_cell_value("user_label_nr", bench_sample.user_label_nr)|string|trim %}{{ ctx_item("Label #", "user_label_nr", bench_sample.user_label_nr) }}{% endif %}
-      {{ ctx_item("Material", "material", bench_sample.material) }}
-      {{ ctx_item("Fraction", "fraction", bench_sample.fraction) }}
+      {{ ctx_item(field_label("user_label"), "user_label", bench_sample.user_label) }}
+      {% if format_table_cell_value("user_label_nr", bench_sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", bench_sample.user_label_nr) }}{% endif %}
+      {{ ctx_item(field_label("material"), "material", bench_sample.material) }}
+      {{ ctx_item(field_label("fraction"), "fraction", bench_sample.fraction) }}
       {% if bench_sample.c_n_isotop_a %}<span class="bench-chip">C/N isotope analysis</span>{% endif %}
     </div>
 
@@ -111,10 +111,10 @@
 
       {# Weights in lab order, ending in the yield they give. #}
       <div class="bench-fields is-5">
-        {{ bench_input("bench-weight-start", "bench__weight_start", "Weight start", bench_values, bench_prep.weight_start, bench_errors, hook="data-prep-bench-weight-start") }}
-        {{ bench_input("bench-weight-medium", "bench__weight_medium", "Weight mid", bench_values, bench_prep.weight_medium, bench_errors, hook="data-prep-bench-weight-medium") }}
-        {{ bench_input("bench-weight-medium-2", "bench__weight_medium_2", "Weight mid 2", bench_values, bench_prep.weight_medium_2, bench_errors, hook="data-prep-bench-weight-medium-2") }}
-        {{ bench_input("bench-weight-end", "bench__weight_end", "Weight end", bench_values, bench_prep.weight_end, bench_errors, hook="data-prep-bench-weight-end") }}
+        {{ bench_input("bench-weight-start", "bench__weight_start", field_label("weight_start"), bench_values, bench_prep.weight_start, bench_errors, hook="data-prep-bench-weight-start") }}
+        {{ bench_input("bench-weight-medium", "bench__weight_medium", field_label("weight_medium"), bench_values, bench_prep.weight_medium, bench_errors, hook="data-prep-bench-weight-medium") }}
+        {{ bench_input("bench-weight-medium-2", "bench__weight_medium_2", field_label("weight_medium_2"), bench_values, bench_prep.weight_medium_2, bench_errors, hook="data-prep-bench-weight-medium-2") }}
+        {{ bench_input("bench-weight-end", "bench__weight_end", field_label("weight_end"), bench_values, bench_prep.weight_end, bench_errors, hook="data-prep-bench-weight-end") }}
         {% set bench_yield_value = bench_values['bench__yield_percent_display'] if 'bench__yield_percent_display' in bench_values else (bench_entry.yield_percent if bench_entry.yield_percent is not none else '') %}
         <div class="bench-field is-readout">
           <span class="bench-field-label">Yield (%)</span>
@@ -122,10 +122,10 @@
           <input type="hidden" name="bench__yield_percent_display" value="{{ bench_yield_value or '' }}" data-prep-bench-yield-hidden />
         </div>
 
-        {{ bench_input("bench-prep-start", "bench__prep_start", "Prep start", bench_values, bench_prep.prep_start.strftime('%Y-%m-%d') if bench_prep.prep_start else '', bench_errors, kind="date", hook="data-prep-bench-prep-start") }}
-        {{ bench_input("bench-prep-end", "bench__prep_end", "Prep end", bench_values, bench_prep.prep_end.strftime('%Y-%m-%d') if bench_prep.prep_end else '', bench_errors, kind="date", hook="data-prep-bench-prep-end") }}
+        {{ bench_input("bench-prep-start", "bench__prep_start", field_label("prep_start"), bench_values, bench_prep.prep_start.strftime('%Y-%m-%d') if bench_prep.prep_start else '', bench_errors, kind="date", hook="data-prep-bench-prep-start") }}
+        {{ bench_input("bench-prep-end", "bench__prep_end", field_label("prep_end"), bench_values, bench_prep.prep_end.strftime('%Y-%m-%d') if bench_prep.prep_end else '', bench_errors, kind="date", hook="data-prep-bench-prep-end") }}
         <div class="bench-field is-span-3{% if bench_errors.get('bench__s_storage_loc') %} has-error{% endif %}">
-          <label for="bench-storage-loc">Sample storage location</label>
+          <label for="bench-storage-loc">{{ field_label('s_storage_loc') }}</label>
           <input id="bench-storage-loc" type="text" name="bench__s_storage_loc" value="{{ bench_storage_value }}" placeholder="—" data-prep-bench-storage-location />
           {% if bench_errors.get('bench__s_storage_loc') %}<p class="bench-field-error">{{ bench_errors['bench__s_storage_loc'] }}</p>{% endif %}
           <p class="bench-field-warning" data-prep-bench-storage-warning hidden></p>
@@ -136,7 +136,7 @@
         {% set field_name = 'bench__' ~ step_field %}
         {% set step_value = bench_values[field_name] if field_name in bench_values else (bench_prep|attr(step_field) or '') %}
         <div class="bench-field{% if bench_errors.get(field_name) %} has-error{% endif %}">
-          <label for="prep-bench-{{ step_field }}">Step {{ step_index }} method</label>
+          <label for="prep-bench-{{ step_field }}">{{ field_label('step' ~ step_index ~ '_method') }}</label>
           <select id="prep-bench-{{ step_field }}" name="{{ field_name }}">
             <option value="">—</option>
             {% for method_value in bench_method_options or [] %}
@@ -150,15 +150,15 @@
         <div class="bench-flags-row">
           <span class="bench-flags-label" id="prep-bench-flags-label">Flags</span>
           <div class="bench-flags" role="group" aria-labelledby="prep-bench-flags-label">
-            {{ bench_flag("bench__s_no_leftover", "No leftover", bench_values, bench_sample.s_no_leftover, bench_errors, hook="data-prep-bench-no-leftover") }}
-            {{ bench_flag_readonly("Return to sender", bench_project and (bench_project.return_to_sender or 0), hook="data-prep-bench-return-to-sender", title="Set on the project") }}
-            {{ bench_flag_readonly("Sample archived", bench_storage_value|string|trim, hook="data-prep-bench-sample-archived", title="Ticked while a sample storage location is filled in") }}
-            {{ bench_flag("bench__stop", "Discarded", bench_values, bench_prep.stop, bench_errors) }}
+            {{ bench_flag("bench__s_no_leftover", field_label("s_no_leftover"), bench_values, bench_sample.s_no_leftover, bench_errors, hook="data-prep-bench-no-leftover") }}
+            {{ bench_flag_readonly(field_label("return_to_sender"), bench_project and (bench_project.return_to_sender or 0), hook="data-prep-bench-return-to-sender", title="Set on the project") }}
+            {{ bench_flag_readonly("Sample Archived", bench_storage_value|string|trim, hook="data-prep-bench-sample-archived", title="Ticked while a sample storage location is filled in") }}
+            {{ bench_flag("bench__stop", field_label("stop"), bench_values, bench_prep.stop, bench_errors) }}
           </div>
         </div>
 
         <div class="bench-field is-full{% if bench_errors.get('bench__prep_comment') %} has-error{% endif %}">
-          <label for="bench-prep-comment">Preparation comment</label>
+          <label for="bench-prep-comment">{{ field_label('prep_comment') }}</label>
           <textarea id="bench-prep-comment" name="bench__prep_comment" rows="3" placeholder="Add lab notes for this preparation">{{ bench_values['bench__prep_comment'] if 'bench__prep_comment' in bench_values else (bench_prep.prep_comment or '') }}</textarea>
           {% if bench_errors.get('bench__prep_comment') %}<p class="bench-field-error">{{ bench_errors['bench__prep_comment'] }}</p>{% endif %}
         </div>

@@ -8,6 +8,8 @@ from typing import Any, Callable, Iterable
 
 from sqlalchemy.inspection import inspect
 
+from sams_web.field_labels import field_label
+
 SectionSpec = tuple[str, str, tuple[str, ...]]
 Row = dict[str, Any]
 RowsBySectionFactory = Callable[[str], Iterable[Row]]
@@ -70,14 +72,19 @@ def mapped_values(entity: Any) -> dict[str, Any]:
     return {attr.key: getattr(entity, attr.key) for attr in mapper.column_attrs}
 
 
-def default_label(key: str) -> str:
-    return key.replace("_", " ").title()
+def table_rows(entities: Iterable[Any]) -> list[dict[str, Any]]:
+    """ORM records as plain row dicts, for the `table_cell` macro.
+
+    A related-records table (a project's samples, a submitter's projects)
+    names its columns by key and renders head and cells through
+    `field_label` / `table_cell`, like every list table. Rows carry every
+    column, so the link rule (`fk_based_link`) finds the foreign keys."""
+    return [mapped_values(entity) for entity in entities]
 
 
 def build_sections(
     entity: Any,
     *,
-    field_labels: dict[str, str],
     section_specs: tuple[SectionSpec, ...],
     kind_resolver: Callable[[str], str],
     value_formatter: Callable[[str, Any], Any],
@@ -107,7 +114,7 @@ def build_sections(
             rows.append(
                 {
                     "key": key,
-                    "label": field_labels.get(key, default_label(key)),
+                    "label": field_label(key),
                     "kind": kind_resolver(key),
                     "raw_value": values_by_key[key],
                     "value": value_formatter(key, values_by_key[key]),
@@ -132,7 +139,7 @@ def build_sections(
         other_rows = [
             {
                 "key": key,
-                "label": field_labels.get(key, default_label(key)),
+                "label": field_label(key),
                 "kind": kind_resolver(key),
                 "raw_value": values_by_key[key],
                 "value": value_formatter(key, values_by_key[key]),

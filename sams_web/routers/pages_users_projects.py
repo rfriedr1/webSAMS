@@ -14,9 +14,12 @@ from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_con
 from sams_web.magic_nav import append_magic_feedback, submitter_name_not_found_message
 from sams_web.routers.pages_shared import logger, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
+from sams_web.viewmodels.detail_sections_common import table_rows
 from sams_web.viewmodels.detail_sections_user_project import (
     PROJECT_DETAIL_PAGE,
+    PROJECT_SAMPLE_COLUMNS,
     SUBMITTER_DETAIL_PAGE,
+    SUBMITTER_PROJECT_COLUMNS,
 )
 
 router = APIRouter()
@@ -27,6 +30,8 @@ def _project_extra_keys(data: dict[str, object]) -> dict[str, object]:
     return {
         "user": data["user"],
         "samples": samples,
+        "sample_rows": table_rows(samples),
+        "sample_columns": PROJECT_SAMPLE_COLUMNS,
         "sample_count": len(samples),
     }
 
@@ -43,6 +48,8 @@ def _project_cursor(data: dict[str, object]) -> NavCursor:
 def _submitter_extra_keys(data: dict[str, object]) -> dict[str, object]:
     return {
         "projects": data["projects"],
+        "project_rows": table_rows(data["projects"]),
+        "project_columns": SUBMITTER_PROJECT_COLUMNS,
     }
 
 
@@ -98,7 +105,7 @@ def submitters_page(
             "error": error,
             "error_trace": error_trace,
             "total_count": total_count,
-            # Pre-fills the table's own search box (Last Name column), set
+            # Pre-fills the table's own search box (last-name column), set
             # by `/submitters/lookup` when a name matches several records.
             "q": " ".join(q.split()),
         },

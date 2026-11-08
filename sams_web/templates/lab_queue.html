@@ -20,8 +20,8 @@
 {% from "_table_macros.html" import table_cell %}
 {% block content %}
 {#- Lab pages carry no page header: the breadcrumb and the Lab sub-nav
-    already say where you are. The bench (or the analysis magazine lookup)
-    comes first, then the queue table. -#}
+    already say where you are. The bench comes first, then the queue table
+    (and on Analysis the magazine lookup under it). -#}
 {% if bench_entry_enabled %}
 {% include "_preparation_bench.html" %}
 {% endif %}
@@ -31,9 +31,54 @@
 {% include "_graphitization_bench.html" %}
 {% endif %}
 
+<section class="panel" id="tbl-{{ table_key|replace('_', '-') }}">
+  <details class="table-collapsible" open data-table-filter>
+    <summary class="table-summary">
+      <span class="table-summary-title">{{ table_title }}</span>
+      <span class="badge table-summary-count">{{ rows|length }} rows</span>
+    </summary>
+    {% if rows %}
+    {% set ns = namespace(visible_keys=[]) %}
+    {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
+    {% if table_key == 'waiting_for_meas' %}
+      {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
+    {% endif %}
+    {% for key in rows[0].keys() %}
+      {% if key not in hidden_helper_keys %}
+        {% set _ = ns.visible_keys.append(key) %}
+      {% endif %}
+    {% endfor %}
+    <div class="table-wrap table-wrap-dashboard">
+      <table>
+        <thead>
+          <tr>
+            {% for key in ns.visible_keys %}
+            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            {% for key in ns.visible_keys %}
+            <td>{{ table_cell(key, row) }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+    {% else %}
+    <p class="table-empty">No rows.</p>
+    {% endif %}
+  </details>
+</section>
+
 {% if magazine_lookup_enabled %}
-{#- Analysis: look up one magazine's targets. A tool row like the bench
-    lookup; the table only appears once a magazine is chosen. -#}
+{#- Analysis: look up one magazine's targets, below the queue (the queue
+    is the page's daily job). The table only appears once a magazine is
+    chosen. -#}
 <section class="panel" id="tbl-magazine-targets" data-page-label="Analysis">
   <div class="panel-bar">
     <h2 class="panel-bar-title is-small">Magazine</h2>
@@ -41,7 +86,7 @@
     <span class="panel-bar-count">{{ magazine_rows|length }} target{{ '' if magazine_rows|length == 1 else 's' }} in {{ magazine_query }}</span>
     {% endif %}
     <form method="get" action="/lab/analysis" class="panel-bar-actions magazine-form" role="search">
-      <label class="sr-only" for="analysis-magazine">Magazine</label>
+      <label class="sr-only" for="analysis-magazine">{{ field_label('magazine') }}</label>
       <div class="search-field magazine-field{% if magazine_error %} has-error{% endif %}">
         <input
           id="analysis-magazine"
@@ -97,50 +142,6 @@
   {% endif %}
 </section>
 {% endif %}
-
-<section class="panel" id="tbl-{{ table_key|replace('_', '-') }}">
-  <details class="table-collapsible" open data-table-filter>
-    <summary class="table-summary">
-      <span class="table-summary-title">{{ table_title }}</span>
-      <span class="badge table-summary-count">{{ rows|length }} rows</span>
-    </summary>
-    {% if rows %}
-    {% set ns = namespace(visible_keys=[]) %}
-    {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
-    {% if table_key == 'waiting_for_meas' %}
-      {% set hidden_helper_keys = hidden_helper_keys + ['sample_nr', 'prep_nr', 'target_nr'] %}
-    {% endif %}
-    {% for key in rows[0].keys() %}
-      {% if key not in hidden_helper_keys %}
-        {% set _ = ns.visible_keys.append(key) %}
-      {% endif %}
-    {% endfor %}
-    <div class="table-wrap table-wrap-dashboard">
-      <table>
-        <thead>
-          <tr>
-            {% for key in ns.visible_keys %}
-            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in rows %}
-          <tr>
-            {% for key in ns.visible_keys %}
-            <td>{{ table_cell(key, row) }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
-    {% else %}
-    <p class="table-empty">No rows.</p>
-    {% endif %}
-  </details>
-</section>
 
 {% if table_key == "waiting_for_graph" %}
 <section class="panel" id="graphitization-tools">

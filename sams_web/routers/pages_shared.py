@@ -18,6 +18,7 @@ from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_SAMPLE_LABEL,
     MAGIC_IDENTIFIER_TARGET_LABEL,
 )
+from sams_web.field_labels import field_label
 from sams_web.search import fk_based_link
 from sams_web.navigation import (
     MAIN_NAV_ITEMS,
@@ -36,128 +37,9 @@ APP_SUBTITLE_BASE = "CEZA C14 Laboratory Information System"
 
 LAST_SAMPLE_COOKIE = "last_sample_nr"
 
-TABLE_HEADER_LABELS: dict[str, str] = {
-    # Identifiers
-    "sample_nr": "Sample #",
-    "project_nr": "Project #",
-    "user_nr": "Submitter #",
-    "prep_nr": "Prep #",
-    "target_nr": "Target #",
-    "ma_nr": "MA #",
-    "invoice_nr": "Invoice #",
-    "auftragsnr": "Order ID",
-    "order_nr": "Order #",
-    "target_id": "Target ID",
-    # Submitter
-    "last_name": "Last Name",
-    "first_name": "First Name",
-    "user_last_name": "Submitter Last Name",
-    "organisation": "Organisation",
-    "institute": "Institute",
-    "address_1": "Address 1",
-    "address_2": "Address 2",
-    "town": "Town",
-    "country": "Country",
-    "postcode": "Postcode",
-    "phone_1": "Phone 1",
-    "phone_2": "Phone 2",
-    "email": "Email",
-    "account": "Account",
-    "user_comment": "Submitter Comment",
-    # Project
-    "project": "Project Name",
-    "in_date": "In Date",
-    "out_date": "Out Date",
-    "desired_date": "Desired Date",
-    "invoice_date": "Invoice Date",
-    "invoice": "Invoice",
-    "letter": "Letter",
-    "project_comment": "Project Comment",
-    "report": "Report",
-    "report_type": "Report Type",
-    "research": "Research",
-    "advisor": "Advisor",
-    "supervisor": "Supervisor",
-    "priority": "Priority",
-    "status": "Status",
-    "project_type": "Project Type",
-    "price": "Price",
-    "free_of_charge": "Free of Charge",
-    "sample_storage_loc": "Sample Storage Location",
-    "return_to_sender": "Return to Sender",
-    "returned_to_sender": "Returned to Sender",
-    "prep_return_to_sender": "Prep Return to Sender",
-    "prep_returned_to_sender": "Prep Returned to Sender",
-    # Sample
-    "type": "Type",
-    "material": "Material",
-    "fraction": "Fraction",
-    "weight": "Weight",
-    "sampling_date": "Sampling Date",
-    "user_label": "Sample Label",
-    "user_label_nr": "Sample Label #",
-    "user_desc1": "Description 1",
-    "user_desc2": "Description 2",
-    "pre_sub_treat": "Submitter Pre-treatment",
-    "preparation": "Preparation",
-    "residue": "Residue",
-    "lab_comment": "Lab Comment",
-    "prep_storage_loc": "Prep Storage Location",
-    "storage": "Storage",
-    "photo": "Photo",
-    # Sample / Target measurements
-    "c14_age": "C14 Age",
-    "c14_age_sig": "C14 Age Sigma",
-    "fm": "FM",
-    "fm_sig": "FM Sigma",
-    "av_fm": "Average FM",
-    "av_fm_sig": "Average FM Sigma",
-    "av_dc13": "Average δ¹³C",
-    "av_dc13_sig": "Average δ¹³C Sigma",
-    "dc13": "δ¹³C",
-    "dc13_sig": "δ¹³C Sigma",
-    "delta_r": "Delta R",
-    "calib": "Calibration",
-    "cal1s_min": "Cal 1σ Min",
-    "cal1s_max": "Cal 1σ Max",
-    "cal2s_min": "Cal 2σ Min",
-    "cal2s_max": "Cal 2σ Max",
-    # Preparation
-    "batch": "Prep Batch",
-    "cn_ratio": "C/N Ratio",
-    "cn_ratio_calc": "C/N Ratio",
-    "c_percent": "C (%)",
-    "n_percent": "N (%)",
-    "prep_start": "Prep Start",
-    "prep_end": "Prep End",
-    "prep_comment": "Prep Comment",
-    "weight_start": "Weight Start",
-    "weight_medium": "Weight Mid",
-    "weight_medium_2": "Weight Mid 2",
-    "weight_end": "Weight End",
-    # Target
-    "magazine": "Magazine",
-    "position": "Position",
-    "graph_batch": "Graph Batch",
-    "graphitized": "Graphitized",
-    "target_pressed": "Target Pressed",
-    "target_comment": "Target Comment",
-    "meas_comment": "Measurement Comment",
-    "weight_combustion": "Combustion Weight",
-    "conc_c": "C (%)",
-    "conc_n": "N (%)",
-    "le_curr": "LE Current",
-    "he_curr": "HE Current",
-}
-
-
-def format_table_header_label(key: Any) -> str:
-    key_str = str(key)
-    label = TABLE_HEADER_LABELS.get(key_str.lower())
-    if label is not None:
-        return label
-    # Default: snake_case → Title Case for unknown columns
-    return key_str.replace("_", " ").title()
+# Column heads come from the one field-label registry, the same labels
+# the detail pages use (sams_web/field_labels.py).
+format_table_header_label = field_label
 
 
 def format_table_cell_value(key: Any, value: Any) -> Any:
@@ -198,6 +80,7 @@ templates.env.globals["format_one_decimal"] = ds.format_one_decimal
 templates.env.globals["format_cn_ratio"] = ds.format_cn_ratio
 templates.env.globals["format_cn_ratio_from_conc"] = ds.format_cn_ratio_from_conc
 templates.env.globals["format_table_header_label"] = format_table_header_label
+templates.env.globals["field_label"] = field_label
 templates.env.globals["format_table_cell_value"] = format_table_cell_value
 # Which table cells link to which record: one rule for every table.
 templates.env.globals["row_link"] = fk_based_link
@@ -215,7 +98,7 @@ templates.env.globals["app_database"] = get_settings().database_name
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261107-25"
+templates.env.globals["css_v"] = "20261108-2"
 
 
 def parse_positive_int(raw_value: str) -> int | None:

@@ -37,10 +37,10 @@
       <table data-projects-in-progress-table>
         <thead>
           <tr>
-            <th>Project</th>
-            <th title="Last Name">Last</th>
-            <th title="In Date">In</th>
-            <th title="Desired Date">Due</th>
+            <th>{{ field_label('project') }}</th>
+            <th>{{ field_label('last_name') }}</th>
+            <th>{{ field_label('in_date') }}</th>
+            <th>{{ field_label('desired_date') }}</th>
             <th title="Samples">Smp</th>
             <th title="Discarded Preparations">dPrep</th>
             <th title="Preparations Done">Prep</th>
@@ -142,15 +142,15 @@
       <table data-projects-table>
         <thead>
           <tr>
-            <th>Submitter #</th>
-            <th>Last Name</th>
-            <th>First Name</th>
-            <th>Project #</th>
-            <th>Name</th>
-            <th>Status</th>
-            <th>In Date</th>
-            <th>Desired</th>
-            <th>Out Date</th>
+            <th>{{ field_label('user_nr') }}</th>
+            <th>{{ field_label('last_name') }}</th>
+            <th>{{ field_label('first_name') }}</th>
+            <th>{{ field_label('project_nr') }}</th>
+            <th>{{ field_label('project') }}</th>
+            <th>{{ field_label('status') }}</th>
+            <th>{{ field_label('in_date') }}</th>
+            <th>{{ field_label('desired_date') }}</th>
+            <th>{{ field_label('out_date') }}</th>
           </tr>
         </thead>
         <tbody>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
+{% from "_table_macros.html" import table_cell %}
 {% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav %}
 
 {% block content %}
@@ -47,30 +48,20 @@
       <table data-user-projects-table>
         <thead>
           <tr>
-            <th class="table-sortable" title="Click to sort">Project #</th>
-            <th class="table-sortable" title="Click to sort">Name</th>
-            <th class="table-sortable" title="Click to sort">Status</th>
-            <th class="table-sortable" title="Click to sort">In Date</th>
-            <th class="table-sortable" title="Click to sort">Out Date</th>
+            {% for key in project_columns %}<th>{{ field_label(key) }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
-          {% for project in projects %}
+          {% for row in project_rows %}
           <tr>
-            <td><a href="/projects/{{ project.project_nr }}">{{ project.project_nr }}</a></td>
-            <td><a href="/projects/{{ project.project_nr }}">{{ project.project }}</a></td>
-            <td>
-              {% set status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
-              <span class="badge status-pill status-{{ status_class }}">{{ project.status or 'unknown' }}</span>
-            </td>
-            <td>{{ project.in_date }}</td>
-            <td>{{ project.out_date or '' }}</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="5" class="table-empty-row">
-              No projects linked to this submitter yet. Add one from the Projects page.
-            </td>
+            {% for key in project_columns %}
+            {% if key == 'status' %}
+            {% set status_class = (row.status or 'unknown')|lower|replace(' ', '-') %}
+            <td><span class="badge status-pill status-{{ status_class }}">{{ row.status or 'unknown' }}</span></td>
+            {% else %}
+            <td>{{ table_cell(key, row) }}</td>
+            {% endif %}
+            {% endfor %}
           </tr>
           {% endfor %}
         </tbody>
