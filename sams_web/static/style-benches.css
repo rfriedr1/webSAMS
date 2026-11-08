@@ -333,10 +333,6 @@
   gap: var(--space-3) var(--space-4);
 }
 
-.bench-fields.is-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
 .bench-field {
   position: relative;
   display: grid;
@@ -350,8 +346,102 @@
   grid-column: 1 / -1;
 }
 
-.bench-field.is-span-3 {
-  grid-column: span 3;
+.bench-field.is-span-2 {
+  grid-column: span 2;
+}
+
+/* ---- Preparation bench: the lab flow ------------------------------------
+   Left: the preparation from top to bottom, one stage per group (Start ·
+   Leftover Sample · Container · End · Outcome) strung on a thin rail with a
+   dot per stage, so the eye follows the order the work is done in. Every
+   stage row has the same three columns, so the weights (start, empty, end)
+   line up in the first. Right, behind one rule: prep steps 1–5, which run
+   alongside the whole preparation. */
+
+.prep-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr);
+  gap: var(--space-5);
+}
+
+.prep-flow-main {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-width: 0;
+}
+
+.prep-flow-steps {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  min-width: 0;
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--line-soft);
+}
+
+.bench-stage {
+  --stage-dot: 0.6rem;
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-left: 1.5rem;
+}
+
+/* The dot sits on the stage title; the rail runs from it to the next dot. */
+.bench-stage::before {
+  content: "";
+  position: absolute;
+  top: 0.18rem;
+  left: 0;
+  width: var(--stage-dot);
+  height: var(--stage-dot);
+  box-sizing: border-box;
+  border: 2px solid var(--brand-accent);
+  border-radius: 999px;
+  background: var(--surface-solid);
+}
+
+.bench-stage:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: calc(0.18rem + var(--stage-dot) + 0.2rem);
+  bottom: calc(-1 * var(--space-4) + 0.2rem);
+  left: calc(var(--stage-dot) / 2 - 1px);
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line-strong);
+}
+
+.panel .bench-stage-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.bench-stage-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.bench-stage-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A flag beside an input (Sample Archived next to the storage location):
+   on the input's baseline, not the label's. */
+.bench-stage-cell.is-flag {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
 }
 
 .bench-field > label,
@@ -644,12 +734,13 @@
 /* ---- Responsive ------------------------------------------------------- */
 
 @media (max-width: 1024px) {
-  .bench-fields.is-5 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .prep-flow {
+    grid-template-columns: minmax(0, 1.6fr) minmax(13rem, 1fr);
+    gap: var(--space-4);
   }
 
-  .bench-field.is-span-3 {
-    grid-column: 1 / -1;
+  .prep-flow-steps {
+    padding-left: var(--space-4);
   }
 }
 
@@ -658,8 +749,20 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .bench-fields.is-5 {
+  /* The steps move under the flow, in two columns. */
+  .prep-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prep-flow-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--space-4) 0 0;
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
+  }
+
+  .prep-flow-steps > .bench-stage-title {
+    grid-column: 1 / -1;
   }
 }
 
@@ -682,9 +785,17 @@
     margin-left: 0;
   }
 
-  .bench-fields,
-  .bench-fields.is-5 {
+  .bench-fields {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bench-stage-row,
+  .prep-flow-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bench-stage-cell.is-flag {
+    grid-column: 1 / -1;
   }
 
   .bench-actions {

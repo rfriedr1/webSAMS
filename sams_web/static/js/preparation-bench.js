@@ -98,12 +98,18 @@
           if (weightEndTouched && weightEnd.value.trim() !== "") {
             return;
           }
-          const mid = asNumber(weightMid.value);
-          const mid2 = asNumber(weightMid2.value);
-          if (!Number.isFinite(mid) || !Number.isFinite(mid2)) {
+          // weight_medium = container empty, weight_medium_2 = container
+          // full: the sample's end weight is full minus empty.
+          const empty = asNumber(weightMid.value);
+          const full = asNumber(weightMid2.value);
+          if (!Number.isFinite(empty) || !Number.isFinite(full)) {
             return;
           }
-          weightEnd.value = formatNumber(mid - mid2, 4);
+          weightEnd.value = formatNumber(full - empty, 4);
+          // `change`, not `input`: marks the field unsaved (dirty dot)
+          // without counting as typed, so a corrected container weight
+          // still updates it.
+          weightEnd.dispatchEvent(new Event("change", { bubbles: true }));
           updateYield();
         };
 
