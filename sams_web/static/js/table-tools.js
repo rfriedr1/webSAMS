@@ -313,6 +313,10 @@
     allOption.textContent = allColumnsText;
     columnSelect.append(allOption);
     headers.forEach((header, index) => {
+      // A control column (record-action tick boxes) is no data to filter on.
+      if (header.hasAttribute("data-table-skip")) {
+        return;
+      }
       const option = document.createElement("option");
       option.value = String(index);
       option.textContent = header.textContent?.trim() || `Column ${index + 1}`;
@@ -571,9 +575,15 @@
       const scope = resolveDownloadScope(container);
       const sourceRows = Array.from(tbody.querySelectorAll("tr")).filter((row) => !row.querySelector("td[colspan]"));
       const exportRows = scope === "all" ? sourceRows : sourceRows.filter((row) => !row.hidden);
-      const headerValues = headers.map((header) => normalizeWhitespace(header.textContent || ""));
+      // Control columns (`data-table-skip`, e.g. tick boxes) are not exported.
+      const keep = headers.map((header) => !header.hasAttribute("data-table-skip"));
+      const headerValues = headers
+        .map((header) => normalizeWhitespace(header.textContent || ""))
+        .filter((_value, index) => keep[index]);
       const dataValues = exportRows.map((row) => {
-        const values = Array.from(row.cells).map((cell) => extractCellValue(cell));
+        const values = Array.from(row.cells)
+          .map((cell) => extractCellValue(cell))
+          .filter((_value, index) => keep[index] !== false);
         if (values.length < headerValues.length) {
           return values.concat(Array.from({ length: headerValues.length - values.length }, () => ""));
         }

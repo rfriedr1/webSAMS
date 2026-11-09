@@ -104,6 +104,13 @@
         toasted = true;
       }
     });
+    // A record action that ran (record-actions.js) reports its counts.
+    const actionNotice = params.get("action_notice");
+    if (actionNotice) {
+      show(actionNotice.replace(/\+/g, " "), "success", { duration: 7000 });
+      params.delete("action_notice");
+      toasted = true;
+    }
     const noticeKeys = ["bench_notice", "graph_notice", "graph_batch_notice", "ea_check_notice", "signoff_notice"];
     noticeKeys.forEach((key) => {
       const value = params.get(key);
@@ -117,7 +124,7 @@
     });
     // Rejected EA-check / sign-off posts redirect back with *_error; the
     // page also shows them inline, the toast makes sure they are noticed.
-    ["ea_check_error", "signoff_error"].forEach((key) => {
+    ["ea_check_error", "signoff_error", "action_error"].forEach((key) => {
       const value = params.get(key);
       if (value) {
         show(value.replace(/\+/g, " "), "error", { duration: 8000 });

@@ -154,6 +154,43 @@ class SamsService:
             save_error = "Please correct the highlighted fields and save again."
         return False, result.field_errors, save_error
 
+    def apply_many_and_commit(
+        self,
+        config: "DetailUpdateConfig",
+        updates: list[tuple[Any, dict[str, str]]],
+        *,
+        dry_run: bool = False,
+    ) -> list[tuple[Any, str]]:
+        """Apply one form update to each of many records (record actions).
+
+        Every record passes `apply_detail_update`, so the same checks run as
+        on its detail page. A record that fails them is left untouched —
+        the primitive only writes after its checks pass — and is returned
+        as `(entity_nr, reason)`; the rest are committed together. With
+        `dry_run` nothing is kept: the session is rolled back, which is how
+        the preview learns which records would be refused.
+
+        Like `_apply_and_commit`, this is where the change log will hook in
+        once login exists (ADR-0006).
+        """
+        rejected: list[tuple[Any, str]] = []
+        try:
+            for entity_nr, form in updates:
+                result = apply_detail_update(config, entity_nr, form, self.repo)
+                if not result.saved:
+                    reasons = list(dict.fromkeys(result.field_errors.values()))
+                    if result.save_error:
+                        reasons.insert(0, result.save_error)
+                    rejected.append((entity_nr, " ".join(reasons) or "Rejected."))
+            if dry_run:
+                self.session.rollback()
+            else:
+                self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+        return rejected
+
     def update_submitter_detail(
         self,
         user_nr: int,

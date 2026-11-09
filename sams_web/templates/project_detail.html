@@ -2,6 +2,7 @@
 {% from "_detail_fields.html" import render_detail_sections %}
 {% from "_table_macros.html" import table_cell %}
 {% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
+{% from "_record_actions.html" import record_actions_menu, record_action_tick_head, record_action_tick %}
 
 {% block content %}
 <section class="panel" data-edit-scope>
@@ -15,8 +16,9 @@
     jump_action='/projects/' ~ project.project_nr,
     jump_name='jump_project',
   ) }}{% endset %}
+  {% set actions %}{% if project_can_edit %}{{ record_actions_menu('/projects/' ~ project.project_nr, record_action_menu, 'sample', 'samples', samples|length) }}{% endif %}{% endset %}
   <div class="panel-head">
-    {% call render_record_head('Project ' ~ project.project_nr, project.project or 'Untitled project', project_edit_form_id, quick_nav=nav) %}
+    {% call render_record_head('Project ' ~ project.project_nr, project.project or 'Untitled project', project_edit_form_id, quick_nav=nav, actions=actions) %}
       <a href="/projects" class="nav-back-arrow" data-history-back data-fallback="/projects" aria-label="Back to projects" title="Back to projects">&#x2039; Projects</a>
       {% set detail_status_class = (project.status or 'unknown')|lower|replace(' ', '-') %}
       <span class="badge status-pill status-{{ detail_status_class }}">{{ project.status or 'unknown' }}</span>
@@ -50,12 +52,14 @@
       <table data-project-samples-table>
         <thead>
           <tr>
+            {% if project_can_edit and samples %}{{ record_action_tick_head('samples') }}{% endif %}
             {% for key in sample_columns %}<th>{{ field_label(key) }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
           {% for row in sample_rows %}
           <tr>
+            {% if project_can_edit %}{{ record_action_tick(row.sample_nr, 'sample ' ~ row.sample_nr) }}{% endif %}
             {% for key in sample_columns %}<td>{{ table_cell(key, row) }}</td>{% endfor %}
           </tr>
           {% else %}
