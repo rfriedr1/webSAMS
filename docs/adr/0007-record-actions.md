@@ -18,7 +18,9 @@ Some lab tasks change the same field on many records. The trigger was C/N isotop
 
 7. **Free-text fields are edited, not set.** A storage location is not one value for everyone: samples of one project sit in several boxes. So its action is *Edit* (with a *Clear* twin): the dialog lists every record in scope with its current value in an editable box, plus a *Fill all* field for the common case. Only changed rows are posted and checked; records the page would refuse are shown disabled with the reason. Decision 3 still holds — the editor *is* the preview: old values are visible, changed rows carry a dirty dot, and nothing is saved until the primary button. (Added 2026-11 for Sample / Prep Storage Location, project page only.)
 
-8. **No run log, no undo (for now).** Every action has its opposite, which is the undo. Recording who ran what, with old values, belongs with the change log that comes with login (ADR-0006 §8); `apply_many_and_commit` is where it will hook in, next to `_apply_and_commit`.
+8. **Sample and preparation actions live on the project page only.** They were first offered on the submitter page too, reaching the samples of the ticked projects. The lab does not need them there (2026-11): the project is where such work is decided. The submitter page keeps only the project flags (Return to Sender, Prep Return to Sender).
+
+9. **No run log, no undo (for now).** Every action has its opposite, which is the undo. Recording who ran what, with old values, belongs with the change log that comes with login (ADR-0006 §8); `apply_many_and_commit` is where it will hook in, next to `_apply_and_commit`.
 
 ## Consequences
 

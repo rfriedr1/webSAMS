@@ -238,18 +238,6 @@ class SamsRepository:
         )
         return list(self.session.scalars(stmt))
 
-    def list_samples_by_projects(self, project_nrs: list[int]) -> list[Sample]:
-        """Samples of several projects in one query (record actions run
-        across a submitter's projects)."""
-        if not project_nrs:
-            return []
-        stmt = (
-            select(Sample)
-            .where(Sample.project_nr.in_(project_nrs))
-            .order_by(Sample.sample_nr.asc())
-        )
-        return list(self.session.scalars(stmt))
-
     def get_sample(self, sample_nr: int) -> Sample | None:
         return self.session.get(Sample, sample_nr)
 

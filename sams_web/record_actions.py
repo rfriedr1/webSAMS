@@ -8,8 +8,7 @@ project. Decisions: `docs/adr/0007-record-actions.md`.
   `submitter`). Its related table holds the **rows** the operator can tick
   (a project's samples, a submitter's projects). No ticks means all rows.
 - The **child** is the kind of record the action writes. It is the row
-  itself, or reached through it (the preparations of the ticked samples,
-  the samples of the ticked projects).
+  itself, or reached through it (the preparations of the ticked samples).
 - Every action is previewed first (`plan`), then run (`apply`). Both go
   through `SamsService.apply_many_and_commit`, i.e. through
   `apply_detail_update`, so a record that its detail page would refuse to
@@ -153,13 +152,8 @@ def _reach(service: "SamsService", row_kind: str, rows: list[Any], child: str) -
     repo = service.repo
     if child == row_kind:
         return list(rows)
-    if row_kind == "project" and child == "sample":
-        return repo.list_samples_by_projects([row.project_nr for row in rows])
     if row_kind == "sample" and child == "preparation":
         return repo.list_preparations_by_samples([row.sample_nr for row in rows])
-    if row_kind == "project" and child == "preparation":
-        samples = repo.list_samples_by_projects([row.project_nr for row in rows])
-        return repo.list_preparations_by_samples([s.sample_nr for s in samples])
     raise ValueError(f"A {row_kind} row cannot reach {child} records.")
 
 
@@ -273,15 +267,18 @@ def _flag_pair(child: str, field_name: str, owners: tuple[str, ...], warn=None) 
     ]
 
 
-_BOTH = ("project", "submitter")
+_PROJECT = ("project",)
+_SUBMITTER = ("submitter",)
 
 _FLAGS: tuple[tuple[str, str, tuple[str, ...], Any], ...] = (
-    ("sample", "c_n_isotop_a", _BOTH, _warn_cn_moved),
-    ("sample", "dendro_a", _BOTH, None),
-    ("sample", "s_no_leftover", _BOTH, None),
-    ("preparation", "p_no_leftover", _BOTH, None),
-    ("project", "return_to_sender", ("submitter",), None),
-    ("project", "prep_return_to_sender", ("submitter",), None),
+    # Sample and prep flags belong to the project page (removed from the
+    # submitter page 2026-11: not needed there, the project is the place).
+    ("sample", "c_n_isotop_a", _PROJECT, _warn_cn_moved),
+    ("sample", "dendro_a", _PROJECT, None),
+    ("sample", "s_no_leftover", _PROJECT, None),
+    ("preparation", "p_no_leftover", _PROJECT, None),
+    ("project", "return_to_sender", _SUBMITTER, None),
+    ("project", "prep_return_to_sender", _SUBMITTER, None),
 )
 
 def _text_pair(child: str, field_name: str, owners: tuple[str, ...]) -> list[RecordAction]:
@@ -298,8 +295,8 @@ def _text_pair(child: str, field_name: str, owners: tuple[str, ...]) -> list[Rec
 
 
 _TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("sample", "s_storage_loc", ("project",)),
-    ("sample", "prep_storage_loc", ("project",)),
+    ("sample", "s_storage_loc", _PROJECT),
+    ("sample", "prep_storage_loc", _PROJECT),
 )
 
 RECORD_ACTIONS: dict[str, RecordAction] = {
