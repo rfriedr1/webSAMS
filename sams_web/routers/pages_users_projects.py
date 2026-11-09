@@ -15,6 +15,7 @@ from sams_web.dependencies import get_service
 from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
 from sams_web.magic_nav import append_magic_feedback, submitter_name_not_found_message
 from sams_web.routers.pages_shared import logger, resolve_jump_redirect_url, templates
+from sams_web.record_actions import action_menu
 from sams_web.services import SamsService
 from sams_web.viewmodels.detail_sections_common import table_rows
 from sams_web.viewmodels.detail_sections_user_project import (
@@ -35,6 +36,7 @@ def _project_extra_keys(data: dict[str, object]) -> dict[str, object]:
         "sample_rows": table_rows(samples),
         "sample_columns": PROJECT_SAMPLE_COLUMNS,
         "sample_count": len(samples),
+        "record_action_menu": action_menu("project"),
     }
 
 
@@ -52,6 +54,7 @@ def _submitter_extra_keys(data: dict[str, object]) -> dict[str, object]:
         "projects": data["projects"],
         "project_rows": table_rows(data["projects"]),
         "project_columns": SUBMITTER_PROJECT_COLUMNS,
+        "record_action_menu": action_menu("submitter"),
     }
 
 

@@ -62,6 +62,7 @@ _JS_BUNDLE_FILES: tuple[str, ...] = (
     "js/table-tools.js",
     "js/magic-nav-ui.js",
     "js/detail-edit-mode.js",
+    "js/record-actions.js",
     "js/detail-empty-fields.js",
     "js/anchor-details.js",
     "js/tab-panels.js",

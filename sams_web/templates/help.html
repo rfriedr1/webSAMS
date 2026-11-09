@@ -10,6 +10,7 @@
   <nav class="help-toc" aria-label="Help sections">
     <a href="#help-navigate">Navigate</a>
     <a href="#help-edit">Edit</a>
+    <a href="#help-record-actions">Many records</a>
     <a href="#help-import">Import</a>
     <a href="#help-find">Find</a>
     <a href="#help-feedback">Feedback &amp; status</a>
@@ -129,6 +130,38 @@
       <li><kbd>?</kbd> — open the cheat-sheet overlay (same content, on top of the current page)</li>
     </ul>
     <p class="muted">Shortcuts are suppressed while you're typing in an input — except Save, which always works.</p>
+  </div>
+
+  <div class="card" id="help-record-actions">
+    <h3>Change many records at once</h3>
+    <p>
+      Project and submitter pages have an <strong>Actions</strong> button in their header. It sets or clears one value on many records in one go —
+      for example C/N isotope analysis on every sample of a project, instead of opening each sample.
+    </p>
+    <ul>
+      <li>
+        <strong>Which records</strong>:
+        tick rows in the table under the record (a project's samples, a submitter's projects). Nothing ticked means all of them.
+        The tick box in the table head ticks the rows the table filter shows, so <em>filter “bone”, tick all, run</em> works.
+      </li>
+      <li>
+        <strong>Preview first</strong>:
+        choosing an action shows what will change (number, label, old → new), how many already have the value, and any warning.
+        Nothing is saved until you press the button at the foot of that window.
+      </li>
+      <li>
+        <strong>Records that cannot be changed</strong>:
+        a record its own page would refuse to save (an old sample without a Type, say) is listed with the reason and left as it is; the rest are saved.
+      </li>
+      <li>
+        <strong>Undo</strong>:
+        every action comes as a <em>Set</em> / <em>Clear</em> pair — run the other one on the same rows.
+      </li>
+      <li>
+        <strong>From the command palette</strong>:
+        on a project or submitter page, <kbd>⌘K</kbd> lists the actions as <em>Action: …</em>.
+      </li>
+    </ul>
   </div>
 
   <div class="card" id="help-import">

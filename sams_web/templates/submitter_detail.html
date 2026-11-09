@@ -2,6 +2,7 @@
 {% from "_detail_fields.html" import render_detail_sections %}
 {% from "_table_macros.html" import table_cell %}
 {% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
+{% from "_record_actions.html" import record_actions_menu, record_action_tick_head, record_action_tick %}
 
 {% block content %}
 <section class="panel submitter-detail-panel" data-edit-scope>
@@ -16,8 +17,9 @@
     jump_name='jump_submitter',
   ) }}{% endset %}
   {% set submitter_name = [submitter.last_name, submitter.first_name] | select | join(', ') %}
+  {% set actions %}{% if submitter_can_edit and projects %}{{ record_actions_menu('/submitters/' ~ submitter.user_nr, record_action_menu, 'project', 'projects', projects|length) }}{% endif %}{% endset %}
   <div class="panel-head submitter-detail-head">
-    {% call render_record_head('Submitter ' ~ submitter.user_nr, submitter_name, submitter_edit_form_id, quick_nav=nav) %}
+    {% call render_record_head('Submitter ' ~ submitter.user_nr, submitter_name, submitter_edit_form_id, quick_nav=nav, actions=actions) %}
       <a href="/submitters" class="nav-back-arrow" data-history-back data-fallback="/submitters" aria-label="Back to submitters" title="Back to submitters">&#x2039; Submitters</a>
       {% if submitter.organisation %}<span class="record-context-item">{{ submitter.organisation }}</span>{% endif %}
       {% if submitter.institute %}<span class="record-context-item">{{ submitter.institute }}</span>{% endif %}
@@ -50,12 +52,14 @@
       <table data-user-projects-table>
         <thead>
           <tr>
+            {% if submitter_can_edit %}{{ record_action_tick_head('projects') }}{% endif %}
             {% for key in project_columns %}<th>{{ field_label(key) }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
           {% for row in project_rows %}
           <tr>
+            {% if submitter_can_edit %}{{ record_action_tick(row.project_nr, 'project ' ~ row.project_nr) }}{% endif %}
             {% for key in project_columns %}
             {% if key == 'status' %}
             {% set status_class = (row.status or 'unknown')|lower|replace(' ', '-') %}

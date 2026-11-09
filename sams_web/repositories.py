@@ -238,6 +238,18 @@ class SamsRepository:
         )
         return list(self.session.scalars(stmt))
 
+    def list_samples_by_projects(self, project_nrs: list[int]) -> list[Sample]:
+        """Samples of several projects in one query (record actions run
+        across a submitter's projects)."""
+        if not project_nrs:
+            return []
+        stmt = (
+            select(Sample)
+            .where(Sample.project_nr.in_(project_nrs))
+            .order_by(Sample.sample_nr.asc())
+        )
+        return list(self.session.scalars(stmt))
+
     def get_sample(self, sample_nr: int) -> Sample | None:
         return self.session.get(Sample, sample_nr)
 
@@ -318,6 +330,18 @@ class SamsRepository:
             select(Preparation)
             .where(Preparation.sample_nr == sample_nr)
             .order_by(Preparation.prep_nr.desc())
+        )
+        return list(self.session.scalars(stmt))
+
+    def list_preparations_by_samples(self, sample_nrs: list[int]) -> list[Preparation]:
+        """Preparations of several samples in one query, in sample then
+        prep order."""
+        if not sample_nrs:
+            return []
+        stmt = (
+            select(Preparation)
+            .where(Preparation.sample_nr.in_(sample_nrs))
+            .order_by(Preparation.sample_nr.asc(), Preparation.prep_nr.asc())
         )
         return list(self.session.scalars(stmt))
 

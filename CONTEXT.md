@@ -106,6 +106,10 @@ _Avoid_: Approval, check (the paper log's word), validation.
 Marking a wrongly entered QC record as invalid without deleting it — who, when and why are kept, the record stays visible and is excluded from statistics. Only for entry mistakes; a genuinely failed **EA check** is logged, not voided. A signed-off record cannot be voided.
 _Avoid_: Delete, cancel.
 
+**Record action**:
+A named task, run from a record page, that sets one field to one value on many records under that record at once — e.g. *Set C/N Isotope Analysis* on the samples of a **Project**, or *Set Return to Sender* on the projects of a **Submitter**. It runs on the rows ticked in the page's related table, or on all of them; it is always previewed first, and a record its own detail page would refuse to save is listed and left unchanged (`sams_web/record_actions.py`, [ADR-0007](docs/adr/0007-record-actions.md)).
+_Avoid_: Batch action, bulk edit, macro, automation (the bare word).
+
 **User**:
 A person signed in to webSAMS (laboratory staff). Not a **Submitter** — see the ambiguity note below. Until login exists every request is one anonymous user whose **Role** comes from `SAMS_ACCESS_ROLE`; with login the identity will come from Windows Authentication via IIS (`sams_web/access.py`).
 

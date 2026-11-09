@@ -9,12 +9,14 @@ from sams_web.routers.pages_ea_checks import router as ea_checks_router
 from sams_web.routers.pages_import import router as sample_import_router
 from sams_web.routers.pages_magic_samples import router as magic_samples_router
 from sams_web.routers.pages_qc import router as qc_router
+from sams_web.routers.pages_record_actions import router as record_actions_router
 from sams_web.routers.pages_search_lab_import import router as search_lab_import_router
 from sams_web.routers.pages_users_projects import router as users_projects_router
 
 router = APIRouter(tags=["pages"])
 router.include_router(dashboard_setup_help_router)
 router.include_router(users_projects_router)
+router.include_router(record_actions_router)
 # Registered before the magic/sample routes so the literal
 # `/samples/import` path is not captured by `/samples/{sample_nr}`.
 router.include_router(sample_import_router)

@@ -1,0 +1,73 @@
+{#-
+  Record actions (sams_web/record_actions.py, ADR-0007).
+
+    record_actions_menu(base_url, menu, row_singular, row_plural, row_total)
+      → the "Actions" button for `render_record_head(actions=…)`, its menu,
+        the command-palette entries and the preview dialog. Rendered only
+        for a user who may edit; `record-actions.js` drives it.
+
+    record_action_tick_head() / record_action_tick(nr, label)
+      → the tick column of the related table: the rows an action runs on
+        (none ticked = all).
+-#}
+
+{% macro record_actions_menu(base_url, menu, row_singular, row_plural, row_total) -%}
+{% if menu %}
+<div class="record-actions" data-record-actions data-base-url="{{ base_url }}"
+     data-row-singular="{{ row_singular }}" data-row-plural="{{ row_plural }}" data-row-total="{{ row_total }}">
+  <button type="button" class="record-action record-actions-toggle" data-record-actions-toggle
+          aria-haspopup="true" aria-expanded="false" title="Change many records at once">Actions <span aria-hidden="true">▾</span></button>
+  <div class="record-actions-menu" data-record-actions-menu hidden>
+    <p class="record-actions-scope" data-record-actions-scope>All {{ row_total }} {{ row_plural }}</p>
+    {% for group in menu %}
+    <p class="record-actions-group">{{ group.title }}</p>
+    <ul class="record-actions-list">
+      {% for item in group['items'] %}
+      <li class="record-actions-item">
+        <span class="record-actions-label">{{ item.label }}</span>
+        <span class="record-actions-verbs">
+          {% for act in item.actions %}
+          <button type="button" class="record-actions-verb" data-record-action="{{ act.key }}" title="{{ act.title }}">{{ act.verb }}</button>
+          {% endfor %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+  </div>
+  {% for group in menu %}{% for item in group['items'] %}{% for act in item.actions %}
+  <a hidden data-command-link data-command-label="Action: {{ act.title }}" href="#action={{ act.key }}">{{ act.title }}</a>
+  {% endfor %}{% endfor %}{% endfor %}
+
+  <dialog class="record-action-dialog" data-record-action-dialog aria-labelledby="record-action-title">
+    <form method="post" action="" data-record-action-form>
+      <header class="record-action-dialog-head">
+        <h3 id="record-action-title" data-record-action-title>Action</h3>
+        <button type="button" class="record-action-dialog-close" data-record-action-cancel aria-label="Close">×</button>
+      </header>
+      <input type="hidden" name="nrs" value="" data-record-action-nrs />
+      <div class="record-action-dialog-body" data-record-action-body aria-live="polite">
+        <p class="record-action-loading">Checking which records change …</p>
+      </div>
+      <div class="record-action-dialog-foot">
+        {#- Initial focus on Cancel, so a stray Enter cannot run the action. -#}
+        <button type="button" class="detail-edit-cancel" data-record-action-cancel autofocus>Cancel</button>
+        <button type="submit" class="detail-edit-save" data-record-action-submit disabled>Run</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+{% endif %}
+{%- endmacro %}
+
+
+{% macro record_action_tick_head(row_plural) -%}
+<th class="record-action-tick" data-no-sort="true" data-table-skip>
+  <input type="checkbox" data-record-action-all aria-label="Tick all shown {{ row_plural }}" title="Tick all shown {{ row_plural }}" />
+</th>
+{%- endmacro %}
+
+
+{% macro record_action_tick(nr, label) -%}
+<td class="record-action-tick"><input type="checkbox" data-record-action-row value="{{ nr }}" aria-label="Tick {{ label }}" /></td>
+{%- endmacro %}
