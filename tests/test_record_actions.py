@@ -52,9 +52,13 @@ def _sample(service: SamsService, nr: int) -> Sample:
 
 
 def test_every_action_has_its_twin_a_label_and_a_writable_field():
+    twins = {"Set": "clear", "Edit": "clear", "Clear": None}
     for action in ra.RECORD_ACTIONS.values():
-        twin_key = action.key.rsplit(".", 1)[0] + (".clear" if action.verb == "Set" else ".set")
-        assert twin_key in ra.RECORD_ACTIONS, action.key
+        base = action.key.rsplit(".", 1)[0]
+        if action.verb == "Clear":
+            assert f"{base}.set" in ra.RECORD_ACTIONS or f"{base}.edit" in ra.RECORD_ACTIONS, action.key
+        else:
+            assert f"{base}.{twins[action.verb]}" in ra.RECORD_ACTIONS, action.key
         assert action.field in FIELD_LABELS, action.field
         config = ra.KINDS[action.child].config
         assert action.field not in config.read_only_fields
@@ -168,3 +172,78 @@ def test_clearing_cn_after_the_move_warns(service):
     preview = ra.plan(service, action, "project", 10, [])
     assert preview.warnings == ("Sample 100 was already moved to C/N analysis.",)
     assert preview.as_json()["change_count"] == 1
+
+
+# ---- Storage locations (Edit / Clear) --------------------------------------
+
+
+def test_storage_location_actions_are_project_only():
+    for key in ("sample.s_storage_loc.edit", "sample.prep_storage_loc.edit", "sample.s_storage_loc.clear"):
+        assert ra.action_for("project", key)
+        with pytest.raises(KeyError):
+            ra.action_for("submitter", key)
+    labels = [item["label"] for group in ra.action_menu("project") for item in group["items"]]
+    assert "Sample Storage Location" in labels and "Prep Storage Location" in labels
+
+
+def test_edit_preview_lists_every_record_with_its_value(service):
+    _sample(service, 100).s_storage_loc = "Box 1"
+    _sample(service, 101).type = None  # its page refuses any save
+    service.session.commit()
+    action = ra.action_for("project", "sample.s_storage_loc.edit")
+    payload = ra.plan(service, action, "project", 10, []).as_json()
+    assert payload["mode"] == "edit"
+    assert payload["editor"]["max_length"] == 45
+    rows = {row["ref"]: row for row in payload["editor"]["rows"]}
+    assert rows["100"]["value"] == "Box 1"
+    assert rows["102"]["value"] == ""
+    assert rows["101"]["refused"] and rows["100"]["refused"] is None
+    assert payload["change_count"] == 0
+    assert _sample(service, 101).type is None  # probe rolled back
+
+
+def test_edit_writes_only_the_posted_rows(service):
+    _sample(service, 100).s_storage_loc = "Box 1"
+    _sample(service, 101).s_storage_loc = "Box 1"
+    service.session.commit()
+    action = ra.action_for("project", "sample.s_storage_loc.edit")
+    outcome = ra.apply(service, action, "project", 10, [], {"100": " Box 2 ", "101": "Box 1", "102": "Shelf A"})
+    assert outcome.changed == 2
+    assert [_sample(service, nr).s_storage_loc for nr in (100, 101, 102)] == ["Box 2", "Box 1", "Shelf A"]
+    assert outcome.notice() == "Sample Storage Location changed on 2 samples."
+
+    # An emptied box clears the value.
+    ra.apply(service, action, "project", 10, [], {"100": ""})
+    assert _sample(service, 100).s_storage_loc is None
+
+
+def test_edit_refuses_a_value_too_long_and_a_record_out_of_scope(service):
+    action = ra.action_for("project", "sample.prep_storage_loc.edit")
+    with pytest.raises(ValueError, match="at most 45"):
+        ra.apply(service, action, "project", 10, [], {"100": "x" * 46})
+    with pytest.raises(ValueError, match="Sample 200 is not in this selection"):
+        ra.apply(service, action, "project", 10, [], {"200": "Box"})
+    with pytest.raises(ValueError, match="Sample 102 is not in this selection"):
+        ra.apply(service, action, "project", 10, [100], {"102": "Box"})
+    assert _sample(service, 100).prep_storage_loc is None
+
+
+def test_clear_storage_location(service):
+    _sample(service, 100).prep_storage_loc = "Freezer 2"
+    _sample(service, 101).prep_storage_loc = "  "
+    service.session.commit()
+    action = ra.action_for("project", "sample.prep_storage_loc.clear")
+    preview = ra.plan(service, action, "project", 10, [])
+    assert [(c.record.ref, c.old, c.new) for c in preview.changes] == [("100", "Freezer 2", "—")]
+    assert preview.unchanged == 2
+    ra.apply(service, action, "project", 10, [])
+    assert _sample(service, 100).prep_storage_loc is None
+
+
+def test_parse_values():
+    assert ra.parse_values("") is None
+    assert ra.parse_values('{"100": "Box 1"}') == {"100": "Box 1"}
+    with pytest.raises(ValueError):
+        ra.parse_values("[1, 2]")
+    with pytest.raises(ValueError):
+        ra.parse_values("{nope")

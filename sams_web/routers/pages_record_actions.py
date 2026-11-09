@@ -38,12 +38,13 @@ def _preview(service: SamsService, owner: str, owner_nr: int, key: str, nrs: str
     return JSONResponse(result.as_json())
 
 
-def _run(service: SamsService, owner: str, owner_nr: int, key: str, nrs: str) -> RedirectResponse:
+def _run(service: SamsService, owner: str, owner_nr: int, key: str, nrs: str, values: str) -> RedirectResponse:
     action = _resolve(service, owner, owner_nr, key)
     back = f"/{_OWNER_PATHS[owner]}/{owner_nr}"
     try:
         selected = record_actions.parse_selection(nrs)
-        outcome = record_actions.apply(service, action, owner, owner_nr, selected)
+        edited = record_actions.parse_values(values) if action.edits_values else None
+        outcome = record_actions.apply(service, action, owner, owner_nr, selected, edited)
     except ValueError as exc:
         return RedirectResponse(url=f"{back}?{urlencode({'action_error': str(exc)})}", status_code=303)
     logger.info(
@@ -75,9 +76,10 @@ def project_action_run(
     project_nr: int,
     key: str,
     nrs: str = Form(default=""),
+    values: str = Form(default=""),
     service: SamsService = Depends(get_service),
 ):
-    return _run(service, "project", project_nr, key, nrs)
+    return _run(service, "project", project_nr, key, nrs, values)
 
 
 @router.get(
@@ -101,6 +103,7 @@ def submitter_action_run(
     user_nr: int,
     key: str,
     nrs: str = Form(default=""),
+    values: str = Form(default=""),
     service: SamsService = Depends(get_service),
 ):
-    return _run(service, "submitter", user_nr, key, nrs)
+    return _run(service, "submitter", user_nr, key, nrs, values)

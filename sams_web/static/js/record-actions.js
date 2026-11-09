@@ -13,6 +13,11 @@
 // what would change. Only the dialog's primary button posts, to
 // `<base>/actions/<key>`; the server re-checks everything. All text is
 // set with textContent: sample labels come from customers' sheets.
+//
+// An Edit action (`mode: "edit"`, e.g. Sample Storage Location) shows an
+// editor instead of a preview: every record with its current value in a
+// box, a "Fill all" field, and a dirty dot on each changed row. Only the
+// changed rows are posted, as JSON in the hidden `values` field.
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
 
@@ -41,6 +46,7 @@
     const titleNode = dialog?.querySelector("[data-record-action-title]");
     const body = dialog?.querySelector("[data-record-action-body]");
     const nrsInput = dialog?.querySelector("[data-record-action-nrs]");
+    const valuesInput = dialog?.querySelector("[data-record-action-values]");
     const submit = dialog?.querySelector("[data-record-action-submit]");
     const tickAll = document.querySelector("[data-record-action-all]");
     const rowBoxes = () => Array.from(document.querySelectorAll("[data-record-action-row]"));
@@ -214,6 +220,128 @@
       }
     };
 
+    // ---- Edit actions: one box per record --------------------------------
+    let editorInputs = [];
+
+    const changedValues = () => {
+      const changed = {};
+      editorInputs.forEach((input) => {
+        if (input.disabled) return;
+        if (input.value.trim() !== input.dataset.initialValue) changed[input.dataset.ref] = input.value.trim();
+      });
+      return changed;
+    };
+
+    const syncEditor = (plan) => {
+      const child = plan.child;
+      const count = Object.keys(changedValues()).length;
+      editorInputs.forEach((input) => {
+        input.closest("tr")?.classList.toggle("is-dirty", !input.disabled && input.value.trim() !== input.dataset.initialValue);
+      });
+      submit.disabled = count === 0;
+      submit.textContent = count === 0 ? "Nothing changed yet" : `Save on ${count} ${plural(count, child.singular, child.plural)}`;
+    };
+
+    const renderEditor = (plan) => {
+      body.textContent = "";
+      const child = plan.child;
+      const rows = plan.editor.rows;
+      const maxLength = plan.editor.max_length;
+      const editable = rows.filter((row) => !row.refused);
+
+      const fromLine = ticked().length
+        ? `${rows.length} ${plural(rows.length, child.singular, child.plural)} from the ticked rows. Change a value, or fill them all.`
+        : `All ${rows.length} ${plural(rows.length, child.singular, child.plural)} of this record. Tick rows first to edit only those.`;
+      body.append(el("p", "record-action-from", fromLine));
+
+      // Fill all: copies one value into every editable box.
+      const fill = el("div", "record-action-fill");
+      const fillInput = el("input");
+      fillInput.type = "text";
+      fillInput.className = "record-action-fill-input";
+      fillInput.placeholder = `New ${plan.field} for all`;
+      fillInput.setAttribute("aria-label", `New ${plan.field} for all ${child.plural}`);
+      if (maxLength) fillInput.maxLength = maxLength;
+      const distinct = [...new Set(editable.map((row) => row.value).filter(Boolean))];
+      if (distinct.length === 1) fillInput.value = distinct[0];
+      const fillButton = el("button", "record-action-fill-button", "Fill all");
+      fillButton.type = "button";
+      const applyFill = () => {
+        editorInputs.forEach((input) => {
+          if (!input.disabled) input.value = fillInput.value;
+        });
+        syncEditor(plan);
+      };
+      fillButton.addEventListener("click", applyFill);
+      fillInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          applyFill();
+        }
+      });
+      fill.append(fillInput, fillButton);
+      body.append(fill);
+
+      const section = el("section", "record-action-section");
+      section.append(el("h4", "record-action-section-title", plan.field));
+      const wrap = el("div", "record-action-table-wrap is-editor");
+      const table = el("table", "record-action-table record-action-editor");
+      table.setAttribute("data-table-plain", "");
+      const tbody = el("tbody");
+      editorInputs = [];
+      rows.forEach((row) => {
+        const tr = el("tr");
+        const ref = el("td", "record-action-ref-cell");
+        ref.append(recordLink(row));
+        tr.append(ref, el("td", "record-action-label", row.label || "—"));
+        const cell = el("td", "record-action-value-cell");
+        const input = el("input", "record-action-value");
+        input.type = "text";
+        input.value = row.value || "";
+        input.placeholder = "—";
+        input.dataset.ref = row.ref;
+        input.dataset.initialValue = row.value || "";
+        input.setAttribute("aria-label", `${plan.field} of ${child.singular} ${row.ref}`);
+        if (maxLength) input.maxLength = maxLength;
+        cell.append(input);
+        if (row.refused) {
+          input.disabled = true;
+          input.title = row.refused;
+          cell.append(el("span", "record-action-reason", row.refused));
+          tr.classList.add("is-refused");
+        }
+        input.addEventListener("input", () => syncEditor(plan));
+        input.addEventListener("keydown", (event) => {
+          // Enter moves down the list, like a spreadsheet; it never saves.
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          const live = editorInputs.filter((box) => !box.disabled);
+          const next = live[live.indexOf(input) + (event.shiftKey ? -1 : 1)];
+          next?.focus();
+          next?.select();
+        });
+        tr.append(cell);
+        tbody.append(tr);
+        editorInputs.push(input);
+      });
+      table.append(tbody);
+      wrap.append(table);
+      section.append(wrap);
+      body.append(section);
+
+      const refusedCount = rows.length - editable.length;
+      if (refusedCount) {
+        body.append(
+          el(
+            "p",
+            "record-action-note",
+            `${refusedCount} ${plural(refusedCount, child.singular, child.plural)} cannot be changed here — fix them on their own page.`,
+          ),
+        );
+      }
+      syncEditor(plan);
+    };
+
     const renderError = (message) => {
       body.textContent = "";
       body.append(el("p", "record-action-error", message));
@@ -232,6 +360,8 @@
       const nrs = ticked().join(",");
       form.action = `${baseUrl}/actions/${encodeURIComponent(key)}`;
       nrsInput.value = nrs;
+      if (valuesInput) valuesInput.value = "";
+      editorInputs = [];
       submit.disabled = true;
       submit.classList.remove("is-saving");
       submit.textContent = "Run";
@@ -256,14 +386,23 @@
           return;
         }
         if (payload?.title) titleNode.textContent = payload.title;
-        renderPlan(payload);
+        if (payload?.mode === "edit") renderEditor(payload);
+        else renderPlan(payload);
       } catch (_error) {
         if (thisRequest !== requestId) return;
         renderError("The server could not be reached. Check the connection and try again.");
       }
     };
 
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (event) => {
+      if (editorInputs.length) {
+        const changed = changedValues();
+        if (!Object.keys(changed).length) {
+          event.preventDefault();
+          return;
+        }
+        if (valuesInput) valuesInput.value = JSON.stringify(changed);
+      }
       submit.classList.add("is-saving");
       // Disable after the submit has been collected, so the post still goes.
       window.setTimeout(() => {
