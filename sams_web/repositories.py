@@ -269,13 +269,17 @@ class SamsRepository:
         return sample
 
     def create_blank_prep(self, sample_nr: int, prep_nr: int = 1) -> Preparation:
-        prep = Preparation(sample_nr=sample_nr, prep_nr=prep_nr)
+        # Legacy flags: write 0 explicitly. An unset mapped column is INSERTed
+        # as NULL, and the lab queues filter on `stop = 0`, so a NULL Discarded
+        # flag would drop the new preparation out of every queue.
+        prep = Preparation(sample_nr=sample_nr, prep_nr=prep_nr, stop=0, p_no_leftover=0)
         self.session.add(prep)
         self.session.flush()
         return prep
 
     def create_blank_target(self, sample_nr: int, prep_nr: int = 1, target_nr: int = 1) -> Target:
-        target = Target(sample_nr=sample_nr, prep_nr=prep_nr, target_nr=target_nr)
+        # `stop` (Discarded) written as 0, not NULL: see `create_blank_prep`.
+        target = Target(sample_nr=sample_nr, prep_nr=prep_nr, target_nr=target_nr, stop=0)
         self.session.add(target)
         self.session.flush()
         return target
