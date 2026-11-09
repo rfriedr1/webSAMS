@@ -72,7 +72,18 @@ def test_project_page_has_no_project_level_actions():
         ra.action_for("project", "project.return_to_sender.set")
     kinds = [group["kind"] for group in ra.action_menu("project")]
     assert kinds == ["sample", "preparation"]
-    assert [g["kind"] for g in ra.action_menu("submitter")] == ["sample", "preparation", "project"]
+    assert [g["kind"] for g in ra.action_menu("submitter")] == ["project"]
+
+
+def test_submitter_page_offers_only_project_flags():
+    keys = {act["key"] for g in ra.action_menu("submitter") for item in g["items"] for act in item["actions"]}
+    assert keys == {
+        "project.return_to_sender.set", "project.return_to_sender.clear",
+        "project.prep_return_to_sender.set", "project.prep_return_to_sender.clear",
+    }
+    for key in ("sample.c_n_isotop_a.set", "sample.dendro_a.set", "sample.s_no_leftover.set", "preparation.p_no_leftover.set"):
+        with pytest.raises(KeyError):
+            ra.action_for("submitter", key)
 
 
 def test_parse_selection():
@@ -130,20 +141,20 @@ def test_preparations_are_reached_through_the_ticked_samples(service):
     assert service.session.get(Preparation, (101, 1)).p_no_leftover is None
 
 
-def test_submitter_reaches_samples_of_ticked_projects(service):
-    action = ra.action_for("submitter", "sample.c_n_isotop_a.set")
-    preview = ra.plan(service, action, "submitter", 1, [11])
-    assert [c.record.ref for c in preview.changes] == ["110"]
-    preview_all = ra.plan(service, action, "submitter", 1, [])
-    assert sorted(c.record.ref for c in preview_all.changes) == ["100", "101", "102", "110"]
-
-
 def test_submitter_project_flag(service):
     action = ra.action_for("submitter", "project.return_to_sender.set")
     outcome = ra.apply(service, action, "submitter", 1, [])
     assert outcome.changed == 2
     assert service.session.get(Project, 10).return_to_sender == 1
     assert service.session.get(Project, 20).return_to_sender is None
+
+
+def test_submitter_ticked_projects_only(service):
+    action = ra.action_for("submitter", "project.prep_return_to_sender.set")
+    preview = ra.plan(service, action, "submitter", 1, [11])
+    assert [c.record.ref for c in preview.changes] == ["11"]
+    with pytest.raises(ValueError, match="Project 20 is not in submitter 1"):
+        ra.plan(service, action, "submitter", 1, [20])
 
 
 def test_record_its_detail_page_would_refuse_is_listed_and_skipped(service):
