@@ -46,6 +46,8 @@
         <button type="button" class="record-action-dialog-close" data-record-action-cancel aria-label="Close">×</button>
       </header>
       <input type="hidden" name="nrs" value="" data-record-action-nrs />
+      {#- Edit actions: the changed rows as {"ref": "new value"}, set on submit. -#}
+      <input type="hidden" name="values" value="" data-record-action-values />
       <div class="record-action-dialog-body" data-record-action-body aria-live="polite">
         <p class="record-action-loading">Checking which records change …</p>
       </div>

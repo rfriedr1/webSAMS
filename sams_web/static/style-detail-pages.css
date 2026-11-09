@@ -1462,6 +1462,79 @@ a.record-action-ref {
   color: var(--warn-text);
 }
 
+/* Edit actions: one box per record, a "Fill all" row above. */
+.record-action-fill {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.record-action-fill-input,
+.record-action-value {
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.record-action-fill-input {
+  flex: 1;
+}
+
+button.record-action-fill-button {
+  flex: none;
+  padding: 0.3rem var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  box-shadow: none;
+}
+
+button.record-action-fill-button:hover {
+  border-color: var(--brand-accent);
+  color: var(--brand);
+}
+
+.record-action-table-wrap.is-editor {
+  max-height: min(24rem, 50vh);
+}
+
+.record-action-editor td {
+  vertical-align: middle;
+}
+
+.record-action-value-cell {
+  width: 45%;
+}
+
+.record-action-editor tr.is-dirty .record-action-value {
+  border-color: var(--brand-accent);
+  background: var(--brand-tint);
+  box-shadow: inset 3px 0 0 0 var(--brand-accent);
+}
+
+.record-action-editor tr.is-dirty .record-action-ref-cell::after {
+  content: "•";
+  margin-left: 0.28rem;
+  color: var(--brand-accent);
+}
+
+.record-action-editor tr.is-refused .record-action-value {
+  background: var(--surface-tint);
+  color: var(--muted);
+}
+
+.record-action-editor .record-action-reason {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--text-xs);
+}
+
 .record-action-dialog-foot {
   display: flex;
   justify-content: space-between;
@@ -1489,6 +1562,9 @@ a.record-action-ref {
   }
 
   button.record-actions-verb,
+  button.record-action-fill-button,
+  .record-action-fill-input,
+  .record-action-value,
   .record-action-dialog-foot button {
     min-height: 2.75rem;
     padding-inline: var(--space-4);
