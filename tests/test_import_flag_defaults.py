@@ -31,3 +31,34 @@ def test_extra_analyses_coerced_to_flags():
     assert _payload({"cn_isotop_a": "1"})["c_n_isotop_a"] == 1
     assert _payload({"dendro_a": "0"})["dendro_a"] == 0
     assert _payload({"dendro_a": None})["dendro_a"] == 0
+
+
+class _FakeSession:
+    def __init__(self):
+        self.added = []
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    def flush(self):
+        pass
+
+
+def _repo():
+    from sams_web.repositories import SamsRepository
+
+    repo = SamsRepository.__new__(SamsRepository)
+    repo.session = _FakeSession()
+    return repo
+
+
+def test_new_preparation_flags_written_as_zero_not_null():
+    # The lab queues filter on `stop = 0`; NULL would hide the record.
+    prep = _repo().create_blank_prep(sample_nr=1, prep_nr=1)
+    assert prep.stop == 0
+    assert prep.p_no_leftover == 0
+
+
+def test_new_target_discarded_flag_written_as_zero_not_null():
+    target = _repo().create_blank_target(sample_nr=1, prep_nr=1, target_nr=1)
+    assert target.stop == 0
