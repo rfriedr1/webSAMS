@@ -18,6 +18,10 @@
 // editor instead of a preview: every record with its current value in a
 // box, a "Fill all" field, and a dirty dot on each changed row. Only the
 // changed rows are posted, as JSON in the hidden `values` field.
+// When the action names a `mark_suffix` (storage locations: "E", entnommen)
+// an "Add E" button appends it to every filled box (266 → 266E), and the
+// download icon saves the list (number, label, value, new value) as Excel
+// for finding the samples in the lab.
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
 
@@ -242,6 +246,58 @@
       submit.textContent = count === 0 ? "Nothing changed yet" : `Save on ${count} ${plural(count, child.singular, child.plural)}`;
     };
 
+    // "Project 246" from the page's base URL (/projects/246), for the file name.
+    const ownerTitle = () => {
+      const [kind, nr] = baseUrl.split("/").filter(Boolean);
+      const word = (kind || "record").replace(/s$/, "");
+      return `${word.charAt(0).toUpperCase()}${word.slice(1)} ${nr || ""}`.trim();
+    };
+
+    // The editor's list as Excel: number, label, value as stored and, when
+    // boxes were changed, the new value beside it.
+    const downloadButton = (plan) => {
+      const button = el("button", "record-action-download");
+      button.type = "button";
+      const label = `Download the list as Excel (${plan.editor.columns.join(", ")}, ${plan.field})`;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      const svgNs = "http://www.w3.org/2000/svg";
+      const icon = document.createElementNS(svgNs, "svg");
+      icon.setAttribute("viewBox", "0 0 24 24");
+      icon.setAttribute("aria-hidden", "true");
+      const path = document.createElementNS(svgNs, "path");
+      path.setAttribute("d", "M12 3v10m0 0l4-4m-4 4-4-4M5 17h14v4H5z");
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      icon.append(path);
+      button.append(icon);
+      button.addEventListener("click", () => {
+        const byRef = new Map(editorInputs.map((input) => [input.dataset.ref, input]));
+        const changed = editorInputs.some((input) => input.value.trim() !== input.dataset.initialValue);
+        const headers = [...plan.editor.columns, plan.field];
+        if (changed) headers.push(`New ${plan.field}`);
+        const rows = plan.editor.rows.map((row) => {
+          const line = [row.ref, row.label || "", row.value || ""];
+          if (changed) {
+            const input = byRef.get(row.ref);
+            const next = input ? input.value.trim() : row.value || "";
+            line.push(next !== (row.value || "") ? next : "");
+          }
+          return line;
+        });
+        // The value columns stay text: "007" or "266" is a place, not a number.
+        const textColumns = changed ? [1, 2, 3] : [1, 2];
+        window.SAMSTableExport?.download(`${ownerTitle()} ${plan.field}`, headers, rows, {
+          sheetName: plan.field,
+          textColumns,
+        });
+      });
+      return button;
+    };
+
     const renderEditor = (plan) => {
       body.textContent = "";
       const child = plan.child;
@@ -280,10 +336,49 @@
         }
       });
       fill.append(fillInput, fillButton);
-      body.append(fill);
+
+      // Add E: appends the action's mark to every filled, editable box that
+      // does not end with it yet. Nothing is saved until Save.
+      const suffix = plan.editor.mark_suffix;
+      const markNote = el("p", "record-action-note record-action-mark-note");
+      markNote.hidden = true;
+      if (suffix) {
+        const markButton = el("button", "record-action-fill-button record-action-mark-button", `Add ${suffix}`);
+        markButton.type = "button";
+        markButton.title = `Add “${suffix}” to every ${plan.field}: 266 → 266${suffix}. Empty boxes and values that already end in ${suffix} stay as they are.`;
+        markButton.addEventListener("click", () => {
+          let added = 0;
+          let already = 0;
+          let empty = 0;
+          let tooLong = 0;
+          editorInputs.forEach((input) => {
+            if (input.disabled) return;
+            const value = input.value.trim();
+            if (!value) empty += 1;
+            else if (value.toUpperCase().endsWith(suffix.toUpperCase())) already += 1;
+            else if (maxLength && value.length + suffix.length > maxLength) tooLong += 1;
+            else {
+              input.value = `${value}${suffix}`;
+              added += 1;
+            }
+          });
+          const parts = [`${suffix} added to ${added} ${plural(added, child.singular, child.plural)}`];
+          if (already) parts.push(`${already} already had it`);
+          if (empty) parts.push(`${empty} empty, left as they are`);
+          if (tooLong) parts.push(`${tooLong} too long to add it (at most ${maxLength} characters)`);
+          markNote.textContent = `${parts.join(" · ")}. Check the list, then Save.`;
+          markNote.hidden = false;
+          syncEditor(plan);
+        });
+        fill.append(markButton);
+      }
+      body.append(fill, markNote);
 
       const section = el("section", "record-action-section");
-      section.append(el("h4", "record-action-section-title", plan.field));
+      const head = el("div", "record-action-section-head");
+      head.append(el("h4", "record-action-section-title", plan.field));
+      head.append(downloadButton(plan));
+      section.append(head);
       const wrap = el("div", "record-action-table-wrap is-editor");
       const table = el("table", "record-action-table record-action-editor");
       table.setAttribute("data-table-plain", "");

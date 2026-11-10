@@ -99,7 +99,9 @@
     return /^[-+]?(\d+(\.\d+)?|\.\d+)([eE][-+]?\d+)?$/.test(normalized);
   };
 
-  const buildSpreadsheetXml = (sheetName, headers, rows) => {
+  // `textColumns`: column indexes always written as text, never as a number
+  // (a storage location "007" or "266" is a label, not a quantity).
+  const buildSpreadsheetXml = (sheetName, headers, rows, { textColumns = [] } = {}) => {
     const columnCount = Math.max(
       headers.length,
       ...rows.map((row) => row.length),
@@ -118,7 +120,7 @@
 
     const headerRow = `<Row>${Array.from({ length: columnCount }, (_unused, index) => renderCell(headers[index] || "")).join("")}</Row>`;
     const dataRows = rows
-      .map((row) => `<Row>${Array.from({ length: columnCount }, (_unused, index) => renderCell(row[index] || "", true)).join("")}</Row>`)
+      .map((row) => `<Row>${Array.from({ length: columnCount }, (_unused, index) => renderCell(row[index] || "", !textColumns.includes(index))).join("")}</Row>`)
       .join("");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -147,6 +149,16 @@
     anchor.remove();
     window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
   };
+
+  // The same Excel export for lists that are not tables (the record-action
+  // editor): `SAMSTableExport.download(title, headers, rows, options)`.
+  window.SAMSTableExport = Object.freeze({
+    download: (title, headers, rows, options = {}) => {
+      const fileName = `${slugifyFilePart(title)}_${formatFileTimestamp()}.xls`;
+      const xml = buildSpreadsheetXml(sanitizeSheetName(options.sheetName || title), headers, rows, options);
+      triggerFileDownload(fileName, xml, "application/vnd.ms-excel;charset=utf-8");
+    },
+  });
 
   const inferTableTitle = (container, table) => {
     const explicitName = normalizeWhitespace(container.dataset.tableDownloadName || table.dataset.tableDownloadName || "");

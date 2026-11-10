@@ -213,6 +213,24 @@ def test_edit_preview_lists_every_record_with_its_value(service):
     assert _sample(service, 101).type is None  # probe rolled back
 
 
+def test_storage_location_editor_offers_the_taken_mark_and_export_columns(service):
+    for key in ("sample.s_storage_loc.edit", "sample.prep_storage_loc.edit"):
+        editor = ra.plan(service, ra.action_for("project", key), "project", 10, []).as_json()["editor"]
+        # "Add E" (entnommen) appends this in the browser: 266 -> 266E.
+        assert editor["mark_suffix"] == ra.STORAGE_TAKEN_SUFFIX == "E"
+        # The Excel download heads its columns with the registry labels.
+        assert editor["columns"] == ["Sample #", "Sample Label"]
+
+
+def test_a_marked_location_is_saved_like_any_edit(service):
+    _sample(service, 100).s_storage_loc = "266"
+    service.session.commit()
+    action = ra.action_for("project", "sample.s_storage_loc.edit")
+    outcome = ra.apply(service, action, "project", 10, [], values={"100": "266E"})
+    assert outcome.changed == 1
+    assert _sample(service, 100).s_storage_loc == "266E"
+
+
 def test_edit_writes_only_the_posted_rows(service):
     _sample(service, 100).s_storage_loc = "Box 1"
     _sample(service, 101).s_storage_loc = "Box 1"

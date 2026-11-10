@@ -1500,6 +1500,39 @@ button.record-action-fill-button:hover {
   color: var(--brand);
 }
 
+/* Title of the editor list with its download icon on the right. */
+.record-action-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+button.record-action-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--brand-deep);
+  box-shadow: none;
+}
+
+button.record-action-download:hover {
+  background: var(--brand-tint);
+}
+
+.record-action-download svg {
+  display: block;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 .record-action-table-wrap.is-editor {
   max-height: min(24rem, 50vh);
 }
