@@ -25,6 +25,7 @@
     installers.installMagicIdentifierHelp?.();
     installers.installDetailEditMode?.();
     installers.installRecordActions?.();
+    installers.installTargetSwap?.();
     installers.installDetailEmptyFields?.();
     installers.installAnchorDetails?.();
     installers.installTabPanels?.();

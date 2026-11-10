@@ -110,6 +110,10 @@ _Avoid_: Delete, cancel.
 A named task, run from a record page, that sets one field to one value on many records under that record at once — e.g. *Set C/N Isotope Analysis* on the samples of a **Project**, or *Set Return to Sender* on the projects of a **Submitter**. It runs on the rows ticked in the page's related table, or on all of them; it is always previewed first, and a record its own detail page would refuse to save is listed and left unchanged (`sams_web/record_actions.py`, [ADR-0007](docs/adr/0007-record-actions.md)).
 _Avoid_: Batch action, bulk edit, macro, automation (the bare word).
 
+**Target swap**:
+Exchanging the data of two **Targets** that were mixed up (on the graphitization rig, in the magazine, or when typing), run from the target page's *Actions* menu as *Swap target info*. The operator ticks which groups move (Graphitization, Elemental Analysis, Measurement and Results, Comments and Status); sample, prep and target numbers and the target ID never move. Moving the results also moves BATS' `calc_sample_t` rows; nothing is recomputed (`sams_web/target_swap.py`, [ADR-0008](docs/adr/0008-target-swap.md)).
+_Avoid_: Target exchange, relabel (a swap moves data, not numbers).
+
 **User**:
 A person signed in to webSAMS (laboratory staff). Not a **Submitter** — see the ambiguity note below. Until login exists every request is one anonymous user whose **Role** comes from `SAMS_ACCESS_ROLE`; with login the identity will come from Windows Authentication via IIS (`sams_web/access.py`).
 

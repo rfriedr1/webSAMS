@@ -154,6 +154,28 @@ class SamsService:
             save_error = "Please correct the highlighted fields and save again."
         return False, result.field_errors, save_error
 
+    def swap_targets(
+        self,
+        first: Any,
+        second: Any,
+        attributes: list[str],
+        *,
+        move_calc_rows: tuple[tuple[int, int, int], tuple[int, int, int]] | None = None,
+    ) -> None:
+        """Exchange `attributes` between two targets and, when asked, their
+        BATS evaluation rows; one commit (ADR-0008, `target_swap.py`).
+        Bypasses `apply_detail_update` on purpose: it moves BATS-owned
+        values the target page may not edit. The change log will hook in
+        here too once login exists (ADR-0006)."""
+        try:
+            self.repo.swap_target_values(first, second, attributes)
+            if move_calc_rows is not None:
+                self.repo.swap_calc_sample_rows(*move_calc_rows)
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
     def apply_many_and_commit(
         self,
         config: "DetailUpdateConfig",

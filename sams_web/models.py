@@ -10,9 +10,11 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     ForeignKeyConstraint,
+    Column,
     Integer,
     SmallInteger,
     String,
+    Table,
     Text,
     UniqueConstraint,
     func,
@@ -231,6 +233,7 @@ class Target(Base):
     cal1s_max: Mapped[float | None] = mapped_column("cal1sMax", Float)
     cal2s_min: Mapped[float | None] = mapped_column("cal2sMin", Float)
     cal2s_max: Mapped[float | None] = mapped_column("cal2sMax", Float)
+    cal_curve: Mapped[str | None] = mapped_column(String(20))
     graph_batch: Mapped[str | None] = mapped_column(String(120), index=True)
     graph_date: Mapped[datetime | None] = mapped_column(DateTime)
     weight_combustion: Mapped[float | None] = mapped_column(Float)
@@ -249,6 +252,24 @@ class Target(Base):
         viewonly=True,
     )
     preparation: Mapped[Preparation] = relationship(back_populates="targets")
+
+
+# BATS' per-target evaluation rows: one per calc set the target took part in
+# (its role: type, blank / standard flags). Owned by BATS (ADR-0003); webSAMS
+# only moves rows between targets when two targets are swapped (ADR-0008).
+# A Core table, not a mapped class: webSAMS never edits these as records.
+calc_sample_table = Table(
+    "calc_sample_t",
+    Base.metadata,
+    Column("calcset", String(20), primary_key=True),
+    Column("sample_nr", Integer, primary_key=True),
+    Column("prep_nr", Integer, primary_key=True),
+    Column("target_nr", Integer, primary_key=True),
+    Column("type", String(20)),
+    Column("prep_bl", Float),
+    Column("active", SmallInteger, nullable=False, default=1),
+    Column("std_bl", SmallInteger),
+)
 
 
 class Material(Base):
