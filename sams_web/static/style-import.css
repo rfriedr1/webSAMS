@@ -1353,3 +1353,21 @@
     flex: 1 1 auto;
   }
 }
+
+/* Sample-name check beside the Samples count (Lab values step). */
+.import-name-check {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-weight: 600;
+}
+
+.import-name-check.is-ok { color: var(--success); }
+.import-name-check.is-error { color: var(--danger-text); }
+
+/* A sample name another imported row also uses: blocks the import. */
+.import-table td.import-col-sheet.is-duplicate input {
+  border-color: var(--danger-line);
+  background: var(--danger-bg-strong);
+  color: var(--danger-text);
+}

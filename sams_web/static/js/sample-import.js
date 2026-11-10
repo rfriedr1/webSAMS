@@ -893,6 +893,43 @@
 
   const includedSamples = () => state.draft.samples.filter((s) => s.include);
 
+  // Two sample names are the same when they differ only in case or spacing
+  // (mirrors `sample_label_key` in parser.py). Accents count.
+  const labelKey = (value) => window.SAMSUtil.normalizeWhitespace(value).toLowerCase();
+
+  /**
+   * Sample names used by more than one imported row: key -> {label, count}.
+   * Rows left out of the import do not count. The lab works by the
+   * customer's name, so a repeat makes two samples indistinguishable on
+   * the bench, so a repeat blocks the import (`labProblems`), as
+   * `_validate_payload` in commit.py does on the server.
+   */
+  function duplicateLabels() {
+    const seen = new Map();
+    includedSamples().forEach((s) => {
+      const key = labelKey(s.values.user_label);
+      if (!key) return;
+      const entry = seen.get(key);
+      if (entry) entry.count += 1;
+      else seen.set(key, { label: window.SAMSUtil.normalizeWhitespace(s.values.user_label), count: 1 });
+    });
+    return new Map([...seen].filter(([, entry]) => entry.count > 1));
+  }
+
+  /** The "✓ Sample names unique" / "⚠ N names repeated" line beside the count. */
+  function renderLabelCheck(duplicates) {
+    const host = $("[data-label-check]");
+    const named = includedSamples().some((s) => labelKey(s.values.user_label));
+    host.hidden = !named;
+    if (!named) return;
+    const repeated = duplicates.size;
+    host.classList.toggle("is-ok", !repeated);
+    host.classList.toggle("is-error", repeated > 0);
+    host.innerHTML = repeated
+      ? `<span aria-hidden="true">⚠</span> ${repeated === 1 ? "1 sample name" : `${repeated} sample names`} used more than once`
+      : '<span aria-hidden="true">✓</span> Sample names unique';
+  }
+
   /**
    * Group rows: one per distinct submitter material.
    *
@@ -1140,6 +1177,8 @@
     const included = includedSamples().length;
     $("[data-sample-count]").textContent =
       included === total ? `all ${total} will be imported` : `${included} of ${total} will be imported`;
+    const duplicates = duplicateLabels();
+    renderLabelCheck(duplicates);
 
     const allSelected = state.selection.size === total && total > 0;
     $("[data-sample-head]").innerHTML =
@@ -1169,13 +1208,16 @@
 
     $("[data-sample-body]").innerHTML = state.draft.samples
       .map((sample, index) => {
+        const repeat =
+          sample.include && duplicates.get(labelKey(sample.values.user_label));
         const sheetCells = sheet
-          .map(
-            (field) =>
-              `<td class="import-col-sheet"><input size="${widths[field]}" data-cell-row="${index}" data-cell-field="${field}"
-                          aria-label="${esc(labels[field] || field)}, row ${sample.row_number}"
-                          value="${esc(sample.values[field] ?? "")}" /></td>`
-          )
+          .map((field) => {
+            const isRepeat = field === "user_label" && repeat;
+            return `<td class="import-col-sheet${isRepeat ? " is-duplicate" : ""}"><input size="${widths[field]}" data-cell-row="${index}" data-cell-field="${field}"
+                          aria-label="${esc(labels[field] || field)}, row ${sample.row_number}${isRepeat ? ", name used more than once" : ""}"
+                          ${isRepeat ? `title="This sample name is used by ${repeat.count} rows"` : ""}
+                          value="${esc(sample.values[field] ?? "")}" /></td>`;
+          })
           .join("");
         const labCells = LOOKUP_FIELDS.map((field) => {
           const value = sample.values[`lab_${field}`] || "";
@@ -1317,6 +1359,15 @@
     if (unnamed) {
       problems.push(
         `${unnamed === 1 ? "One row has" : `${unnamed} rows have`} no sample label (marked red below): fill it in or switch the row off.`
+      );
+    }
+    const duplicates = [...duplicateLabels().values()];
+    if (duplicates.length) {
+      const shown = duplicates.slice(0, 5).map((d) => `“${d.label}” ×${d.count}`);
+      if (duplicates.length > 5) shown.push(`${duplicates.length - 5} more`);
+      problems.push(
+        `Sample names used more than once (marked red below): ${shown.join(", ")}. ` +
+          "Rename them or switch rows off, so every sample can be told apart on the bench."
       );
     }
     return problems;

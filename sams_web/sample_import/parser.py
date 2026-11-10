@@ -384,17 +384,28 @@ def parse_sample_rows(
     return samples
 
 
+def sample_label_key(value: Any) -> str:
+    """The form two sample names are compared in: case and spacing ignored.
+
+    `Bone 1`, `bone 1` and `Bone  1 ` are the same name to the lab. Accents
+    are kept (`Häck` is not `Hack`). `labelKey()` in `sample-import.js`
+    mirrors this for the live check on the Lab values step.
+    """
+    return " ".join(str(value or "").split()).lower()
+
+
 def _flag_duplicate_labels(samples: list[SampleDraft]) -> None:
     """Warn on repeated sample names within the sheet.
 
     The lab uses the customer's own label as the working identifier, so
     duplicates make samples indistinguishable on the bench. Legacy did
-    not check this at all during import; we warn rather than block,
-    because occasionally a duplicate is intentional.
+    not check this at all during import. Here it is only a note on the
+    draft: labels can still be edited in the wizard, so the blocking check
+    runs live on the Lab values step and again in `commit._validate_payload`.
     """
     seen: dict[str, int] = {}
     for sample in samples:
-        label = str(sample.values.get("user_label", "")).strip().lower()
+        label = sample_label_key(sample.values.get("user_label"))
         if not label:
             continue
         first_row = seen.get(label)
