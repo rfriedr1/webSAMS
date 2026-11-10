@@ -1544,7 +1544,8 @@ button.record-action-download:hover {
 
 /* ---- Swap target info (target page, ADR-0008) --------------------------- */
 
-.target-swap-pick {
+.target-swap-pick,
+.magazine-rename-pick {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -1558,7 +1559,8 @@ button.record-action-download:hover {
   font-weight: 600;
 }
 
-.target-swap-field {
+.target-swap-field,
+.magazine-rename-field {
   display: grid;
   gap: 0.15rem;
   color: var(--muted);
@@ -1566,7 +1568,8 @@ button.record-action-download:hover {
   font-weight: 600;
 }
 
-.target-swap-field input {
+.target-swap-field input,
+.magazine-rename-field input {
   width: 6.5rem;
   padding: 0.3rem var(--space-2);
   border: 1px solid var(--line-soft);
@@ -1582,7 +1585,8 @@ button.record-action-download:hover {
   width: 4.5rem;
 }
 
-.target-swap-body {
+.target-swap-body,
+.magazine-rename-body {
   display: grid;
   gap: var(--space-3);
 }
@@ -1700,6 +1704,39 @@ button.record-action-download:hover {
   background: var(--surface-tint);
   color: var(--muted);
   cursor: not-allowed;
+}
+
+/* ---- Rename a magazine (Lab → Analysis, ADR-0009) ----------------------- */
+
+.magazine-rename-field input {
+  width: 10rem;
+  font-variant-numeric: normal;
+}
+
+.magazine-rename-changes {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.magazine-rename-changes .count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.magazine-rename-changes code {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.record-action-ok {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--success-line);
+  border-radius: 10px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 640px) {

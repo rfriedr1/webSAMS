@@ -1,0 +1,56 @@
+{#-
+  Magazine actions on Lab → Analysis (sams_web/magazine_rename.py, ADR-0009).
+
+    magazine_actions_menu(magazine)
+      → the "Actions" button for the Magazine panel bar, its menu, the
+        command-palette entry and the rename dialog. Rendered only for a user
+        who may edit and only while a magazine is shown; `js/magazine-rename.js`
+        drives it. Same look as the record-action menu (same classes), own
+        data hooks.
+-#}
+
+{% macro magazine_actions_menu(magazine) -%}
+<div class="record-actions magazine-actions" data-magazine-actions data-magazine="{{ magazine }}">
+  <button type="button" class="record-action record-actions-toggle" data-magazine-actions-toggle
+          aria-haspopup="true" aria-expanded="false" title="Actions on magazine {{ magazine }}">Actions <span aria-hidden="true">▾</span></button>
+  <div class="record-actions-menu" data-magazine-actions-menu hidden>
+    <p class="record-actions-group">This magazine</p>
+    <ul class="record-actions-list">
+      <li class="record-actions-item">
+        <span class="record-actions-label">{{ field_label('magazine') }} name</span>
+        <span class="record-actions-verbs">
+          <button type="button" class="record-actions-verb" data-magazine-rename-open
+                  title="Rename magazine {{ magazine }}">Rename…</button>
+        </span>
+      </li>
+    </ul>
+  </div>
+  <a hidden data-command-link data-command-label="Action: Rename magazine {{ magazine }}" href="#action=rename-magazine">Rename magazine</a>
+
+  <dialog class="record-action-dialog magazine-rename-dialog" data-magazine-rename-dialog aria-labelledby="magazine-rename-title">
+    <form method="post" action="/lab/analysis/magazine/rename" data-magazine-rename-form>
+      <input type="hidden" name="magazine" value="{{ magazine }}" />
+      <header class="record-action-dialog-head">
+        <h3 id="magazine-rename-title">Rename magazine {{ magazine }}</h3>
+        <button type="button" class="record-action-dialog-close" data-magazine-rename-cancel aria-label="Close">×</button>
+      </header>
+      <div class="record-action-dialog-body">
+        <p class="record-action-from">Only a magazine that has not been measured yet can be renamed.</p>
+        <div class="magazine-rename-pick">
+          <label class="magazine-rename-field"><span>New name</span>
+            <input type="text" name="new_name" maxlength="12" autocomplete="off" spellcheck="false"
+                   required data-magazine-rename-name /></label>
+          <button type="button" class="record-action-fill-button" data-magazine-rename-check>Check</button>
+        </div>
+        <div class="magazine-rename-body" data-magazine-rename-body aria-live="polite">
+          <p class="record-action-loading">Loading the magazine …</p>
+        </div>
+      </div>
+      <div class="record-action-dialog-foot">
+        <button type="button" class="detail-edit-cancel" data-magazine-rename-cancel>Cancel</button>
+        <button type="submit" class="detail-edit-save" data-magazine-rename-submit disabled>Rename</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+{%- endmacro %}

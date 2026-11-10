@@ -176,6 +176,18 @@ class SamsService:
             self.session.rollback()
             raise
 
+    def rename_magazine(self, old: str, new: str) -> dict[str, int]:
+        """Rename a magazine everywhere and commit (ADR-0009,
+        `magazine_rename.py`, which checks first). The change log will hook
+        in here once login exists (ADR-0006)."""
+        try:
+            counts = self.repo.rename_magazine(old, new)
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+        return counts
+
     def apply_many_and_commit(
         self,
         config: "DetailUpdateConfig",

@@ -18,6 +18,7 @@
 {% endblock %}
 
 {% from "_table_macros.html" import table_cell %}
+{% from "_magazine_actions.html" import magazine_actions_menu %}
 {% block content %}
 {#- Lab pages carry no page header: the breadcrumb and the Lab sub-nav
     already say where you are. The bench comes first, then the queue tables
@@ -113,6 +114,9 @@
       </datalist>
       <button type="submit" class="search-submit">Show</button>
     </form>
+    {% if magazine_query and not magazine_error and can("edit_records") %}
+    {{ magazine_actions_menu(magazine_query) }}
+    {% endif %}
   </div>
 
   {% if magazine_error %}

@@ -114,6 +114,10 @@ _Avoid_: Batch action, bulk edit, macro, automation (the bare word).
 Exchanging the data of two **Targets** that were mixed up (on the graphitization rig, in the magazine, or when typing), run from the target page's *Actions* menu as *Swap target info*. The operator ticks which groups move (Graphitization, Elemental Analysis, Measurement and Results, Comments and Status); sample, prep and target numbers and the target ID never move. Moving the results also moves BATS' `calc_sample_t` rows; nothing is recomputed (`sams_web/target_swap.py`, [ADR-0008](docs/adr/0008-target-swap.md)).
 _Avoid_: Target exchange, relabel (a swap moves data, not numbers).
 
+**Magazine rename**:
+Giving a **Magazine** that has not been measured yet a new name, run from the Magazine panel on Lab → Analysis (*Actions › Rename…*). The name is written into the sequence (`measprog_t`), the targets (`target_t`) and the magazine list (`magazine_t`); a measured magazine (results, or a BATS calc set) is refused, and a name already in use is never merged (`sams_web/magazine_rename.py`, [ADR-0009](docs/adr/0009-magazine-rename.md)).
+_Avoid_: Move magazine, relabel.
+
 **User**:
 A person signed in to webSAMS (laboratory staff). Not a **Submitter** — see the ambiguity note below. Until login exists every request is one anonymous user whose **Role** comes from `SAMS_ACCESS_ROLE`; with login the identity will come from Windows Authentication via IIS (`sams_web/access.py`).
 

@@ -23,7 +23,7 @@
 # this table stores the name of a graphitization batch and the batch number
 
 - magazine_t(name, last_changed)  
-# this table stores the name of a magazine and the time when it was last changed
+# this table stores the name of a magazine and the time when it was last changed. Kept by triggers: any insert/update/delete on measprog_t or target_t REPLACEs the magazine name here (never removes one). See docs/adr/0009-magazine-rename.md
 
 - material_t(material, indexnr)  
 # this table stores a list of materials that are used as samples, every sample will be assigned a material
