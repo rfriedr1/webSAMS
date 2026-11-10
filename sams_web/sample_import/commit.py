@@ -25,6 +25,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from sams_web.sample_import.fields import KIND_DATE, KIND_INTEGER, NUMERIC_KINDS, FieldRegistry
+from sams_web.sample_import.parser import sample_label_key
 
 # --- Intake defaults -------------------------------------------------------
 #
@@ -357,11 +358,21 @@ def _validate_payload(payload: dict[str, Any], registry: FieldRegistry) -> _Impo
         raise ImportCommitError("No samples were selected for import.")
 
     prepared: list[tuple[int, dict[str, Any]]] = []
+    first_row_by_label: dict[str, Any] = {}
     for row in rows:
         values = row.get("values") or {}
         where = f"Row {row.get('row_number', '?')}"
         if not _clean(values.get("user_label")):
             raise ImportCommitError(f"{where} has no sample name. Fix or exclude it before importing.")
+        # The lab tells samples apart by the customer's name, so a repeat
+        # among the imported rows is refused (the wizard blocks it too).
+        label_key = sample_label_key(values.get("user_label"))
+        if label_key in first_row_by_label:
+            raise ImportCommitError(
+                f"{where} has the same sample name as row {first_row_by_label[label_key]} "
+                f"(“{_clean(values.get('user_label'))}”). Rename one of them or leave one out."
+            )
+        first_row_by_label[label_key] = row.get("row_number", "?")
         _check_storable(where, values)
         _check_numbers(where, values, registry)
         prepared.append((int(row.get("row_number") or 0), values))
