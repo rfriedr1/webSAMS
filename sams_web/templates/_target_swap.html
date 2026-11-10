@@ -1,0 +1,59 @@
+{#-
+  Swap target info (sams_web/target_swap.py, ADR-0008).
+
+    target_swap_menu(base_url)
+      → the "Actions" button for the target page's `render_record_head(actions=…)`,
+        its menu, the command-palette entry and the swap dialog. Rendered only
+        for a user who may edit; `js/target-swap.js` drives it. Looks like the
+        record-action menu on project pages (same classes), own data hooks.
+-#}
+
+{% macro target_swap_menu(base_url) -%}
+<div class="record-actions" data-target-swap data-base-url="{{ base_url }}">
+  <button type="button" class="record-action record-actions-toggle" data-target-swap-toggle
+          aria-haspopup="true" aria-expanded="false" title="Actions on this target">Actions <span aria-hidden="true">▾</span></button>
+  <div class="record-actions-menu" data-target-swap-menu hidden>
+    <p class="record-actions-group">This target</p>
+    <ul class="record-actions-list">
+      <li class="record-actions-item">
+        <span class="record-actions-label">Target info</span>
+        <span class="record-actions-verbs">
+          <button type="button" class="record-actions-verb" data-target-swap-open
+                  title="Swap target info with another target">Swap…</button>
+        </span>
+      </li>
+    </ul>
+  </div>
+  <a hidden data-command-link data-command-label="Action: Swap target info" href="#action=swap-target">Swap target info</a>
+
+  <dialog class="record-action-dialog target-swap-dialog" data-target-swap-dialog aria-labelledby="target-swap-title">
+    <form method="post" action="{{ base_url }}/swap" data-target-swap-form>
+      <header class="record-action-dialog-head">
+        <h3 id="target-swap-title">Swap target info</h3>
+        <button type="button" class="record-action-dialog-close" data-target-swap-cancel aria-label="Close">×</button>
+      </header>
+      <div class="record-action-dialog-body">
+        <p class="record-action-from">Exchange this target's data with another target's. Sample, prep and target numbers stay where they are.</p>
+        <div class="target-swap-pick" role="group" aria-label="Target to swap with">
+          <span class="target-swap-pick-title">Swap with</span>
+          <label class="target-swap-field"><span>{{ field_label('sample_nr') }}</span>
+            <input type="number" min="1" inputmode="numeric" name="with_sample" required data-target-swap-nr /></label>
+          <label class="target-swap-field"><span>{{ field_label('prep_nr') }}</span>
+            <input type="number" min="1" inputmode="numeric" name="with_prep" value="1" required data-target-swap-nr /></label>
+          <label class="target-swap-field"><span>{{ field_label('target_nr') }}</span>
+            <input type="number" min="1" inputmode="numeric" name="with_target" value="1" required data-target-swap-nr /></label>
+          <button type="button" class="record-action-fill-button" data-target-swap-load>Show</button>
+        </div>
+        <div class="target-swap-body" data-target-swap-body aria-live="polite">
+          <p class="record-action-note">Enter the other target and press Show to compare.</p>
+        </div>
+      </div>
+      <div class="record-action-dialog-foot">
+        {#- Initial focus is on the sample number; Cancel is never the default action. -#}
+        <button type="button" class="detail-edit-cancel" data-target-swap-cancel>Cancel</button>
+        <button type="submit" class="detail-edit-save" data-target-swap-submit disabled>Swap</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+{%- endmacro %}

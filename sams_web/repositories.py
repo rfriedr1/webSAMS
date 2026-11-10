@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 
-from sqlalchemy import String, and_, case, cast, exists, false, func, select, text, tuple_
+from sqlalchemy import String, and_, case, cast, exists, false, func, select, text, tuple_, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, selectinload
 
@@ -20,6 +20,7 @@ from sams_web.models import (
     SampleType,
     Target,
     Submitter,
+    calc_sample_table,
 )
 
 
@@ -418,6 +419,45 @@ class SamsRepository:
             Target.target_nr == target_nr,
         )
         return self.session.scalar(stmt)
+
+    # ---- Target swap (ADR-0008) -------------------------------------------
+
+    def swap_target_values(self, first: Target, second: Target, attributes: Iterable[str]) -> None:
+        """Exchange the given attributes between two targets (flushed, not
+        committed). Values are moved as they are; nothing is recomputed."""
+        for name in attributes:
+            first_value = getattr(first, name)
+            setattr(first, name, getattr(second, name))
+            setattr(second, name, first_value)
+        self.session.flush()
+
+    def count_calc_sample_rows(self, sample_nr: int, prep_nr: int, target_nr: int) -> int:
+        c = calc_sample_table.c
+        stmt = select(func.count()).select_from(calc_sample_table).where(
+            c.sample_nr == sample_nr, c.prep_nr == prep_nr, c.target_nr == target_nr
+        )
+        return int(self.session.scalar(stmt) or 0)
+
+    def swap_calc_sample_rows(self, first: tuple[int, int, int], second: tuple[int, int, int]) -> None:
+        """Move BATS' evaluation rows (calc_sample_t) of two targets onto each
+        other's key. The key is the primary key, so the first target's rows
+        park on a key no target has (-1/-1/-1) while the second's move."""
+        c = calc_sample_table.c
+        parked = (-1, -1, -1)
+
+        def move(source: tuple[int, int, int], dest: tuple[int, int, int]) -> None:
+            self.session.execute(
+                update(calc_sample_table)
+                .where(c.sample_nr == source[0], c.prep_nr == source[1], c.target_nr == source[2])
+                .values(sample_nr=dest[0], prep_nr=dest[1], target_nr=dest[2])
+            )
+
+        if self.count_calc_sample_rows(*parked):
+            raise ValueError("calc_sample_t holds rows on the parking key -1/-1/-1; clear them in BATS first.")
+        move(first, parked)
+        move(second, first)
+        move(parked, second)
+        self.session.flush()
 
     def get_targets_for_batch_assignment(
         self,

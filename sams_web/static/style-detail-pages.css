@@ -1541,6 +1541,125 @@ button.record-action-download:hover {
   vertical-align: middle;
 }
 
+/* ---- Swap target info (target page, ADR-0008) --------------------------- */
+
+.target-swap-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.target-swap-pick-title {
+  align-self: center;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.target-swap-field {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.target-swap-field input {
+  width: 6.5rem;
+  padding: 0.3rem var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  font: inherit;
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.target-swap-field input[name="with_prep"],
+.target-swap-field input[name="with_target"] {
+  width: 4.5rem;
+}
+
+.target-swap-body {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.target-swap-group-head {
+  display: flex;
+  align-items: center; /* a checkbox has no text baseline */
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.target-swap-group-head input {
+  flex: none;
+  width: auto;
+  margin: 0;
+}
+
+.target-swap-group-head .record-action-section-title {
+  margin: 0;
+}
+
+.target-swap-group:has(input:disabled) .target-swap-group-head {
+  cursor: default;
+}
+
+/* Same column widths in every group, so the values line up down the dialog. */
+.target-swap-table {
+  table-layout: fixed;
+}
+
+.target-swap-table th:first-child { width: 28%; }
+.target-swap-table th:nth-child(3) { width: 1.75rem; }
+
+.target-swap-group-count {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.target-swap-table thead th {
+  padding: 0.25rem var(--space-2) 0.25rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.target-swap-table .target-swap-label {
+  padding: 0.25rem var(--space-2) 0.25rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.target-swap-value {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.target-swap-table .target-swap-arrow {
+  width: 1.5rem;
+  color: var(--brand-deep);
+  text-align: center;
+}
+
+/* Equal values change nothing: muted, so the differences stand out. */
+.target-swap-table tr.is-same td {
+  color: var(--muted);
+}
+
+/* An unticked group stays visible but reads as "stays where it is". */
+.target-swap-group.is-off .record-action-table-wrap {
+  opacity: 0.45;
+}
+
 .record-action-value-cell {
   width: 45%;
 }

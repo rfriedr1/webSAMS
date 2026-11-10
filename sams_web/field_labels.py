@@ -129,6 +129,7 @@ FIELD_LABELS: dict[str, str] = {
     "delta_r": "Delta R",
     "calib": "Calibration",
     "calcset": "Calc Set",
+    "cal_curve": "Cal Curve",
     "cal1s_min": "Cal 1σ Min",
     "cal1s_max": "Cal 1σ Max",
     "cal2s_min": "Cal 2σ Min",

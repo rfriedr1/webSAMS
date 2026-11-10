@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from urllib.parse import urlencode
 
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+
+from sams_web import target_swap
 from sams_web.access import Permission, guarded
-from fastapi.responses import RedirectResponse
 
 from sams_web.dependencies import get_service
 from sams_web.detail_page import EditFormState, NavCursor, build_detail_page_context
-from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, resolve_jump_redirect_url, templates
+from sams_web.routers.pages_shared import LAST_SAMPLE_COOKIE, logger, resolve_jump_redirect_url, templates
 from sams_web.services import SamsService
 from sams_web.viewmodels.detail_sections_sample_lab import TARGET_DETAIL_PAGE
 
@@ -157,3 +160,57 @@ async def save_target_detail_page(
         samesite="lax",
     )
     return response
+
+
+# ---- Swap target info (ADR-0008) ------------------------------------------
+
+
+@router.get(
+    "/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}/swap/preview",
+    dependencies=guarded(Permission.EDIT_RECORDS),
+)
+def target_swap_preview(
+    sample_nr: int,
+    prep_nr: int,
+    target_nr: int,
+    with_sample: int = Query(...),
+    with_prep: int = Query(default=1),
+    with_target: int = Query(default=1),
+    service: SamsService = Depends(get_service),
+):
+    """Both targets' values per group, for the swap dialog (JSON)."""
+    try:
+        payload = target_swap.plan(
+            service, (sample_nr, prep_nr, target_nr), (with_sample, with_prep, with_target)
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    return JSONResponse(payload)
+
+
+@router.post(
+    "/samples/{sample_nr}/preparations/{prep_nr}/targets/{target_nr}/swap",
+    dependencies=guarded(Permission.EDIT_RECORDS),
+)
+def target_swap_run(
+    sample_nr: int,
+    prep_nr: int,
+    target_nr: int,
+    with_sample: int = Form(...),
+    with_prep: int = Form(...),
+    with_target: int = Form(...),
+    groups: list[str] = Form(default=[]),
+    service: SamsService = Depends(get_service),
+):
+    first = (sample_nr, prep_nr, target_nr)
+    second = (with_sample, with_prep, with_target)
+    back = target_swap.target_href(first)
+    try:
+        notice = target_swap.apply(service, first, second, target_swap.parse_groups(groups))
+    except ValueError as exc:
+        return RedirectResponse(url=f"{back}?{urlencode({'action_error': str(exc)})}", status_code=303)
+    logger.info(
+        "Target swap %s <-> %s: %s",
+        target_swap.key_text(first), target_swap.key_text(second), ", ".join(groups),
+    )
+    return RedirectResponse(url=f"{back}?{urlencode({'action_notice': notice})}", status_code=303)

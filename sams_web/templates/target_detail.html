@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_detail_fields.html" import render_detail_sections %}
 {% from "_detail_chrome.html" import render_record_head, render_detail_notice_block, render_detail_quick_nav, render_pending_bar %}
+{% from "_target_swap.html" import target_swap_menu %}
 
 {% block content %}
 <section class="panel" data-edit-scope>
@@ -33,6 +34,7 @@
     </select>
     <button type="submit" class="record-action" {% if not target_prep_options %}disabled{% endif %}>+ Target</button>
   </form>
+  {{ target_swap_menu(target_base_url ~ target.target_nr) }}
   {% endif %}
   {% endset %}
   <div class="panel-head">
