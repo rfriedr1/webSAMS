@@ -49,12 +49,16 @@ class Kind:
     singular: str
     plural: str
     config: DetailUpdateConfig | None
+    ref_field: str = ""
+    """Field keys behind a `RecordRef`'s number and label: their labels head
+    the columns of the editor's Excel download."""
+    label_field: str = ""
 
 
 KINDS: dict[str, Kind] = {
-    "sample": Kind("sample", "sample", "samples", SAMPLE_DETAIL),
-    "preparation": Kind("preparation", "preparation", "preparations", PREPARATION_DETAIL),
-    "project": Kind("project", "project", "projects", PROJECT_DETAIL),
+    "sample": Kind("sample", "sample", "samples", SAMPLE_DETAIL, "sample_nr", "user_label"),
+    "preparation": Kind("preparation", "preparation", "preparations", PREPARATION_DETAIL, "prep_nr", "batch"),
+    "project": Kind("project", "project", "projects", PROJECT_DETAIL, "project_nr", "project"),
     "submitter": Kind("submitter", "submitter", "submitters", None),
 }
 
@@ -221,6 +225,11 @@ class EditTextAction(RecordAction):
 
     edits_values = True
 
+    mark_suffix: str | None = None
+    """A letter the dialog's *Add …* button appends to every value, e.g. `E`
+    (*entnommen*) on a storage location: the sample was taken out. Only
+    the browser applies it; the posted values are ordinary edits."""
+
     @property
     def max_length(self) -> int | None:
         column = KINDS[self.child].config.model.__table__.columns.get(self.field)
@@ -281,11 +290,13 @@ _FLAGS: tuple[tuple[str, str, tuple[str, ...], Any], ...] = (
     ("project", "prep_return_to_sender", _SUBMITTER, None),
 )
 
-def _text_pair(child: str, field_name: str, owners: tuple[str, ...]) -> list[RecordAction]:
+def _text_pair(
+    child: str, field_name: str, owners: tuple[str, ...], mark_suffix: str | None = None
+) -> list[RecordAction]:
     return [
         EditTextAction(
             key=f"{child}.{field_name}.edit", child=child, field=field_name, value=None,
-            verb="Edit", owners=owners, value_kind="text",
+            verb="Edit", owners=owners, value_kind="text", mark_suffix=mark_suffix,
         ),
         RecordAction(
             key=f"{child}.{field_name}.clear", child=child, field=field_name, value=None,
@@ -294,16 +305,24 @@ def _text_pair(child: str, field_name: str, owners: tuple[str, ...]) -> list[Rec
     ]
 
 
-_TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("sample", "s_storage_loc", _PROJECT),
-    ("sample", "prep_storage_loc", _PROJECT),
+STORAGE_TAKEN_SUFFIX = "E"
+"""Appended to a storage location when the sample was taken out (*entnommen*): `266` → `266E`."""
+
+_TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
+    # child, field, owners, mark suffix (the dialog's "Add …" button)
+    ("sample", "s_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX),
+    ("sample", "prep_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX),
 )
 
 RECORD_ACTIONS: dict[str, RecordAction] = {
     action.key: action
     for action in (
         *(a for child, field_name, owners, warn in _FLAGS for a in _flag_pair(child, field_name, owners, warn)),
-        *(a for child, field_name, owners in _TEXT_FIELDS for a in _text_pair(child, field_name, owners)),
+        *(
+            a
+            for child, field_name, owners, suffix in _TEXT_FIELDS
+            for a in _text_pair(child, field_name, owners, suffix)
+        ),
     )
 }
 
@@ -400,6 +419,8 @@ class ActionPlan:
             # The whole list: the operator edits every record, so no cap.
             payload["editor"] = {
                 "max_length": self.action.max_length,
+                "mark_suffix": self.action.mark_suffix,
+                "columns": [field_label(KINDS[child].ref_field), field_label(KINDS[child].label_field)],
                 "rows": [
                     {
                         "ref": r.record.ref, "href": r.record.href, "label": r.record.label,
