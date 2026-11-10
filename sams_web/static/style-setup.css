@@ -239,12 +239,12 @@
 .setup-subhead {
   margin: var(--space-5) 0 var(--space-2);
   padding-bottom: var(--space-1);
-  border-bottom: 1px solid var(--line);
-  color: var(--brand);
-  font-size: var(--text-xs);
-  font-weight: 800;
+  border-bottom: var(--section-title-rule);
+  color: var(--section-title-color);
+  font-size: var(--section-title-size);
+  font-weight: var(--section-title-weight);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--section-title-tracking);
 }
 
 .setup-subhead:first-of-type { margin-top: var(--space-3); }
@@ -324,12 +324,12 @@
   background: var(--surface-tint);
 }
 
+/* Field labels, not headings: muted, no capitals (uppercase is reserved for
+   section titles, which these sat beside and looked like). */
 .setup-custom-row .import-field > label {
   font-size: var(--text-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-soft);
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .setup-custom-row input,
