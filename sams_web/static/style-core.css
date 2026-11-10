@@ -56,6 +56,17 @@
   --text-h3: var(--text-lg);
   --text-h4: var(--text-md);
 
+  /* Section titles — fact-sheet groups, bench stages, dialog sections,
+     Setup sub-heads, menu groups. Field labels are muted, text-sm, weight
+     600, Title Case; a section title differs in colour, weight and case at
+     once, and is never smaller than a label (2026-11: both were muted grey
+     and the title was the smaller one, so the two read alike). */
+  --section-title-color: var(--brand-deep);
+  --section-title-size: var(--text-sm);
+  --section-title-weight: 800;
+  --section-title-tracking: 0.08em;
+  --section-title-rule: 1px solid var(--line-soft);
+
   /* Spacing scale — 4 px grid replacing the 19 ad-hoc rem values
      scattered across the stylesheets. Components should reference these
      instead of hard-coding. */
