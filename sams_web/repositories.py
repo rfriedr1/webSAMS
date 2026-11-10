@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 
-from sqlalchemy import String, and_, case, cast, exists, false, func, select, text, tuple_, update
+from sqlalchemy import String, and_, case, cast, delete, exists, false, func, or_, select, text, tuple_, union, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, selectinload
 
@@ -21,6 +21,9 @@ from sams_web.models import (
     Target,
     Submitter,
     calc_sample_table,
+    calc_set_table,
+    magazine_table,
+    measprog_table,
 )
 
 
@@ -532,27 +535,107 @@ class SamsRepository:
         rows = self.session.execute(stmt).mappings().all()
         return [dict(row) for row in rows]
 
-    def list_magazines(self) -> list[str]:
-        stmt = (
-            select(Target.magazine)
-            .where(Target.magazine.is_not(None), func.trim(Target.magazine) != "")
-            .distinct()
-            .order_by(Target.magazine.asc())
+    def _magazine_names(self):
+        """Every magazine name: on a target or in `magazine_t` (a magazine
+        still being planned may have no target yet)."""
+        on_targets = select(Target.magazine.label("name")).where(
+            Target.magazine.is_not(None), func.trim(Target.magazine) != ""
         )
+        listed = select(magazine_table.c.name.label("name")).where(func.trim(magazine_table.c.name) != "")
+        return union(on_targets, listed).subquery()
+
+    def list_magazines(self) -> list[str]:
+        names = self._magazine_names()
+        stmt = select(names.c.name).order_by(names.c.name.asc())
         return [value for value in self.session.scalars(stmt) if value is not None]
 
     def resolve_existing_magazine(self, magazine_query: str) -> str | None:
         query = magazine_query.strip()
         if not query:
             return None
+        names = self._magazine_names()
         stmt = (
-            select(Target.magazine)
-            .where(Target.magazine.is_not(None), func.lower(func.trim(Target.magazine)) == query.lower())
-            .order_by(Target.magazine.asc())
+            select(names.c.name)
+            .where(func.lower(func.trim(names.c.name)) == query.lower())
+            .order_by(names.c.name.asc())
             .limit(1)
         )
         value = self.session.scalar(stmt)
         return str(value).strip() if value is not None else None
+
+    # ---- Rename a magazine (ADR-0009, `magazine_rename.py`) -----------------
+
+    MEASURED_TARGET_FIELDS = ("fm", "fm_sig", "c14_age", "c14_age_sig", "dc13", "le_curr", "he_curr")
+
+    def magazine_usage(self, name: str) -> dict[str, Any]:
+        """Where a magazine name is written, and whether it was measured."""
+        measured = or_(
+            *(getattr(Target, field).is_not(None) for field in self.MEASURED_TARGET_FIELDS),
+            and_(Target.calcset.is_not(None), func.trim(Target.calcset) != ""),
+            Target.editallowed == 2,
+        )
+        targets, measured_targets = self.session.execute(
+            select(func.count(), func.coalesce(func.sum(case((measured, 1), else_=0)), 0)).where(Target.magazine == name)
+        ).one()
+        sequence = self.session.scalar(
+            select(func.count()).select_from(measprog_table).where(measprog_table.c.magazine == name)
+        )
+        listed = self.session.scalar(
+            select(func.count()).select_from(magazine_table).where(magazine_table.c.name == name)
+        )
+        calcsets = list(self.session.scalars(
+            select(calc_set_table.c.calcset).where(calc_set_table.c.magazine == name).order_by(calc_set_table.c.calcset)
+        ))
+        return {
+            "targets": int(targets or 0),
+            "measured_targets": int(measured_targets or 0),
+            "sequence": int(sequence or 0),
+            "listed": int(listed or 0),
+            "calcsets": calcsets,
+        }
+
+    def magazine_name_taken(self, name: str) -> str | None:
+        """The stored spelling when any table already uses `name` as a
+        magazine (upper / lower case not told apart), else None."""
+        wanted = name.strip().lower()
+        sources = (
+            (Target.magazine, None),
+            (measprog_table.c.magazine, measprog_table),
+            (magazine_table.c.name, magazine_table),
+            (calc_set_table.c.magazine, calc_set_table),
+        )
+        for column, table in sources:
+            stmt = select(column).where(func.lower(func.trim(column)) == wanted).limit(1)
+            if table is not None:
+                stmt = stmt.select_from(table)
+            found = self.session.scalar(stmt)
+            if found is not None:
+                return str(found).strip()
+        return None
+
+    def rename_magazine(self, old: str, new: str) -> dict[str, int]:
+        """Write `new` wherever `old` is the magazine; no commit.
+
+        The live database's triggers add `new` to `magazine_t` as soon as a
+        sequence or target row changes, so the old name's row is then
+        removed; a magazine with no rows at all gets its `magazine_t` row
+        renamed instead (and on a database without the triggers too)."""
+        sequence = self.session.execute(
+            update(measprog_table).where(measprog_table.c.magazine == old).values(magazine=new)
+        ).rowcount
+        targets = self.session.execute(
+            update(Target.__table__).where(Target.__table__.c.magazine == old).values(magazine=new)
+        ).rowcount
+        g = magazine_table.c
+        if self.session.scalar(select(func.count()).select_from(magazine_table).where(g.name == new)):
+            self.session.execute(delete(magazine_table).where(g.name == old))
+        else:
+            self.session.execute(
+                update(magazine_table).where(g.name == old).values(name=new, last_changed=func.now())
+            )
+        self.session.flush()
+        self.session.expire_all()
+        return {"sequence": int(sequence or 0), "targets": int(targets or 0)}
 
     def count_targets_by_prep(self, sample_nr: int) -> dict[int, int]:
         stmt = (

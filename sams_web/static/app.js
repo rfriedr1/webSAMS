@@ -26,6 +26,7 @@
     installers.installDetailEditMode?.();
     installers.installRecordActions?.();
     installers.installTargetSwap?.();
+    installers.installMagazineRename?.();
     installers.installDetailEmptyFields?.();
     installers.installAnchorDetails?.();
     installers.installTabPanels?.();

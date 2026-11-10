@@ -272,6 +272,42 @@ calc_sample_table = Table(
 )
 
 
+# Magazines (ADR-0009). A magazine has no record of its own: its name is
+# written into each of these tables. `magazine_t` is a name list kept up to
+# date by database triggers on `measprog_t` / `target_t` (any insert, update
+# or delete there REPLACEs the name, which stamps `last_changed`); triggers
+# never remove a name. `measprog_t` is the planned measurement sequence.
+MAGAZINE_NAME_LENGTH = 12
+"""Width of every magazine column in the live schema (`varchar(12)`)."""
+
+magazine_table = Table(
+    "magazine_t",
+    Base.metadata,
+    Column("name", String(MAGAZINE_NAME_LENGTH), primary_key=True),
+    Column("last_changed", DateTime, nullable=False, server_default=func.now()),
+)
+
+measprog_table = Table(
+    "measprog_t",
+    Base.metadata,
+    Column("magazine", String(MAGAZINE_NAME_LENGTH), primary_key=True),
+    Column("sequence", Integer, primary_key=True),
+    Column("position", SmallInteger, nullable=False),
+    Column("recno", Integer, nullable=False),
+    Column("prepdate", Date),
+)
+
+# BATS' evaluation sets (ADR-0003). Only the columns webSAMS reads: a calc
+# set names the magazine it evaluated, so a magazine with one was measured.
+calc_set_table = Table(
+    "calc_set_t",
+    Base.metadata,
+    Column("calcset", String(20), primary_key=True),
+    Column("magazine", String(MAGAZINE_NAME_LENGTH)),
+    Column("date_calc", DateTime),
+)
+
+
 class Material(Base):
     __tablename__ = "material_t"
 

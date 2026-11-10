@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import json
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 
 from sams_web.access import Permission, guarded
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
+from sams_web import magazine_rename
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
 from sams_web.preparation_bench import PreparationBench
 from sams_web.routers.pages_ea_checks import ea_strip_context
 from sams_web.search import SEARCH_CONTEXTS
-from sams_web.routers.pages_shared import parse_positive_int, templates
+from sams_web.routers.pages_shared import logger, parse_positive_int, templates
 from sams_web.services import SamsService
 
 router = APIRouter()
@@ -404,3 +405,38 @@ def lab_analysis_page(
             "magazine_rows": magazine_rows,
         },
     )
+
+
+# ---- Rename a magazine (ADR-0009) -------------------------------------------
+
+
+def _analysis_href(magazine: str, **params: str) -> str:
+    return "/lab/analysis?" + urlencode({"magazine": magazine, **params}) + "#tbl-magazine-targets"
+
+
+@router.get("/lab/analysis/magazine/rename/preview", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_rename_preview(
+    magazine: str = Query(...),
+    new_name: str | None = Query(default=None),
+    service: SamsService = Depends(get_service),
+):
+    """What a rename would change and whether it may run (JSON)."""
+    try:
+        payload = magazine_rename.plan(service, magazine, new_name)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    return JSONResponse(payload)
+
+
+@router.post("/lab/analysis/magazine/rename", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_rename_run(
+    magazine: str = Form(...),
+    new_name: str = Form(default=""),
+    service: SamsService = Depends(get_service),
+):
+    try:
+        renamed, notice = magazine_rename.apply(service, magazine, new_name)
+    except ValueError as exc:
+        return RedirectResponse(url=_analysis_href(magazine.strip(), action_error=str(exc)), status_code=303)
+    logger.info("Magazine renamed: %s -> %s", magazine.strip(), renamed)
+    return RedirectResponse(url=_analysis_href(renamed, action_notice=notice), status_code=303)
