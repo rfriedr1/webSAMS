@@ -201,5 +201,85 @@
     });
   };
 
-  window.SAMSBench = { installDirtyMarkers, installLookupForm };
+  // ---- balance in grams: g → mg on Enter --------------------------------
+
+  // Some balances send their reading in grams, the database stores mg. The
+  // balance types the number into the focused field and ends with Enter
+  // (the bench's own Enter handler then leaves the field). With the
+  // "Balance g → mg" switch on, Enter in a `[data-bench-weight]` field first
+  // multiplies the value by 1000 — as the legacy "auto g -> mg" box did.
+  //
+  // Only a value typed or sent since the last conversion is converted, so a
+  // second Enter, or Enter on a weight loaded from the database, never
+  // multiplies again. The switch is remembered per bench in this browser
+  // (i.e. per lab PC, where the balance is plugged in), like the legacy
+  // Persistent.ini, and is never posted.
+  const gToMgKey = (bench) => `sams_bench_g_to_mg_${bench}`;
+
+  const installGramToMilligram = (form) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    const toggle = form.querySelector("[data-bench-g-to-mg]");
+    if (!(toggle instanceof HTMLInputElement)) {
+      return;
+    }
+    const key = gToMgKey(toggle.dataset.benchGToMg || "bench");
+    const restore = () => {
+      try {
+        toggle.checked = window.localStorage.getItem(key) === "1";
+      } catch (_error) {
+        toggle.checked = false;
+      }
+    };
+    restore();
+    toggle.addEventListener("change", () => {
+      try {
+        window.localStorage.setItem(key, toggle.checked ? "1" : "0");
+      } catch (_error) {
+        // Storage blocked: the switch still works until the page reloads.
+      }
+    });
+    // Cancel (a form reset) must not switch it off.
+    form.addEventListener("reset", () => window.setTimeout(restore, 0));
+
+    form.querySelectorAll("[data-bench-weight]").forEach((input) => {
+      if (!(input instanceof HTMLInputElement)) {
+        return;
+      }
+      let typedSinceConversion = false;
+      input.addEventListener("input", (event) => {
+        if (event.isTrusted) {
+          typedSinceConversion = true;
+        }
+      });
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || !toggle.checked || !typedSinceConversion) {
+          return;
+        }
+        const raw = input.value.trim();
+        const grams = Number.parseFloat(raw.replace(",", "."));
+        if (raw === "" || !Number.isFinite(grams)) {
+          return;
+        }
+        typedSinceConversion = false;
+        // 3 decimals in mg = 1 µg, finer than any balance here; also drops
+        // float noise (0.0123 * 1000 = 12.299999999999999).
+        input.value = String(Number((grams * 1000).toFixed(3)));
+        input.title = `${raw} g → ${input.value} mg`;
+        const field = input.closest(".bench-field");
+        if (field) {
+          field.classList.remove("is-converted");
+          void field.offsetWidth; // restart the highlight
+          field.classList.add("is-converted");
+          window.setTimeout(() => field.classList.remove("is-converted"), 1600);
+        }
+        // Yield, Weight End prefill, dates and dirty dots follow the value.
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+  };
+
+  window.SAMSBench = { installDirtyMarkers, installLookupForm, installGramToMilligram };
 })();

@@ -647,6 +647,46 @@
   border-top: 1px solid var(--line-soft);
 }
 
+/* "Balance g → mg" (bench-common.js): a quiet switch beside Cancel. */
+.bench-unit-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bench-unit-switch input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.bench-unit-switch:has(input:checked) {
+  color: var(--brand-deep);
+}
+
+/* A weight just converted from g: a short tint, the title says from what. */
+.bench-field.is-converted input {
+  animation: bench-converted 1.6s ease-out;
+}
+
+@keyframes bench-converted {
+  from {
+    background: var(--brand-tint);
+    box-shadow: 0 0 0 3px rgba(77, 145, 170, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bench-field.is-converted input {
+    animation: none;
+    background: var(--brand-tint);
+  }
+}
+
 .bench-actions-main {
   display: flex;
   gap: var(--space-2);
@@ -840,5 +880,14 @@
 
   .bench-actions-main .bench-button {
     flex: 1 1 0;
+  }
+
+  .bench-unit-switch {
+    min-height: 2.75rem;
+  }
+
+  .bench-unit-switch input {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 }

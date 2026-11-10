@@ -7,7 +7,7 @@
     (weights + yield, dates + storage, methods), flag chips, comment and
     Save / Save & next. Same pieces as the graphitization bench
     (_bench_macros.html). -#}
-{% from "_bench_macros.html" import stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
+{% from "_bench_macros.html" import balance_unit_switch, stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
 <div
   class="bench-layout is-single"
   data-page-label="Preparation bench"
@@ -126,7 +126,7 @@
           <section class="bench-stage" aria-labelledby="prep-stage-start">
             <h3 class="bench-stage-title" id="prep-stage-start">Start</h3>
             <div class="bench-stage-row">
-              {{ bench_input("bench-weight-start", "bench__weight_start", field_label("weight_start"), bench_values, bench_prep.weight_start, bench_errors, hook="data-prep-bench-weight-start") }}
+              {{ bench_input("bench-weight-start", "bench__weight_start", field_label("weight_start"), bench_values, bench_prep.weight_start, bench_errors, hook="data-prep-bench-weight-start data-bench-weight") }}
               {{ bench_input("bench-prep-start", "bench__prep_start", field_label("prep_start"), bench_values, bench_prep.prep_start.strftime('%Y-%m-%d') if bench_prep.prep_start else '', bench_errors, kind="date", hook="data-prep-bench-prep-start") }}
             </div>
           </section>
@@ -155,15 +155,15 @@
           <section class="bench-stage" aria-labelledby="prep-stage-container">
             <h3 class="bench-stage-title" id="prep-stage-container">Container</h3>
             <div class="bench-stage-row">
-              {{ bench_input("bench-weight-medium", "bench__weight_medium", field_label("weight_medium"), bench_values, bench_prep.weight_medium, bench_errors, hook="data-prep-bench-weight-medium") }}
-              {{ bench_input("bench-weight-medium-2", "bench__weight_medium_2", field_label("weight_medium_2"), bench_values, bench_prep.weight_medium_2, bench_errors, hook="data-prep-bench-weight-medium-2") }}
+              {{ bench_input("bench-weight-medium", "bench__weight_medium", field_label("weight_medium"), bench_values, bench_prep.weight_medium, bench_errors, hook="data-prep-bench-weight-medium data-bench-weight") }}
+              {{ bench_input("bench-weight-medium-2", "bench__weight_medium_2", field_label("weight_medium_2"), bench_values, bench_prep.weight_medium_2, bench_errors, hook="data-prep-bench-weight-medium-2 data-bench-weight") }}
             </div>
           </section>
 
           <section class="bench-stage" aria-labelledby="prep-stage-end">
             <h3 class="bench-stage-title" id="prep-stage-end">End</h3>
             <div class="bench-stage-row">
-              {{ bench_input("bench-weight-end", "bench__weight_end", field_label("weight_end"), bench_values, bench_prep.weight_end, bench_errors, hook="data-prep-bench-weight-end") }}
+              {{ bench_input("bench-weight-end", "bench__weight_end", field_label("weight_end"), bench_values, bench_prep.weight_end, bench_errors, hook="data-prep-bench-weight-end data-bench-weight") }}
               {{ bench_input("bench-prep-end", "bench__prep_end", field_label("prep_end"), bench_values, bench_prep.prep_end.strftime('%Y-%m-%d') if bench_prep.prep_end else '', bench_errors, kind="date", hook="data-prep-bench-prep-end") }}
               <div class="bench-field is-readout">
                 <span class="bench-field-label">{{ field_label('yield_percent') }}</span>
@@ -209,6 +209,7 @@
       {% if can("edit_records") %}
       <div class="bench-actions" data-prep-bench-actions>
         <button type="reset" class="bench-button is-ghost">Cancel</button>
+        {{ balance_unit_switch("prep") }}
         <div class="bench-actions-main">
           <button type="submit" name="bench__action" value="save" class="bench-button">Save</button>
           <button type="submit" name="bench__action" value="save_next" class="bench-button is-primary">Save &amp; next</button>

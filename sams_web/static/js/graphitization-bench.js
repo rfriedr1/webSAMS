@@ -46,6 +46,7 @@
       const targetForm = bench.querySelector("[data-graph-bench-target-form]");
       if (targetForm instanceof HTMLFormElement) {
         const dirtyMarkers = window.SAMSBench.installDirtyMarkers(targetForm);
+        window.SAMSBench.installGramToMilligram(targetForm);
         const prepStorage = targetForm.querySelector("[data-graph-bench-prep-storage]");
         const prepArchived = targetForm.querySelector("[data-graph-bench-prep-archived]");
         const noLeftoverCheckbox = targetForm.querySelector("[data-graph-bench-no-leftover]");
