@@ -6,7 +6,7 @@
     Two panels side by side: the target being worked on (lookup, one line of
     sample facts, the entry fields as lab-flow stages, Save / Save & next)
     and the graph batch being built — the next step for the target. Same pieces as the preparation bench (_bench_macros.html). -#}
-{% from "_bench_macros.html" import stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
+{% from "_bench_macros.html" import balance_unit_switch, stepper_buttons, ctx_item, ctx_flag, bench_input, bench_flag, bench_flag_readonly %}
 <div
   class="bench-layout{% if not graph_bench_entry %} is-single{% endif %}"
   data-page-label="Graphitization bench"
@@ -163,7 +163,7 @@
               <span class="bench-field-label">Prep {{ field_label('weight_end') }}</span>
               <output class="bench-readout">{{ format_table_cell_value("weight_end", graph_prep.weight_end) if graph_prep.weight_end is not none else '—' }}</output>
             </div>
-            {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", field_label("weight_combustion"), graph_values, graph_target.weight_combustion, graph_errors) }}
+            {{ bench_input("graphbench-weight-combustion", "graphbench__weight_combustion", field_label("weight_combustion"), graph_values, graph_target.weight_combustion, graph_errors, hook="data-bench-weight") }}
           </div>
         </section>
 
@@ -214,6 +214,7 @@
       {% if can("edit_records") %}
       <div class="bench-actions" data-graph-bench-target-actions>
         <button type="reset" class="bench-button is-ghost">Cancel</button>
+        {{ balance_unit_switch("graph") }}
         <div class="bench-actions-main">
           <button type="submit" name="graphbench__action" value="save" class="bench-button">Save</button>
           <button type="submit" name="graphbench__action" value="save_next" class="bench-button is-primary">Save &amp; next</button>

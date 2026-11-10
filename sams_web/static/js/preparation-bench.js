@@ -48,6 +48,9 @@
 
       if (saveForm) {
         const dirtyMarkers = window.SAMSBench.installDirtyMarkers(saveForm);
+        // Its Enter listener sits on the field, so it runs before the
+        // form's Enter handler below leaves the field.
+        window.SAMSBench.installGramToMilligram(saveForm);
         const weightStart = saveForm.querySelector("[data-prep-bench-weight-start]");
         const weightMid = saveForm.querySelector("[data-prep-bench-weight-medium]");
         const weightMid2 = saveForm.querySelector("[data-prep-bench-weight-medium-2]");

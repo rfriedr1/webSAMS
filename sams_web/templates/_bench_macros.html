@@ -108,3 +108,14 @@
   <span>{{ label }}</span>
 </label>
 {% endmacro %}
+
+
+{#- "Balance g → mg": for a balance that sends grams. Enter in a weight field
+    (`data-bench-weight`) multiplies by 1000 first. Remembered per bench in
+    this browser (bench-common.js); no name, so never posted. -#}
+{% macro balance_unit_switch(bench) -%}
+<label class="bench-unit-switch" title="For a balance that sends grams: the weight is multiplied by 1000 when Enter leaves the field. Remembered on this computer.">
+  <input type="checkbox" data-bench-g-to-mg="{{ bench }}" />
+  <span>Balance g → mg</span>
+</label>
+{%- endmacro %}
