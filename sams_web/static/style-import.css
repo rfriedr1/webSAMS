@@ -1269,6 +1269,82 @@
   margin: 0;
 }
 
+/* Cc / Bcc: Setup's addresses as tick chips, then a box for extra ones. */
+.import-mail-copies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+}
+
+.import-mail-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+}
+
+.import-mail-copy label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.import-mail-copy span {
+  overflow-wrap: anywhere;
+}
+
+.import-mail-forget {
+  margin: 0 -0.2rem 0 0.1rem;
+  padding: 0 0.25rem;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.import-mail-forget:hover {
+  color: var(--danger);
+}
+
+.import-mail .import-mail-copy input {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Unticked: struck through and muted, so "left out" is not colour alone. */
+.import-mail-copy:has(input:not(:checked)) {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* A remembered address is only on offer: no strike, it was never in. */
+.import-mail-copy:not(.is-remembered):has(input:not(:checked)) span {
+  text-decoration: line-through;
+}
+
+.import-mail .import-mail-extra {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.import-mail-note {
+  grid-column: 2;
+  margin: calc(-1 * var(--space-1)) 0 0;
+}
+
 .import-mail-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1343,6 +1419,10 @@
 
   .import-mail > label.is-top {
     padding-top: 0;
+  }
+
+  .import-mail-note {
+    grid-column: 1;
   }
 
   .import-foot-actions {

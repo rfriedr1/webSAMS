@@ -1771,6 +1771,105 @@
     }
   }
 
+  /*
+   * Addresses added on the e-mail step are remembered in this browser
+   * (one lab PC), so a colleague covering for a while need not retype
+   * them on every import. They come back *unticked* — nobody is copied
+   * without the operator choosing it — and are forgotten after
+   * REMEMBER_DAYS without being sent to, so a stand-in drops out by
+   * itself when the cover ends. × forgets one at once. Never in Setup:
+   * that would copy them from every PC.
+   */
+  const COPIES_KEY = "sams_import_mail_copies";
+  const REMEMBER_DAYS = 30;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  function readRememberedCopies() {
+    let stored = {};
+    try { stored = JSON.parse(window.localStorage.getItem(COPIES_KEY) || "{}") || {}; } catch (_e) { stored = {}; }
+    const cutoff = Date.now() - REMEMBER_DAYS * DAY_MS;
+    const fresh = {};
+    for (const kind of ["cc", "bcc"]) {
+      fresh[kind] = (Array.isArray(stored[kind]) ? stored[kind] : [])
+        .filter((entry) => entry && typeof entry.address === "string" && Date.parse(entry.used) >= cutoff);
+    }
+    return fresh;
+  }
+
+  function writeRememberedCopies(copies) {
+    try { window.localStorage.setItem(COPIES_KEY, JSON.stringify(copies)); } catch (_e) { /* private mode */ }
+  }
+
+  /** After a send: every address sent that is not one of Setup's is remembered as used today. */
+  function rememberSentCopies(sent, setupCopies) {
+    const copies = readRememberedCopies();
+    const today = new Date().toISOString().slice(0, 10);
+    for (const kind of ["cc", "bcc"]) {
+      const fromSetup = new Set((setupCopies[kind] || []).map((a) => a.toLowerCase()));
+      for (const address of sent[kind] || []) {
+        if (fromSetup.has(address.toLowerCase())) continue;
+        copies[kind] = copies[kind].filter((e) => e.address.toLowerCase() !== address.toLowerCase());
+        copies[kind].unshift({ address, used: today });
+      }
+    }
+    writeRememberedCopies(copies);
+  }
+
+  function forgetCopy(kind, address) {
+    const copies = readRememberedCopies();
+    copies[kind] = copies[kind].filter((e) => e.address.toLowerCase() !== address.toLowerCase());
+    writeRememberedCopies(copies);
+  }
+
+  function copyChip(address, { ticked, remembered, kind, used }) {
+    const forget = remembered
+      ? `<button type="button" class="import-mail-forget" data-copy-forget="${esc(kind)}" value="${esc(address)}"
+                 aria-label="Forget ${esc(address)}" title="Forget this address">×</button>`
+      : "";
+    const title = remembered
+      ? `Added on this computer, last sent to ${used}. Forgotten after ${REMEMBER_DAYS} days without use.`
+      : "From Setup → E-mail";
+    return `
+      <span class="import-mail-copy${remembered ? " is-remembered" : ""}" title="${esc(title)}">
+        <label>
+          <input type="checkbox" data-copy-pick value="${esc(address)}" ${ticked ? "checked" : ""} />
+          <span>${esc(address)}</span>
+        </label>${forget}
+      </span>`;
+  }
+
+  /**
+   * One Cc / Bcc row: Setup's addresses (ticked), then the ones added
+   * earlier on this computer (unticked), then a box for new ones.
+   */
+  function copiesRow(kind, label, addresses, remembered) {
+    const fromSetup = new Set((addresses || []).map((a) => a.toLowerCase()));
+    const chips = [
+      ...(addresses || []).map((address) => copyChip(address, { ticked: true, remembered: false, kind })),
+      ...(remembered || [])
+        .filter((entry) => !fromSetup.has(entry.address.toLowerCase()))
+        .map((entry) => copyChip(entry.address, { ticked: false, remembered: true, kind, used: entry.used })),
+    ].join("");
+    return `
+      <label for="import-email-${kind}-extra">${label}</label>
+      <div class="import-mail-copies" data-copies="${kind}">
+        ${chips}
+        <input id="import-email-${kind}-extra" type="text" inputmode="email" class="import-mail-extra"
+               data-copy-extra placeholder="Add addresses, separated by , or ;" autocomplete="off"
+               aria-label="Add ${label} addresses, separated by comma or semicolon" />
+      </div>`;
+  }
+
+  /** The addresses a Cc / Bcc row will send to: ticked chips, then added ones. */
+  function copiesValue(host, kind) {
+    const row = host.querySelector(`[data-copies="${kind}"]`);
+    if (!row) return [];
+    const ticked = [...row.querySelectorAll("[data-copy-pick]:checked")].map((box) => box.value);
+    const added = row.querySelector("[data-copy-extra]").value.split(/[,;\s]+/).filter(Boolean);
+    const seen = new Set();
+    return [...ticked, ...added].filter((a) => !seen.has(a.toLowerCase()) && seen.add(a.toLowerCase()));
+  }
+
   function renderEmailForm(data, result) {
     const email = data.email;
     const host = $("[data-email]");
@@ -1782,6 +1881,7 @@
       .join("");
 
     const from = email.from_name ? `${email.from_name} <${email.from_address}>` : email.from_address;
+    const remembered = readRememberedCopies();
     host.innerHTML = `
       ${blockers.length
         ? `<p class="import-hint is-warning">${blockers.map(esc).join(" ")}
@@ -1794,7 +1894,11 @@
           <span class="import-hint" data-email-template-reason>${esc(templateReasonText(data))}</span>
         </div>
         <label for="import-email-to">To</label>
-        <input id="import-email-to" type="email" data-email-to value="${esc(email.to_address)}" />
+        <input id="import-email-to" type="text" inputmode="email" data-email-to value="${esc(email.to_address)}" />
+        ${copiesRow("cc", "Cc", email.cc, remembered.cc)}
+        ${copiesRow("bcc", "Bcc", email.bcc, remembered.bcc)}
+        <p class="import-hint import-mail-note">Ticked copies come from <a href="/setup?section=email_settings">Setup → E-mail</a>; untick one to leave it out.
+          Addresses you add are remembered on this computer and offered unticked next time, until ${REMEMBER_DAYS} days pass without using them; × forgets one now.</p>
         <label for="import-email-from">From</label>
         <input id="import-email-from" type="text" value="${esc(from || "")}" disabled />
         <label for="import-email-subject">Subject</label>
@@ -1843,6 +1947,15 @@
       }
     });
 
+    host.querySelectorAll("[data-copy-forget]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const kind = button.dataset.copyForget;
+        forgetCopy(kind, button.value);
+        button.closest(".import-mail-copy").remove();
+        host.querySelector(`[data-copies="${kind}"] [data-copy-extra]`).focus();
+      });
+    });
+
     host.querySelector("[data-email-skip]").addEventListener("click", () => {
       $("[data-email-section]").hidden = true;
       window.SAMSToast?.show("No e-mail sent.", "info");
@@ -1860,6 +1973,8 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             to_address: host.querySelector("[data-email-to]").value,
+            cc: copiesValue(host, "cc"),
+            bcc: copiesValue(host, "bcc"),
             subject: host.querySelector("[data-email-subject]").value,
             body: host.querySelector("[data-email-body]").value,
           }),
@@ -1872,7 +1987,13 @@
           button.textContent = "Send e-mail";
           return;
         }
-        host.innerHTML = `<p class="import-sent">✓ Confirmation e-mail sent to ${esc(data2.to_address)}.</p>`;
+        rememberSentCopies({ cc: data2.cc || [], bcc: data2.bcc || [] }, { cc: email.cc, bcc: email.bcc });
+        const copies = [
+          data2.cc?.length ? `Cc ${data2.cc.join(", ")}` : "",
+          data2.bcc?.length ? `Bcc ${data2.bcc.join(", ")}` : "",
+        ].filter(Boolean).join(" · ");
+        host.innerHTML = `<p class="import-sent">✓ Confirmation e-mail sent to ${esc(data2.to_address)}.</p>
+          ${copies ? `<p class="import-hint">${esc(copies)}</p>` : ""}`;
         window.SAMSToast?.show("Confirmation e-mail sent.", "success");
       } catch (_e) {
         status.textContent = "The e-mail could not be sent. The import itself is unaffected.";

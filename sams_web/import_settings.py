@@ -244,7 +244,8 @@ EMAIL_SERVER_FIELDS: tuple[EmailField, ...] = (
     EmailField("from_address", "From address", "Appears as the sender of confirmation e-mails.", default=""),
     EmailField("from_name", "From name", "Display name shown next to the sender address.", default="CEZA C14 Laboratory"),
     EmailField("reply_to", "Reply-to", "Optional. Where customer replies should go.", default=""),
-    EmailField("bcc", "BCC", "Optional. Copies every confirmation to these addresses for the lab's records — separate several with commas (not semicolons).", default=""),
+    EmailField("cc", "CC", "Optional. Copies every confirmation to these addresses, visible to the customer — separate several with commas or semicolons. The operator sees them before sending and can leave one out.", default=""),
+    EmailField("bcc", "BCC", "Optional. Hidden copies of every confirmation for the lab's records — separate several with commas or semicolons. The operator sees them before sending and can leave one out.", default=""),
 )
 
 #: Placeholders available inside a template's subject and body.
