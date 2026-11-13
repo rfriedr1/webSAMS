@@ -376,7 +376,8 @@ async def setup_email_test(
         from_address=str(settings.get("from_address") or ""),
         from_name=str(settings.get("from_name") or ""),
         reply_to=str(settings.get("reply_to") or ""),
-        # Deliberately no Bcc: a connection test should not copy anyone.
+        # Deliberately no Cc / Bcc: a connection test should not copy anyone.
+        cc="",
         bcc="",
     )
     try:

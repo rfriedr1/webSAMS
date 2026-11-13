@@ -9,6 +9,7 @@ committed by the time this runs.
 
 from __future__ import annotations
 
+import re
 import smtplib
 import ssl
 from dataclasses import dataclass
@@ -23,6 +24,36 @@ class EmailError(RuntimeError):
     """Raised when an e-mail cannot be rendered or delivered."""
 
 
+_ADDRESS_SEPARATORS = re.compile(r"[,;\s]+")
+_PLAIN_ADDRESS = re.compile(r"^[^@\s<>,;\"]+@[^@\s<>,;\"]+\.[^@\s<>,;\"]+$")
+
+
+def split_addresses(value: Any) -> list[str]:
+    """A list of addresses from text or a list, in order, without repeats.
+
+    Accepts commas, semicolons, spaces and line breaks as separators —
+    Outlook users type semicolons, and the Setup field used to say
+    "commas only". Repeats (ignoring case) are dropped.
+    """
+    if value is None:
+        return []
+    parts = value if isinstance(value, (list, tuple)) else [value]
+    result: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        for address in _ADDRESS_SEPARATORS.split(str(part or "")):
+            address = address.strip()
+            if address and address.lower() not in seen:
+                seen.add(address.lower())
+                result.append(address)
+    return result
+
+
+def invalid_addresses(addresses: list[str]) -> list[str]:
+    """The entries that are not a plain `name@domain.tld` address."""
+    return [a for a in addresses if not _PLAIN_ADDRESS.match(a)]
+
+
 @dataclass
 class RenderedEmail:
     to_address: str
@@ -31,6 +62,7 @@ class RenderedEmail:
     from_address: str = ""
     from_name: str = ""
     reply_to: str = ""
+    cc: str = ""
     bcc: str = ""
 
     def as_dict(self) -> dict[str, Any]:
@@ -41,8 +73,13 @@ class RenderedEmail:
             "from_address": self.from_address,
             "from_name": self.from_name,
             "reply_to": self.reply_to,
-            "bcc": self.bcc,
+            "cc": split_addresses(self.cc),
+            "bcc": split_addresses(self.bcc),
         }
+
+    def recipients(self) -> list[str]:
+        """Every address the message goes to: To, then Cc, then Bcc."""
+        return split_addresses([self.to_address, self.cc, self.bcc])
 
 
 def format_sample_list(sample_nrs: list[int], labels: list[str] | None = None) -> str:
@@ -117,7 +154,8 @@ def build_confirmation(
         from_address=str(settings.get("from_address", "") or ""),
         from_name=str(settings.get("from_name", "") or ""),
         reply_to=str(settings.get("reply_to", "") or ""),
-        bcc=str(settings.get("bcc", "") or ""),
+        cc=", ".join(split_addresses(settings.get("cc"))),
+        bcc=", ".join(split_addresses(settings.get("bcc"))),
     )
 
 
@@ -135,6 +173,12 @@ def send_email(message: RenderedEmail, settings: dict[str, Any]) -> None:
         raise EmailError("The submitter has no e-mail address, so nothing can be sent.")
     if not message.from_address:
         raise EmailError("No sender address is configured. Set one up in Setup → E-mail.")
+    for label, value in (("To", message.to_address), ("Cc", message.cc), ("Bcc", message.bcc)):
+        bad = invalid_addresses(split_addresses(value))
+        if bad:
+            raise EmailError(
+                f"{label}: {', '.join(bad)} is not an e-mail address. Correct it and send again."
+            )
 
     try:
         port = int(settings.get("smtp_port") or 587)
@@ -151,11 +195,14 @@ def send_email(message: RenderedEmail, settings: dict[str, Any]) -> None:
         if message.from_name
         else message.from_address
     )
-    email["To"] = message.to_address
+    email["To"] = ", ".join(split_addresses(message.to_address))
     if message.reply_to:
         email["Reply-To"] = message.reply_to
-    if message.bcc:
-        email["Bcc"] = message.bcc
+    # Bcc gets no header: its addresses go only into the SMTP envelope
+    # (`recipients()`), so the customer never sees them.
+    cc = split_addresses(message.cc)
+    if cc:
+        email["Cc"] = ", ".join(cc)
     email.set_content(message.body)
 
     try:
@@ -164,22 +211,21 @@ def send_email(message: RenderedEmail, settings: dict[str, Any]) -> None:
             with smtplib.SMTP_SSL(host, port, context=context, timeout=30) as smtp:
                 if user:
                     smtp.login(user, password)
-                smtp.send_message(email)
+                smtp.send_message(email, to_addrs=message.recipients())
         else:
             with smtplib.SMTP(host, port, timeout=30) as smtp:
                 if security == "starttls":
                     smtp.starttls(context=ssl.create_default_context())
                 if user:
                     smtp.login(user, password)
-                smtp.send_message(email)
+                smtp.send_message(email, to_addrs=message.recipients())
     except smtplib.SMTPAuthenticationError as exc:
         raise EmailError(
             "The mail server rejected the username or password. Check Setup → E-mail."
         ) from exc
     except smtplib.SMTPRecipientsRefused as exc:
-        raise EmailError(
-            f"The mail server refused the recipient address {message.to_address!r}."
-        ) from exc
+        refused = ", ".join(sorted(exc.recipients)) or message.to_address
+        raise EmailError(f"The mail server refused the address {refused}.") from exc
     except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
         raise EmailError(f"Could not reach the mail server: {exc}") from exc
 
@@ -190,6 +236,8 @@ __all__ = [
     "RenderedEmail",
     "build_confirmation",
     "format_sample_list",
+    "invalid_addresses",
     "render_confirmation",
     "send_email",
+    "split_addresses",
 ]

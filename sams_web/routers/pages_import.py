@@ -230,9 +230,10 @@ async def sample_import_email_send(
 ):
     """Send the confirmation e-mail the operator just reviewed.
 
-    Takes the *edited* subject/body straight from the request so any
-    last-minute change the operator made in the preview is what goes
-    out. Recipient still comes from the submitter record.
+    Takes the *edited* subject/body and the recipients straight from the
+    request, so what the operator saw is what goes out: the To address,
+    and the Cc / Bcc lists as they left them (Setup's copies ticked or
+    unticked, plus any address added for this e-mail only).
     """
     try:
         payload = await request.json()
@@ -242,16 +243,20 @@ async def sample_import_email_send(
     store = EmailSettingsStore(service.setup_store)
     settings = store.load()
 
-    from sams_web.sample_import.mailer import RenderedEmail
+    from sams_web.sample_import.mailer import RenderedEmail, split_addresses
 
+    to = split_addresses(payload.get("to_address"))
+    cc = split_addresses(payload.get("cc"))
+    bcc = split_addresses(payload.get("bcc"))
     message = RenderedEmail(
-        to_address=str(payload.get("to_address") or "").strip(),
+        to_address=", ".join(to),
         subject=str(payload.get("subject") or ""),
         body=str(payload.get("body") or ""),
         from_address=str(settings.get("from_address") or ""),
         from_name=str(settings.get("from_name") or ""),
         reply_to=str(settings.get("reply_to") or ""),
-        bcc=str(settings.get("bcc") or ""),
+        cc=", ".join(cc),
+        bcc=", ".join(bcc),
     )
     try:
         send_email(message, settings)
@@ -263,4 +268,4 @@ async def sample_import_email_send(
             {"detail": "The e-mail could not be sent. The import itself is unaffected."},
             status_code=500,
         )
-    return JSONResponse({"sent": True, "to_address": message.to_address})
+    return JSONResponse({"sent": True, "to_address": message.to_address, "cc": cc, "bcc": bcc})

@@ -47,6 +47,7 @@
     ]
   },
   "email_settings": {
+    "cc": "",
     "bcc": "",
     "from_address": "c14@ceza.de",
     "from_name": "CEZA C14 Laboratory",

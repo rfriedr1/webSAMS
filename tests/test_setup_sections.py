@@ -136,6 +136,7 @@ def test_email_round_trip_keeps_password_out_of_the_page(client, store):
         "from_address": "lab@example.org",
         "from_name": "Lab",
         "reply_to": "",
+        "cc": "",
         "bcc": "",
         "template_en_subject": "Received: {project_name}",
         "template_en_body": "Hello {submitter_name}",
