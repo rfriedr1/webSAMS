@@ -165,10 +165,28 @@
       if (plan.refused_count) facts.append(document.createTextNode(` · ${plan.refused_count} cannot be changed`));
       body.append(facts);
 
-      const fromLine = ticked().length
-        ? `From ${plan.rows.count} ticked ${plan.rows.noun}.`
-        : `From all ${plan.rows.count} ${plan.rows.noun} of this record.`;
-      body.append(el("p", "record-action-from", fromLine));
+      // An action on the record itself has no "from" line; ticks do not apply.
+      const fromLine = plan.on_owner
+        ? (ticked().length ? `Ticked ${plan.rows.noun} do not apply: this changes the ${child.singular} itself.` : "")
+        : ticked().length
+          ? `From ${plan.rows.count} ticked ${plan.rows.noun}.`
+          : `From all ${plan.rows.count} ${plan.rows.noun} of this record.`;
+      if (fromLine) body.append(el("p", "record-action-from", fromLine));
+
+      if (plan.leftover) {
+        // Returned actions: what has no leftover cannot be returned.
+        const lo = plan.leftover;
+        const line = el("p", "record-action-leftover");
+        line.append(
+          el("strong", "", `${lo.no_leftover} of ${lo.total} ${plural(lo.total, lo.singular, lo.noun)}`),
+          document.createTextNode(
+            lo.no_leftover
+              ? ` ${lo.no_leftover === 1 ? "has" : "have"} no leftover and cannot be returned · ${lo.returnable} can be.`
+              : " have no leftover — all can be returned."
+          ),
+        );
+        body.append(line);
+      }
 
       if (plan.warnings.length) {
         const list = el("ul", "record-action-warnings");
@@ -220,7 +238,9 @@
         submit.textContent = "Nothing to change";
       } else {
         submit.disabled = false;
-        submit.textContent = `${plan.verb} on ${plan.change_count} ${plural(plan.change_count, child.singular, child.plural)}`;
+        submit.textContent = plan.on_owner
+          ? `${plan.verb} on this ${child.singular}`
+          : `${plan.verb} on ${plan.change_count} ${plural(plan.change_count, child.singular, child.plural)}`;
       }
     };
 

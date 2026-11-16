@@ -28,3 +28,7 @@ Some lab tasks change the same field on many records. The trigger was C/N isotop
 - A new flag action is one entry in `_FLAGS` (`sams_web/record_actions.py`); its field must have a `FIELD_LABELS` entry and be writable in its config (`tests/test_record_actions.py` checks both). Work that is not "set field to value" (e.g. add a preparation to every sample) subclasses `RecordAction`.
 - New write routes `POST /projects/{nr}/actions/{key}` and `/submitters/{nr}/actions/{key}` are guarded by *edit records*; their previews are guarded GETs returning JSON.
 - "Record action" is the glossary term; avoid "batch", which already names three lab events.
+
+## Addendum (2026-11): actions on the owner record itself
+
+*Returned to Sender* and *Prep Returned to Sender* live on `project_t`, so on the project page they write the project, not the ticked samples (`RecordAction.on_owner`). They still go through preview → apply and the project's `DetailUpdateConfig`. Because a sample or preparation flagged *No Leftover* cannot be returned, the preview counts them (`scope_facts`) and *Set* is refused when nothing has leftover (`refusal`); *Clear* is never blocked.
