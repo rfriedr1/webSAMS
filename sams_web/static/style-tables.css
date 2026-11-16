@@ -233,6 +233,26 @@ thead th {
   border-bottom: 1px solid var(--line);
 }
 
+/* Opt-in for a table with many short columns on a narrow panel (the
+   submitter's projects), so it fits without scrolling: two-word heads
+   break at the space ("Measured / Targets") — the column is still as wide
+   as its longest word, never narrower, which is what the nowrap rule
+   above protects — and cells get tighter side padding. */
+table.table-compact thead th {
+  white-space: normal;
+  vertical-align: bottom;
+}
+
+table.table-compact th,
+table.table-compact td {
+  padding-left: 0.42rem;
+  padding-right: 0.42rem;
+}
+
+table.table-compact thead th.table-sortable {
+  padding-right: 0.9rem;
+}
+
 thead th.table-sortable {
   position: sticky;
   cursor: pointer;
