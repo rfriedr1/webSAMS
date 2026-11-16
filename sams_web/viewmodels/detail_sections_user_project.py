@@ -23,8 +23,11 @@ from sams_web.viewmodels.detail_sections_common import (
 # Columns of the related-records tables, by key. Head and cells come from
 # `field_label` / `table_cell`, so they read like every other table.
 SUBMITTER_PROJECT_COLUMNS: tuple[str, ...] = (
-    "project_nr", "project", "status", "in_date", "desired_date", "out_date",
+    "project_nr", "project", "status", "sample_count", "measured_targets",
+    "in_date", "desired_date", "out_date",
 )
+"""`sample_count` / `measured_targets` are not project columns: they come
+from `SamsRepository.project_sample_target_counts`."""
 PROJECT_SAMPLE_COLUMNS: tuple[str, ...] = (
     "sample_nr", "user_label", "user_label_nr", "user_desc1", "material", "c14_age",
 )

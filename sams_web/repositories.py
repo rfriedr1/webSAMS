@@ -145,6 +145,31 @@ class SamsRepository:
         )
         return list(self.session.scalars(stmt))
 
+    def project_sample_target_counts(self, project_nrs: list[int]) -> dict[int, dict[str, int]]:
+        """Per project: its samples and its measured targets (a target with
+        an FM or a C14 age), for the submitter's project table."""
+        if not project_nrs:
+            return {}
+        counts = {nr: {"sample_count": 0, "measured_targets": 0} for nr in project_nrs}
+        sample_rows = self.session.execute(
+            select(Sample.project_nr, func.count())
+            .where(Sample.project_nr.in_(project_nrs))
+            .group_by(Sample.project_nr)
+        )
+        for project_nr, n in sample_rows:
+            counts[project_nr]["sample_count"] = int(n)
+        measured = or_(Target.fm.is_not(None), Target.c14_age.is_not(None))
+        target_rows = self.session.execute(
+            select(Sample.project_nr, func.count())
+            .select_from(Target)
+            .join(Sample, Sample.sample_nr == Target.sample_nr)
+            .where(Sample.project_nr.in_(project_nrs), measured)
+            .group_by(Sample.project_nr)
+        )
+        for project_nr, n in target_rows:
+            counts[project_nr]["measured_targets"] = int(n)
+        return counts
+
     def list_projects(
         self, query: str | None = None, limit: int | None = None
     ) -> list[Project]:

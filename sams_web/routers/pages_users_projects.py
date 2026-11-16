@@ -52,7 +52,10 @@ def _project_cursor(data: dict[str, object]) -> NavCursor:
 def _submitter_extra_keys(data: dict[str, object]) -> dict[str, object]:
     return {
         "projects": data["projects"],
-        "project_rows": table_rows(data["projects"]),
+        "project_rows": [
+            {**row, **data["project_counts"].get(row["project_nr"], {})}
+            for row in table_rows(data["projects"])
+        ],
         "project_columns": SUBMITTER_PROJECT_COLUMNS,
         "record_action_menu": action_menu("submitter"),
     }
