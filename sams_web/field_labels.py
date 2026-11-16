@@ -192,6 +192,8 @@ FIELD_LABELS: dict[str, str] = {
     "in_freeze": "In Freeze",
     "samples": "Samples",
     "measured": "Measured",
+    "sample_count": "Samples",
+    "measured_targets": "Measured Targets",
 }
 
 

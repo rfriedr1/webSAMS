@@ -122,9 +122,11 @@ class SamsService:
             return None
         previous_user_nr, next_user_nr = self.repo.get_adjacent_submitter_nrs(user_nr)
         user_count, max_user_nr = self.repo.get_submitter_stats()
+        projects = self.repo.list_projects_by_submitter(user_nr)
         return {
             "user": user,
-            "projects": self.repo.list_projects_by_submitter(user_nr),
+            "projects": projects,
+            "project_counts": self.repo.project_sample_target_counts([p.project_nr for p in projects]),
             "previous_user_nr": previous_user_nr,
             "next_user_nr": next_user_nr,
             "user_count": user_count,
