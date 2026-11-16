@@ -123,7 +123,7 @@ templates.env.globals["app_database"] = get_settings().database_name
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261116-8"
+templates.env.globals["css_v"] = "20261116-10"
 
 
 def parse_positive_int(raw_value: str) -> int | None:

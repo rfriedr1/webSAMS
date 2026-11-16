@@ -1267,13 +1267,31 @@ button.record-action:disabled {
   font-size: var(--text-sm);
 }
 
-.record-actions-group {
-  margin: var(--space-2) 0 var(--space-1);
+/* Group heading with a rule running from the text to the menu's edge, so
+   the groups read as separate sections. `.record-actions-menu` in the
+   selector: `.panel p { margin: 0 }` would otherwise win and squeeze the
+   groups together. */
+.record-actions-menu .record-actions-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-1);
   color: var(--section-title-color);
   font-size: var(--text-xs);
   font-weight: var(--section-title-weight);
   letter-spacing: var(--section-title-tracking);
   text-transform: uppercase;
+}
+
+.record-actions-menu .record-actions-group:first-child,
+.record-actions-menu .record-actions-scope + .record-actions-group {
+  margin-top: var(--space-1);
+}
+
+.record-actions-group::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--line);
 }
 
 .record-actions-list {
