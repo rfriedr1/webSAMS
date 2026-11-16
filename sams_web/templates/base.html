@@ -62,13 +62,14 @@
               action="/magic/open"
               data-magic-prefix-labels='{{ magic_identifier_prefix_labels | tojson }}'
               data-magic-name-labels='{{ magic_identifier_name_labels | tojson }}'
+              data-magic-search-labels='{{ magic_identifier_search_labels | tojson }}'
               data-magic-sample-label="{{ magic_identifier_sample_label }}"
               data-magic-preparation-label="{{ magic_identifier_preparation_label }}"
               data-magic-target-label="{{ magic_identifier_target_label }}"
               data-magic-command-labels='{{ magic_identifier_command_labels | tojson }}'
               data-magic-error="{{ magic_error or '' }}"
             >
-              <label for="magic-identifier-input" class="magic-identifier-label" title="Magic Nav: type a number or a command and press Enter">
+              <label for="magic-identifier-input" class="magic-identifier-label" title="Magic Nav: type a number, s:label or a command and press Enter">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm9 16-3.5-3.5" /></svg>
                 <span class="sr-only">Magic Nav</span>
               </label>
@@ -78,7 +79,7 @@
                 type="text"
                 inputmode="text"
                 autocomplete="off"
-                data-magic-placeholder-rotate='["Try: 12345 (sample)","Try: 12345.1 (prep)","Try: 12345.1.1 (target)","Try: pr:456 (project)","Try: sub:210 (submitter)","Try: sub:meier (submitter by name)","Try: /prep","Try: /graph","Try: /ea","Try: /sub","Try: /proj","Try: /import"]'
+                data-magic-placeholder-rotate='["Try: 12345 (sample)","Try: 12345.1 (prep)","Try: 12345.1.1 (target)","Try: pr:456 (project)","Try: sub:210 (submitter)","Try: sub:meier (submitter by name)","Try: s:mosaic (sample label search)","Try: /prep","Try: /graph","Try: /ea","Try: /sub","Try: /proj","Try: /import"]'
                 placeholder="Try: 12345 (sample)"
                 aria-label="Magic Nav identifier"
                 value="{{ magic_value }}"
@@ -161,7 +162,7 @@
         <div class="command-palette-head">
           <input
             type="text"
-            placeholder="Type command, page, sample #, pr:123, sub:210"
+            placeholder="Type command, page, sample #, pr:123, sub:210, s:label"
             aria-label="Command search"
             data-command-palette-input
           />

@@ -43,10 +43,21 @@
     return "";
   };
 
-  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel, preparationLabel, targetLabel, nameLabels = {}) => {
+  // `s:mosaic`: a search prefix, colon required, any text after it
+  // (mirrors magic_nav._SEARCH_PATTERN).
+  const resolveSearchLabel = (normalized, searchLabels) => {
+    const match = normalized.match(/^([a-z]+)\s*:\s*\S/);
+    return match && Object.prototype.hasOwnProperty.call(searchLabels, match[1]) ? searchLabels[match[1]] : "";
+  };
+
+  const resolveMagicPatchLabel = (value, prefixLabels, sampleLabel, preparationLabel, targetLabel, nameLabels = {}, searchLabels = {}) => {
     const normalized = String(value || "").trim().toLowerCase();
     if (!normalized) {
       return "";
+    }
+    const searchLabel = resolveSearchLabel(normalized, searchLabels);
+    if (searchLabel) {
+      return searchLabel;
     }
     if (Object.prototype.hasOwnProperty.call(prefixLabels, normalized)) {
       return prefixLabels[normalized];
@@ -83,6 +94,7 @@
         ...parseMagicPrefixLabels(form.dataset.magicCommandLabels || ""),
       };
       const nameLabels = parseMagicPrefixLabels(form.dataset.magicNameLabels || "");
+      const searchLabels = parseMagicPrefixLabels(form.dataset.magicSearchLabels || "");
       const sampleLabel = String(form.dataset.magicSampleLabel || "sample number");
       const preparationLabel = String(form.dataset.magicPreparationLabel || "preparation");
       const targetLabel = String(form.dataset.magicTargetLabel || "target");
@@ -102,6 +114,7 @@
           preparationLabel,
           targetLabel,
           nameLabels,
+          searchLabels,
         );
         if (!label) {
           patch.hidden = true;
@@ -182,6 +195,7 @@
             <dt><kbd>pr:456</kbd></dt><dd>Open project 456</dd>
             <dt><kbd>sub:210</kbd></dt><dd>Open submitter 210</dd>
             <dt><kbd>sub:meier</kbd></dt><dd>Find a submitter by last name (one match opens it, several open the filtered list)</dd>
+            <dt><kbd>s:mosaic</kbd></dt><dd>Search samples whose label contains “mosaic” (opens Search → Samples)</dd>
             <dt><kbd>/prep</kbd></dt><dd>Jump to Lab/Preparation</dd>
             <dt><kbd>/graph</kbd></dt><dd>Jump to Lab/Graphitization</dd>
             <dt><kbd>/ana</kbd></dt><dd>Jump to Lab/Analysis</dd>
@@ -190,7 +204,7 @@
             <dt><kbd>/proj</kbd></dt><dd>Jump to Projects</dd>
             <dt><kbd>/import</kbd></dt><dd>Jump to Sample Import</dd>
           </dl>
-          <p class="shortcut-cheatsheet-hint">The colon is optional: <kbd>pr456</kbd>, <kbd>sub210</kbd> and <kbd>sub meier</kbd> work too.</p>
+          <p class="shortcut-cheatsheet-hint">The colon is optional: <kbd>pr456</kbd>, <kbd>sub210</kbd> and <kbd>sub meier</kbd> work too — except in <kbd>s:</kbd>, where it is required.</p>
           <p class="shortcut-cheatsheet-hint">Or press <kbd>Ctrl/⌘ K</kbd> to open the full command palette.</p>
         </div>`;
       return overlay;

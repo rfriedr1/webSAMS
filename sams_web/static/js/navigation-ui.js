@@ -534,6 +534,16 @@
           keywords: `magic nav command ${normalized}`,
         };
       }
+      // Mirrors MAGIC_IDENTIFIER_SEARCH_PREFIXES: `s:mosaic` → Search → Samples.
+      const sampleSearch = normalizeWhitespace(term).match(/^s\s*:\s*(\S.*)$/i);
+      if (sampleSearch) {
+        const phrase = sampleSearch[1].trim();
+        return {
+          label: `Search samples for “${phrase}”`,
+          href: `/search?context=samples&phrase=${encodeURIComponent(phrase)}`,
+          keywords: `${normalized} search samples label ${phrase.toLowerCase()}`,
+        };
+      }
       if (/^\d+$/.test(normalized)) {
         return {
           label: `Open sample ${normalized}`,
