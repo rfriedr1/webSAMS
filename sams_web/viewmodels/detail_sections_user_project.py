@@ -29,7 +29,7 @@ SUBMITTER_PROJECT_COLUMNS: tuple[str, ...] = (
 """`sample_count` / `measured_targets` are not project columns: they come
 from `SamsRepository.project_sample_target_counts`."""
 PROJECT_SAMPLE_COLUMNS: tuple[str, ...] = (
-    "sample_nr", "user_label", "user_label_nr", "user_desc1", "material", "c14_age",
+    "sample_nr", "user_label", "user_label_nr", "user_desc1", "material", "c_n_isotop_a", "c14_age",
 )
 
 

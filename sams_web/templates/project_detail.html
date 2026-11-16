@@ -49,7 +49,7 @@
   <section data-table-filter id="project-samples">
     <h3 class="record-related-title">Samples <span class="record-related-count">{{ samples|length }}</span></h3>
     <div class="table-wrap">
-      <table data-project-samples-table>
+      <table class="table-compact" data-project-samples-table>
         <thead>
           <tr>
             {% if project_can_edit and samples %}{{ record_action_tick_head('samples') }}{% endif %}
