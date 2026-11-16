@@ -27,12 +27,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, Callable
 
 from sams_web.access import Permission
 from sams_web.detail_update import DetailUpdateConfig
 from sams_web.field_labels import field_label
-from sams_web.viewmodels.detail_sections_sample_lab import PREPARATION_DETAIL, SAMPLE_DETAIL
+from sams_web.viewmodels.detail_sections_sample_lab import PREPARATION_DETAIL, SAMPLE_DETAIL, TARGET_DETAIL
 from sams_web.viewmodels.detail_sections_user_project import PROJECT_DETAIL
 
 if TYPE_CHECKING:
@@ -60,6 +61,7 @@ class Kind:
 KINDS: dict[str, Kind] = {
     "sample": Kind("sample", "sample", "samples", SAMPLE_DETAIL, "sample_nr", "user_label"),
     "preparation": Kind("preparation", "preparation", "preparations", PREPARATION_DETAIL, "prep_nr", "batch"),
+    "target": Kind("target", "target", "targets", TARGET_DETAIL, "target_id", "graph_batch"),
     "project": Kind("project", "project", "projects", PROJECT_DETAIL, "project_nr", "project"),
     "submitter": Kind("submitter", "submitter", "submitters", None),
 }
@@ -103,6 +105,13 @@ def _ref_for(kind: str, record: Any) -> RecordRef:
             ref=f"{record.sample_nr} / {record.prep_nr}",
             href=f"/samples/{record.sample_nr}/preparations/{record.prep_nr}",
             label=record.batch or "",
+        )
+    if kind == "target":
+        return RecordRef(
+            key=(record.sample_nr, record.prep_nr, record.target_nr),
+            ref=f"{record.sample_nr}.{record.prep_nr}.{record.target_nr}",
+            href=f"/samples/{record.sample_nr}/preparations/{record.prep_nr}/targets/{record.target_nr}",
+            label=record.graph_batch or "",
         )
     if kind == "project":
         return RecordRef(
@@ -160,6 +169,8 @@ def _reach(service: "SamsService", row_kind: str, rows: list[Any], child: str) -
         return list(rows)
     if row_kind == "sample" and child == "preparation":
         return repo.list_preparations_by_samples([row.sample_nr for row in rows])
+    if row_kind == "sample" and child == "target":
+        return repo.list_targets_by_samples([row.sample_nr for row in rows])
     raise ValueError(f"A {row_kind} row cannot reach {child} records.")
 
 
@@ -230,6 +241,10 @@ class RecordAction:
         return current == new
 
     def display(self, value: Any) -> str:
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date):
+            return value.isoformat() if value.year >= 1950 else "—"
         if self.value_kind == "text":
             text = (value or "").strip() if isinstance(value, str) else value
             return str(text) if text else "—"
@@ -248,6 +263,7 @@ class EditTextAction(RecordAction):
     a record left out keeps its value."""
 
     edits_values = True
+    input_type = "text"
 
     mark_suffix: str | None = None
     """A letter the dialog's *Add …* button appends to every value, e.g. `E`
@@ -257,6 +273,10 @@ class EditTextAction(RecordAction):
     leftover_kind: str | None = None
     """`sample` or `preparation`: the dialog shows, per sample, whether that
     sample (or its preps) has no leftover — a storage location for nothing."""
+
+    def row_note(self, record: Any) -> str | None:
+        """A short chip beside a record in the editor (e.g. *Discarded*)."""
+        return None
 
     def leftover_by_record(self, service: "SamsService", records: list[Any]) -> dict[Any, tuple[int, int]]:
         """Sample key → (records with no leftover, records), for `leftover_kind`."""
@@ -287,6 +307,49 @@ class EditTextAction(RecordAction):
                 f"at most {limit} fit."
             )
         return text or None
+
+
+@dataclass(frozen=True)
+class EditDateAction(EditTextAction):
+    """Type a date per record (e.g. *Graphitized* on a project's targets).
+    The dialog shows date boxes and offers today's date in *Fill all*. The
+    value is posted as `YYYY-MM-DD`; a date-time column stores midnight,
+    like the benches' own date stamps."""
+
+    input_type = "date"
+
+    def current_value(self, record: Any) -> Any:
+        value = getattr(record, self.field, None)
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date):
+            # Legacy sentinel dates (1899-12-30) read as empty.
+            return value.isoformat() if value.year >= 1950 else None
+        return value
+
+    @property
+    def max_length(self) -> int | None:
+        return None
+
+    def new_value(self, record: Any, values: dict[str, str] | None) -> Any:
+        ref = _ref_for(self.child, record).ref
+        if not values or ref not in values:
+            return self.current_value(record)
+        text = (values[ref] or "").strip()
+        if not text:
+            return None
+        try:
+            parsed = date.fromisoformat(text)
+        except ValueError:
+            raise ValueError(
+                f"{self.field_title} of {KINDS[self.child].singular} {ref}: '{text}' is not a date (YYYY-MM-DD)."
+            ) from None
+        if parsed.year < 1950:
+            raise ValueError(f"{self.field_title} of {KINDS[self.child].singular} {ref}: {text} is too early.")
+        return parsed.isoformat()
+
+    def row_note(self, record: Any) -> str | None:
+        return "Discarded" if getattr(record, "stop", None) else None
 
 
 @dataclass(frozen=True)
@@ -428,6 +491,25 @@ _TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None, str | None], ..
     ("sample", "prep_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX, "preparation"),
 )
 
+_DATE_FIELDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    # child, field, owners — a date typed per record, Fill all offers today
+    ("target", "graphitized", _PROJECT),
+)
+
+
+def _date_pair(child: str, field_name: str, owners: tuple[str, ...]) -> list[RecordAction]:
+    return [
+        EditDateAction(
+            key=f"{child}.{field_name}.edit", child=child, field=field_name, value=None,
+            verb="Edit", owners=owners, value_kind="text",
+        ),
+        RecordAction(
+            key=f"{child}.{field_name}.clear", child=child, field=field_name, value=None,
+            verb="Clear", owners=owners, value_kind="text",
+        ),
+    ]
+
+
 _RETURNED_FLAGS: tuple[tuple[str, str], ...] = (
     # field on project_t, kind whose no-leftover flag decides what can go back
     ("returned_to_sender", "sample"),
@@ -454,6 +536,7 @@ RECORD_ACTIONS: dict[str, RecordAction] = {
             for child, field_name, owners, suffix, leftover in _TEXT_FIELDS
             for a in _text_pair(child, field_name, owners, suffix, leftover)
         ),
+        *(a for child, field_name, owners in _DATE_FIELDS for a in _date_pair(child, field_name, owners)),
         # Last in the menu: they write the project itself, not the ticked rows.
         *(a for field_name, kind in _RETURNED_FLAGS for a in _returned_pair(field_name, kind)),
     )
@@ -515,6 +598,8 @@ class EditorRow:
     """"No leftover" (or "1 of 2 preps no leftover") when that applies."""
     no_leftover: bool = False
     """True when nothing of this record is left (all of its preps, for preps)."""
+    note: str | None = None
+    """Any other chip for the row (`EditTextAction.row_note`), e.g. *Discarded*."""
 
 
 @dataclass(frozen=True)
@@ -562,12 +647,14 @@ class ActionPlan:
             payload["editor"] = {
                 "max_length": self.action.max_length,
                 "mark_suffix": self.action.mark_suffix,
+                "input_type": self.action.input_type,
+                "fill_default": date.today().isoformat() if self.action.input_type == "date" else None,
                 "columns": [field_label(KINDS[child].ref_field), field_label(KINDS[child].label_field)],
                 "rows": [
                     {
                         "ref": r.record.ref, "href": r.record.href, "label": r.record.label,
                         "value": r.value, "refused": r.refused,
-                        "leftover": r.leftover, "no_leftover": r.no_leftover,
+                        "leftover": r.leftover, "no_leftover": r.no_leftover, "note": r.note,
                     }
                     for r in self.editor
                 ],
@@ -673,6 +760,7 @@ def _run(
                 refused_probe.get(ref.key),
                 leftover=leftover_text(action.leftover_kind, none, total) if action.leftover_kind else None,
                 no_leftover=bool(total) and none == total,
+                note=action.row_note(record),
             ))
         editor = tuple(rows_out)
 

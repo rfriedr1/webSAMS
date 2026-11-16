@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sams_web import record_actions as ra
 from sams_web.field_labels import FIELD_LABELS
-from sams_web.models import Base, Preparation, Project, Sample, Submitter
+from sams_web.models import Base, Preparation, Project, Sample, Submitter, Target
 from sams_web.services import SamsService
 from sams_web.setup_store import SetupStore
 from sams_web.thresholds import ThresholdStore
@@ -71,7 +71,7 @@ def test_project_page_offers_only_the_returned_flags_on_the_project():
     with pytest.raises(KeyError):
         ra.action_for("project", "project.return_to_sender.set")
     kinds = [group["kind"] for group in ra.action_menu("project")]
-    assert kinds == ["sample", "preparation", "project"]
+    assert kinds == ["sample", "preparation", "target", "project"]
     project_group = ra.action_menu("project")[-1]
     assert project_group["title"] == "This project"
     assert [item["field"] for item in project_group["items"]] == ["returned_to_sender", "prep_returned_to_sender"]
@@ -376,3 +376,56 @@ def test_leftover_text():
     assert ra.leftover_text("sample", 1, 1) == "No leftover"
     assert ra.leftover_text("preparation", 2, 2) == "No leftover (all 2 preps)"
     assert ra.leftover_text("preparation", 1, 3) == "1 of 3 preps no leftover"
+
+
+# ---- Graphitized date on a project's targets ---------------------------------
+
+
+def _add_targets(service):
+    from datetime import datetime
+    service.session.add_all([
+        Target(sample_nr=100, prep_nr=1, target_nr=1, stop=0, graph_batch="G1"),
+        Target(sample_nr=100, prep_nr=2, target_nr=1, stop=1),
+        Target(sample_nr=101, prep_nr=1, target_nr=1, stop=0, graphitized=datetime(2026, 2, 11)),
+        Target(sample_nr=110, prep_nr=1, target_nr=1, stop=0),  # project 11
+    ])
+    service.session.commit()
+
+
+def test_graphitized_editor_lists_the_targets_with_dates(service):
+    _add_targets(service)
+    action = ra.action_for("project", "target.graphitized.edit")
+    data = ra.plan(service, action, "project", 10, []).as_json()
+    assert data["mode"] == "edit"
+    assert data["editor"]["input_type"] == "date"
+    assert data["editor"]["fill_default"]  # today
+    rows = {r["ref"]: r for r in data["editor"]["rows"]}
+    assert list(rows) == ["100.1.1", "100.2.1", "101.1.1"]
+    assert rows["101.1.1"]["value"] == "2026-02-11"
+    assert rows["100.1.1"]["value"] == "" and rows["100.1.1"]["label"] == "G1"
+    assert rows["100.2.1"]["note"] == "Discarded"
+    assert data["editor"]["columns"] == ["Target ID", "Graph Batch"]
+
+
+def test_graphitized_is_saved_as_midnight_on_the_posted_targets(service):
+    from datetime import datetime
+    _add_targets(service)
+    action = ra.action_for("project", "target.graphitized.edit")
+    outcome = ra.apply(service, action, "project", 10, [], values={"100.1.1": "2026-11-16", "101.1.1": "2026-11-16"})
+    assert outcome.changed == 2
+    assert service.session.get(Target, (100, 1, 1)).graphitized == datetime(2026, 11, 16)
+    assert service.session.get(Target, (101, 1, 1)).graphitized == datetime(2026, 11, 16)
+    assert service.session.get(Target, (100, 2, 1)).graphitized is None
+    assert service.session.get(Target, (110, 1, 1)).graphitized is None
+
+
+def test_graphitized_refuses_a_bad_date_and_clear_removes_it(service):
+    _add_targets(service)
+    edit = ra.action_for("project", "target.graphitized.edit")
+    with pytest.raises(ValueError, match="not a date"):
+        ra.apply(service, edit, "project", 10, [], values={"100.1.1": "16.11.2026"})
+    clear = ra.action_for("project", "target.graphitized.clear")
+    preview = ra.plan(service, clear, "project", 10, [101])
+    assert [(c.record.ref, c.old) for c in preview.changes] == [("101.1.1", "2026-02-11")]
+    ra.apply(service, clear, "project", 10, [101])
+    assert service.session.get(Target, (101, 1, 1)).graphitized is None

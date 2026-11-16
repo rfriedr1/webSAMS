@@ -351,14 +351,17 @@
 
       // Fill all: copies one value into every editable box.
       const fill = el("div", "record-action-fill");
+      const inputType = plan.editor.input_type || "text";
       const fillInput = el("input");
-      fillInput.type = "text";
+      fillInput.type = inputType;
       fillInput.className = "record-action-fill-input";
       fillInput.placeholder = `New ${plan.field} for all`;
       fillInput.setAttribute("aria-label", `New ${plan.field} for all ${child.plural}`);
       if (maxLength) fillInput.maxLength = maxLength;
       const distinct = [...new Set(editable.map((row) => row.value).filter(Boolean))];
       if (distinct.length === 1) fillInput.value = distinct[0];
+      // A date action offers today's date unless every record already shares one.
+      else if (plan.editor.fill_default) fillInput.value = plan.editor.fill_default;
       const fillButton = el("button", "record-action-fill-button", "Fill all");
       fillButton.type = "button";
       const applyFill = () => {
@@ -423,23 +426,26 @@
       table.setAttribute("data-table-plain", "");
       const tbody = el("tbody");
       editorInputs = [];
+      const hasNotes = rows.some((row) => row.note);
       rows.forEach((row) => {
         const tr = el("tr");
         const ref = el("td", "record-action-ref-cell");
         ref.append(recordLink(row));
         tr.append(ref, el("td", "record-action-label", row.label || "—"));
-        if (leftover) {
+        if (leftover || hasNotes) {
           const note = el("td", "record-action-leftover-cell");
           if (row.leftover) {
             const chip = el("span", `record-action-leftover-chip${row.no_leftover ? "" : " is-partly"}`, row.leftover);
             note.append(chip);
+          } else if (row.note) {
+            note.append(el("span", "record-action-leftover-chip is-partly", row.note));
           }
           tr.append(note);
           tr.classList.toggle("has-no-leftover", Boolean(row.no_leftover));
         }
         const cell = el("td", "record-action-value-cell");
         const input = el("input", "record-action-value");
-        input.type = "text";
+        input.type = inputType;
         input.value = row.value || "";
         input.placeholder = "—";
         input.dataset.ref = row.ref;

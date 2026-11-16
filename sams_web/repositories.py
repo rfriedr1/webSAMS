@@ -421,6 +421,17 @@ class SamsRepository:
             stmt = stmt.where(Target.prep_nr == prep_nr)
         return int(self.session.scalar(stmt) or 0)
 
+    def list_targets_by_samples(self, sample_nrs: list[int]) -> list[Target]:
+        """Targets of several samples in one query, in sample / prep / target order."""
+        if not sample_nrs:
+            return []
+        stmt = (
+            select(Target)
+            .where(Target.sample_nr.in_(sample_nrs))
+            .order_by(Target.sample_nr.asc(), Target.prep_nr.asc(), Target.target_nr.asc())
+        )
+        return list(self.session.scalars(stmt))
+
     def list_targets_by_sample(
         self,
         sample_nr: int,
