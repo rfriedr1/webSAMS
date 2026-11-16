@@ -67,11 +67,14 @@ def test_every_action_has_its_twin_a_label_and_a_writable_field():
             assert ra.OWNER_ROW_KIND[owner]
 
 
-def test_project_page_has_no_project_level_actions():
+def test_project_page_offers_only_the_returned_flags_on_the_project():
     with pytest.raises(KeyError):
         ra.action_for("project", "project.return_to_sender.set")
     kinds = [group["kind"] for group in ra.action_menu("project")]
-    assert kinds == ["sample", "preparation"]
+    assert kinds == ["sample", "preparation", "project"]
+    project_group = ra.action_menu("project")[-1]
+    assert project_group["title"] == "This project"
+    assert [item["field"] for item in project_group["items"]] == ["returned_to_sender", "prep_returned_to_sender"]
     assert [g["kind"] for g in ra.action_menu("submitter")] == ["project"]
 
 
@@ -276,3 +279,61 @@ def test_parse_values():
         ra.parse_values("[1, 2]")
     with pytest.raises(ValueError):
         ra.parse_values("{nope")
+
+
+# ---- Returned to sender (project page, writes the project) ------------------
+
+
+def test_returned_writes_the_project_and_ignores_ticks(service):
+    service.session.get(Project, 10).return_to_sender = 1
+    _sample(service, 101).s_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "project.returned_to_sender.set")
+    preview = ra.plan(service, action, "project", 10, [100])
+    assert [c.record.ref for c in preview.changes] == ["10"]
+    data = preview.as_json()
+    assert data["on_owner"] is True
+    assert data["leftover"] == {
+        "total": 3, "no_leftover": 1, "returnable": 2, "noun": "samples", "singular": "sample",
+    }
+    assert data["warnings"] == []
+
+    outcome = ra.apply(service, action, "project", 10, [100])
+    assert outcome.changed == 1
+    assert service.session.get(Project, 10).returned_to_sender == 1
+    assert service.session.get(Project, 11).returned_to_sender is None
+
+
+def test_returned_is_refused_when_nothing_has_leftover(service):
+    for nr in (100, 101, 102):
+        _sample(service, nr).s_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "project.returned_to_sender.set")
+    preview = ra.plan(service, action, "project", 10, [])
+    assert preview.changes == ()
+    assert [r.reason for r in preview.refused] == ["All 3 samples have no leftover, so nothing can be returned."]
+    outcome = ra.apply(service, action, "project", 10, [])
+    assert outcome.changed == 0
+    assert service.session.get(Project, 10).returned_to_sender is None
+
+
+def test_prep_returned_counts_preparations_and_warns_when_not_requested(service):
+    service.session.get(Preparation, (100, 1)).p_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "project.prep_returned_to_sender.set")
+    data = ra.plan(service, action, "project", 10, []).as_json()
+    assert data["leftover"]["total"] == 4  # 100/1, 100/2, 101/1, 102/1
+    assert data["leftover"]["no_leftover"] == 1
+    assert data["change_count"] == 1
+    assert data["warnings"] == ["Project 10 does not ask for this (Prep Return to Sender is not set)."]
+
+
+def test_clearing_returned_is_never_blocked_by_leftover(service):
+    project = service.session.get(Project, 11)
+    project.returned_to_sender = 1
+    _sample(service, 110).s_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "project.returned_to_sender.clear")
+    outcome = ra.apply(service, action, "project", 11, [])
+    assert outcome.changed == 1
+    assert service.session.get(Project, 11).returned_to_sender == 0

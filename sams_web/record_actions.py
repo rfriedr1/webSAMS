@@ -18,7 +18,9 @@ project. Decisions: `docs/adr/0007-record-actions.md`.
 **To add an action:** for a flag, one `_FLAGS` entry; for a free-text
 field the operator edits per record, one `_TEXT_FIELDS` entry (an *Edit*
 action, whose dialog lists every record with its current value, plus a
-*Clear*). Anything else gets its own subclass of `RecordAction`.
+*Clear*). Anything else gets its own subclass of `RecordAction` — e.g.
+`ReturnedAction`, which writes the project of a project page itself and
+refuses *Set* when no sample (or prep) has any leftover to return.
 """
 
 from __future__ import annotations
@@ -161,6 +163,16 @@ def _reach(service: "SamsService", row_kind: str, rows: list[Any], child: str) -
     raise ValueError(f"A {row_kind} row cannot reach {child} records.")
 
 
+def _owner_record(service: "SamsService", owner: str, owner_nr: int) -> Any:
+    if owner == "project":
+        record = service.repo.get_project(owner_nr)
+    else:
+        raise ValueError(f"An action cannot write the {owner} itself.")
+    if record is None:
+        raise ValueError(f"{owner.capitalize()} {owner_nr} does not exist.")
+    return record
+
+
 # ---- Actions ---------------------------------------------------------------
 
 
@@ -181,6 +193,18 @@ class RecordAction:
 
     edits_values = False
     """True for an action whose new value is typed per record (`EditTextAction`)."""
+
+    on_owner = False
+    """True for an action that writes the owner record itself (the project
+    of a project page): the ticks do not apply."""
+
+    def scope_facts(self, service: "SamsService", rows: list[Any]) -> dict[str, Any] | None:
+        """Extra facts for the preview (e.g. how many samples have no leftover)."""
+        return None
+
+    def refusal(self, record: Any, facts: dict[str, Any] | None) -> str | None:
+        """Why this action may not change `record`, beyond its page's own checks."""
+        return None
 
     @property
     def field_title(self) -> str:
@@ -249,6 +273,63 @@ class EditTextAction(RecordAction):
         return text or None
 
 
+@dataclass(frozen=True)
+class ReturnedAction(RecordAction):
+    """*Set / Clear Returned to Sender* (or *Prep Returned …*) on the project
+    of a project page. Samples or preparations with no leftover cannot be
+    returned, so the preview counts them, and *Set* is refused when every
+    one of them has no leftover (nothing was left to send back)."""
+
+    on_owner = True
+    leftover_kind: str = "sample"
+
+    @property
+    def title(self) -> str:
+        return f"{self.verb} {self.field_title} on this {KINDS[self.child].singular}"
+    """`sample` (`s_no_leftover`) or `preparation` (`p_no_leftover`)."""
+
+    @property
+    def leftover_field(self) -> str:
+        return "s_no_leftover" if self.leftover_kind == "sample" else "p_no_leftover"
+
+    def scope_facts(self, service: "SamsService", rows: list[Any]) -> dict[str, Any]:
+        records = _reach(service, "sample", rows, self.leftover_kind)
+        no_leftover = sum(1 for r in records if getattr(r, self.leftover_field, None))
+        return {
+            "leftover": {
+                "total": len(records),
+                "no_leftover": no_leftover,
+                "returnable": len(records) - no_leftover,
+                "noun": KINDS[self.leftover_kind].plural,
+                "singular": KINDS[self.leftover_kind].singular,
+            }
+        }
+
+    def refusal(self, record: Any, facts: dict[str, Any] | None) -> str | None:
+        if not self.value or not facts:
+            return None
+        leftover = facts["leftover"]
+        if leftover["total"] == 0:
+            return f"The project has no {leftover['noun']}, so nothing can be returned."
+        if leftover["returnable"] == 0:
+            who = (
+                f"The only {leftover['singular']} has"
+                if leftover["total"] == 1
+                else f"All {leftover['total']} {leftover['noun']} have"
+            )
+            return f"{who} no leftover, so nothing can be returned."
+        return None
+
+
+def _warn_return_not_requested(record: Any, action: RecordAction) -> str | None:
+    requested_field = action.field.replace("returned_to_sender", "return_to_sender")
+    if action.value and not getattr(record, requested_field, None):
+        return (
+            f"Project {record.project_nr} does not ask for this ({field_label(requested_field)} is not set)."
+        )
+    return None
+
+
 def format_flag(value: Any) -> str:
     if value is None:
         return "—"
@@ -314,6 +395,23 @@ _TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
     ("sample", "prep_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX),
 )
 
+_RETURNED_FLAGS: tuple[tuple[str, str], ...] = (
+    # field on project_t, kind whose no-leftover flag decides what can go back
+    ("returned_to_sender", "sample"),
+    ("prep_returned_to_sender", "preparation"),
+)
+
+
+def _returned_pair(field_name: str, leftover_kind: str) -> list[RecordAction]:
+    return [
+        ReturnedAction(
+            key=f"project.{field_name}.{suffix}", child="project", field=field_name, value=value,
+            verb=verb, owners=_PROJECT, warn=_warn_return_not_requested, leftover_kind=leftover_kind,
+        )
+        for suffix, verb, value in (("set", "Set", 1), ("clear", "Clear", 0))
+    ]
+
+
 RECORD_ACTIONS: dict[str, RecordAction] = {
     action.key: action
     for action in (
@@ -323,6 +421,8 @@ RECORD_ACTIONS: dict[str, RecordAction] = {
             for child, field_name, owners, suffix in _TEXT_FIELDS
             for a in _text_pair(child, field_name, owners, suffix)
         ),
+        # Last in the menu: they write the project itself, not the ticked rows.
+        *(a for field_name, kind in _RETURNED_FLAGS for a in _returned_pair(field_name, kind)),
     )
 }
 
@@ -342,9 +442,10 @@ def action_menu(owner: str) -> list[dict[str, Any]]:
     for action in RECORD_ACTIONS.values():
         if owner not in action.owners:
             continue
+        title = f"This {KINDS[action.child].singular}" if action.on_owner else KINDS[action.child].plural.capitalize()
         group = groups.setdefault(
             action.child,
-            {"kind": action.child, "title": KINDS[action.child].plural.capitalize(), "items": {}},
+            {"kind": action.child, "title": title, "items": {}},
         )
         item = group["items"].setdefault(
             action.field, {"field": action.field, "label": action.field_title, "actions": []}
@@ -390,6 +491,7 @@ class ActionPlan:
     refused: tuple[Refused, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
     editor: tuple[EditorRow, ...] = field(default_factory=tuple)
+    facts: dict[str, Any] | None = None
 
     def as_json(self) -> dict[str, Any]:
         child = self.action.child
@@ -414,7 +516,10 @@ class ActionPlan:
             ],
             "refused_count": len(self.refused),
             "warnings": list(self.warnings),
+            "on_owner": self.action.on_owner,
         }
+        if self.facts:
+            payload.update(self.facts)
         if self.action.edits_values:
             # The whole list: the operator edits every record, so no cap.
             payload["editor"] = {
@@ -464,8 +569,14 @@ def _run(
     values: dict[str, str] | None = None,
 ) -> tuple[ActionPlan, list[Any]]:
     row_kind = OWNER_ROW_KIND[owner]
-    rows = owner_rows(service, owner, owner_nr, selected)
-    records = _reach(service, row_kind, rows, action.child)
+    if action.on_owner:
+        # The owner record itself: ticks do not apply, every row counts.
+        rows = owner_rows(service, owner, owner_nr, [])
+        records = [_owner_record(service, owner, owner_nr)]
+    else:
+        rows = owner_rows(service, owner, owner_nr, selected)
+        records = _reach(service, row_kind, rows, action.child)
+    facts = action.scope_facts(service, rows)
     config = KINDS[action.child].config
 
     if values:
@@ -480,10 +591,15 @@ def _run(
     candidates: list[tuple[Any, RecordRef, str, Any]] = []
     unchanged = 0
     warnings: list[str] = []
+    blocked: list[Refused] = []
     for record in records:
         new = action.new_value(record, values)
         if action.is_unchanged(record, new):
             unchanged += 1
+            continue
+        reason = action.refusal(record, facts)
+        if reason:
+            blocked.append(Refused(_ref_for(action.child, record), reason))
             continue
         if action.warn is not None:
             message = action.warn(record, action)
@@ -517,7 +633,7 @@ def _run(
         for _record, ref, old, new in candidates
         if ref.key not in rejected
     )
-    refused = tuple(
+    refused = tuple(blocked) + tuple(
         Refused(ref, rejected[ref.key]) for _record, ref, _old, _new in candidates if ref.key in rejected
     )
     plan = ActionPlan(
@@ -530,6 +646,7 @@ def _run(
         refused=refused,
         warnings=tuple(warnings),
         editor=editor,
+        facts=facts,
     )
     return plan, records
 
