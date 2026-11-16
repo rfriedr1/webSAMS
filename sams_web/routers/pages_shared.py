@@ -44,6 +44,11 @@ LAST_SAMPLE_COOKIE = "last_sample_nr"
 format_table_header_label = field_label
 
 
+TABLE_YES_NO_FLAGS = frozenset({"c_n_isotop_a", "c_n_isotop_a_moved", "dendro_a"})
+"""Extra-analysis flags read as Yes / No in a table (never 1 / 0): the lab
+needs "no" to be an answer, as on the benches."""
+
+
 def format_table_cell_value(key: Any, value: Any) -> Any:
     """Format a table cell's value for display.
 
@@ -55,6 +60,11 @@ def format_table_cell_value(key: Any, value: Any) -> Any:
         return ""
 
     key_lower = str(key).lower()
+    if key_lower in TABLE_YES_NO_FLAGS:
+        try:
+            return "Yes" if int(value) else "No"
+        except (TypeError, ValueError):
+            return value
     if "dc13" in key_lower or "d13c" in key_lower:
         formatted = ds.format_d13c(value)
         return "" if formatted is None else formatted
@@ -113,7 +123,7 @@ templates.env.globals["app_database"] = get_settings().database_name
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261116-7"
+templates.env.globals["css_v"] = "20261116-8"
 
 
 def parse_positive_int(raw_value: str) -> int | None:
