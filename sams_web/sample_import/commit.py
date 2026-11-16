@@ -590,6 +590,30 @@ def needs_no_preparation(step_methods: list[str | None]) -> bool:
     return all(m in ("", NO_PREPARATION_METHOD) for m in normalized[1:])
 
 
+#: Lab materials (matched as substrings, like the legacy import) that arrive
+#: already prepared: "graphite" and "collagen user prep.". The import closes
+#: their preparation at once, whatever prep steps were chosen.
+PREPARED_MATERIAL_MARKERS = ("graphite", "collagen")
+
+#: Lab material that also needs no graphitization: target #1 is stamped
+#: graphitized today.
+GRAPHITE_MARKER = "graphite"
+
+
+def _material_contains(material: str | None, marker: str) -> bool:
+    return marker in str(material or "").strip().lower()
+
+
+def arrives_prepared(material: str | None) -> bool:
+    """True for graphite and collagen-user-prep samples (legacy rule)."""
+    return any(_material_contains(material, m) for m in PREPARED_MATERIAL_MARKERS)
+
+
+def arrives_graphitized(material: str | None) -> bool:
+    """True when the sample's lab material is graphite."""
+    return _material_contains(material, GRAPHITE_MARKER)
+
+
 def _create_samples(
     repo: Any,
     session: Any,
@@ -632,11 +656,19 @@ def _create_samples(
             sample_nr = int(sample.sample_nr)
             sample_labels.append(str(sample_payload.get("user_label") or ""))
 
+            material = sample_payload.get("material")
             prep = repo.create_blank_prep(sample_nr=sample_nr, prep_nr=1)
             step_methods: list[str | None] = []
-            for step_field in PREP_STEP_FIELDS:
-                method = _lookup_or_default(values.get(step_field), allowed_methods, default=None)
-                step_methods.append(method)
+            if arrives_prepared(material):
+                # As the legacy import: the customer already prepared it, so
+                # step 1 is "none", steps 2-5 stay empty and the prep is closed.
+                step_methods = [NO_PREPARATION_METHOD] + [None] * (len(PREP_STEP_FIELDS) - 1)
+            else:
+                step_methods = [
+                    _lookup_or_default(values.get(step_field), allowed_methods, default=None)
+                    for step_field in PREP_STEP_FIELDS
+                ]
+            for step_field, method in zip(PREP_STEP_FIELDS, step_methods):
                 if method:
                     setattr(prep, step_field, method)
             if needs_no_preparation(step_methods):
@@ -644,7 +676,12 @@ def _create_samples(
                 prep.prep_end = datetime.combine(today, datetime.min.time())
             if any(step_methods):
                 session.flush()
-            repo.create_blank_target(sample_nr=sample_nr, prep_nr=1, target_nr=1)
+            target = repo.create_blank_target(sample_nr=sample_nr, prep_nr=1, target_nr=1)
+            if arrives_graphitized(material):
+                # Graphite needs no graphitization: the target is ready for
+                # measurement from day one (midnight, like `prep_end`).
+                target.graphitized = datetime.combine(today, datetime.min.time())
+                session.flush()
             sample_nrs.append(sample_nr)
         except Exception as exc:
             exc.import_row = (row_number, str(values.get("user_label") or ""))  # type: ignore[attr-defined]
@@ -730,6 +767,8 @@ __all__ = [
     "ImportCommitError",
     "NO_PREPARATION_METHOD",
     "needs_no_preparation",
+    "arrives_graphitized",
+    "arrives_prepared",
     "ImportResult",
     "commit_import",
 ]

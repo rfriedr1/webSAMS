@@ -1385,17 +1385,34 @@
     if (noType.length) {
       notices.push(`${noType.length} row(s) have no sample type set — they will be saved as “undefined”.`);
     }
+    // Mirror `arrives_prepared()` / `arrives_graphitized()` /
+    // `needs_no_preparation()` in commit.py.
+    const material = (s) => String(s.values.lab_material || "").trim().toLowerCase();
+    const isGraphite = (s) => material(s).includes("graphite");
+    const isPrepared = (s) => isGraphite(s) || material(s).includes("collagen");
+    const isNone = (v) => String(v || "").trim().toLowerCase() === "none";
     const noSteps = includedSamples().filter(
-      (s) => !STEP_COLUMNS.some((c) => s.values[c])
+      (s) => !isPrepared(s) && !STEP_COLUMNS.some((c) => s.values[c])
     );
     if (noSteps.length) {
       notices.push(`${noSteps.length} row(s) have no preparation steps assigned.`);
     }
-    // Mirrors `needs_no_preparation()` in commit.py: step 1 = "none" and
-    // no real method in steps 2-5.
-    const isNone = (v) => String(v || "").trim().toLowerCase() === "none";
+    const prepared = includedSamples().filter(isPrepared);
+    const graphite = prepared.filter(isGraphite);
+    if (graphite.length) {
+      notices.push(
+        `${graphite.length} row(s) are graphite — they are imported as prepared and graphitized today (prep steps ignored).`
+      );
+    }
+    const collagen = prepared.length - graphite.length;
+    if (collagen) {
+      notices.push(
+        `${collagen} row(s) are collagen user prep. — they are imported as prepared today (prep steps ignored).`
+      );
+    }
     const noPrep = includedSamples().filter(
       (s) =>
+        !isPrepared(s) &&
         isNone(s.values[STEP_COLUMNS[0]]) &&
         STEP_COLUMNS.slice(1).every((c) => !s.values[c] || isNone(s.values[c]))
     );

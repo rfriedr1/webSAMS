@@ -35,9 +35,10 @@ class _FakeSession:
 class _FakeRepo:
     def __init__(self) -> None:
         self.preps: list[SimpleNamespace] = []
+        self.targets: list[SimpleNamespace] = []
 
     def get_materials(self):
-        return ["undefined", "bone"]
+        return ["undefined", "bone", "graphite", "collagen user prep."]
 
     def get_sample_types(self):
         return ["undefined", "arch"]
@@ -57,7 +58,9 @@ class _FakeRepo:
         return prep
 
     def create_blank_target(self, sample_nr, prep_nr=1, target_nr=1):
-        return SimpleNamespace()
+        target = SimpleNamespace(sample_nr=sample_nr, graphitized=None)
+        self.targets.append(target)
+        return target
 
 
 def test_import_closes_preparation_only_for_no_prep_rows():
@@ -80,6 +83,33 @@ def test_import_closes_preparation_only_for_no_prep_rows():
     assert [p.prep_end for p in repo.preps] == [datetime(2026, 9, 30), None, None, None]
     assert all(p.prep_start is None for p in repo.preps)
     assert repo.preps[0].step1_method == "none"
+
+
+def test_import_treats_graphite_and_collagen_as_prepared():
+    """Legacy rule: graphite and collagen user prep. arrive prepared (step 1
+    "none", prep closed today, chosen steps ignored); graphite is also
+    graphitized today."""
+    repo = _FakeRepo()
+    rows = [
+        (1, {"user_label": "G", "material": "Graphite", "step1_method": "ABA", "step2_method": "ABA"}),
+        (2, {"user_label": "C", "material": "collagen user prep.", "step1_method": "ABA"}),
+        (3, {"user_label": "B", "material": "bone", "step1_method": "ABA"}),
+        (4, {"user_label": "U"}),
+    ]
+    _create_samples(
+        repo,
+        _FakeSession(),
+        rows,
+        project_nr=1,
+        today=date(2026, 11, 16),
+        registry=build_registry(),
+        sanitizer=TextSanitizer,
+    )
+    today = datetime(2026, 11, 16)
+    assert [p.prep_end for p in repo.preps] == [today, today, None, None]
+    assert [getattr(p, "step1_method", None) for p in repo.preps] == ["none", "none", "ABA", None]
+    assert not hasattr(repo.preps[0], "step2_method")
+    assert [t.graphitized for t in repo.targets] == [today, None, None, None]
 
 
 def test_unsupported_characters_are_rejected_before_any_write():
