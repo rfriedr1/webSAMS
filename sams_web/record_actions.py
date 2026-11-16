@@ -254,6 +254,22 @@ class EditTextAction(RecordAction):
     (*entnommen*) on a storage location: the sample was taken out. Only
     the browser applies it; the posted values are ordinary edits."""
 
+    leftover_kind: str | None = None
+    """`sample` or `preparation`: the dialog shows, per sample, whether that
+    sample (or its preps) has no leftover — a storage location for nothing."""
+
+    def leftover_by_record(self, service: "SamsService", records: list[Any]) -> dict[Any, tuple[int, int]]:
+        """Sample key → (records with no leftover, records), for `leftover_kind`."""
+        if self.leftover_kind == "sample":
+            return {r.sample_nr: (1 if r.s_no_leftover else 0, 1) for r in records}
+        if self.leftover_kind == "preparation":
+            counts: dict[Any, tuple[int, int]] = {r.sample_nr: (0, 0) for r in records}
+            for prep in service.repo.list_preparations_by_samples([r.sample_nr for r in records]):
+                none, total = counts.get(prep.sample_nr, (0, 0))
+                counts[prep.sample_nr] = (none + (1 if prep.p_no_leftover else 0), total + 1)
+            return counts
+        return {}
+
     @property
     def max_length(self) -> int | None:
         column = KINDS[self.child].config.model.__table__.columns.get(self.field)
@@ -330,6 +346,17 @@ def _warn_return_not_requested(record: Any, action: RecordAction) -> str | None:
     return None
 
 
+def leftover_text(kind: str, no_leftover: int, total: int) -> str | None:
+    """Per-sample note in the storage-location editor; None when there is leftover."""
+    if not no_leftover:
+        return None
+    if kind == "sample":
+        return "No leftover"
+    if no_leftover == total:
+        return "No leftover" if total == 1 else f"No leftover (all {total} preps)"
+    return f"{no_leftover} of {total} preps no leftover"
+
+
 def format_flag(value: Any) -> str:
     if value is None:
         return "—"
@@ -372,12 +399,17 @@ _FLAGS: tuple[tuple[str, str, tuple[str, ...], Any], ...] = (
 )
 
 def _text_pair(
-    child: str, field_name: str, owners: tuple[str, ...], mark_suffix: str | None = None
+    child: str,
+    field_name: str,
+    owners: tuple[str, ...],
+    mark_suffix: str | None = None,
+    leftover_kind: str | None = None,
 ) -> list[RecordAction]:
     return [
         EditTextAction(
             key=f"{child}.{field_name}.edit", child=child, field=field_name, value=None,
             verb="Edit", owners=owners, value_kind="text", mark_suffix=mark_suffix,
+            leftover_kind=leftover_kind,
         ),
         RecordAction(
             key=f"{child}.{field_name}.clear", child=child, field=field_name, value=None,
@@ -389,10 +421,11 @@ def _text_pair(
 STORAGE_TAKEN_SUFFIX = "E"
 """Appended to a storage location when the sample was taken out (*entnommen*): `266` → `266E`."""
 
-_TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
-    # child, field, owners, mark suffix (the dialog's "Add …" button)
-    ("sample", "s_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX),
-    ("sample", "prep_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX),
+_TEXT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None, str | None], ...] = (
+    # child, field, owners, mark suffix (the dialog's "Add …" button),
+    # whose No Leftover the dialog shows per record
+    ("sample", "s_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX, "sample"),
+    ("sample", "prep_storage_loc", _PROJECT, STORAGE_TAKEN_SUFFIX, "preparation"),
 )
 
 _RETURNED_FLAGS: tuple[tuple[str, str], ...] = (
@@ -418,8 +451,8 @@ RECORD_ACTIONS: dict[str, RecordAction] = {
         *(a for child, field_name, owners, warn in _FLAGS for a in _flag_pair(child, field_name, owners, warn)),
         *(
             a
-            for child, field_name, owners, suffix in _TEXT_FIELDS
-            for a in _text_pair(child, field_name, owners, suffix)
+            for child, field_name, owners, suffix, leftover in _TEXT_FIELDS
+            for a in _text_pair(child, field_name, owners, suffix, leftover)
         ),
         # Last in the menu: they write the project itself, not the ticked rows.
         *(a for field_name, kind in _RETURNED_FLAGS for a in _returned_pair(field_name, kind)),
@@ -478,6 +511,10 @@ class EditorRow:
     record: RecordRef
     value: str
     refused: str | None
+    leftover: str | None = None
+    """"No leftover" (or "1 of 2 preps no leftover") when that applies."""
+    no_leftover: bool = False
+    """True when nothing of this record is left (all of its preps, for preps)."""
 
 
 @dataclass(frozen=True)
@@ -530,10 +567,20 @@ class ActionPlan:
                     {
                         "ref": r.record.ref, "href": r.record.href, "label": r.record.label,
                         "value": r.value, "refused": r.refused,
+                        "leftover": r.leftover, "no_leftover": r.no_leftover,
                     }
                     for r in self.editor
                 ],
             }
+            kind = self.action.leftover_kind
+            if kind:
+                payload["editor"]["leftover"] = {
+                    "kind": kind,
+                    "column": "No Leftover" if kind == "sample" else "Prep No Leftover",
+                    "count": sum(1 for r in self.editor if r.no_leftover),
+                    "partly": sum(1 for r in self.editor if r.leftover and not r.no_leftover),
+                    "total": len(self.editor),
+                }
         return payload
 
 
@@ -615,15 +662,19 @@ def _run(
             (_ref_for(action.child, r).key, action.form_for(r, action.current_value(r))) for r in records
         ]
         refused_probe = dict(service.apply_many_and_commit(config, probe, dry_run=True)) if probe else {}
-        editor = tuple(
-            EditorRow(
+        leftover = action.leftover_by_record(service, records)
+        rows_out = []
+        for record in records:
+            ref = _ref_for(action.child, record)
+            none, total = leftover.get(ref.key, (0, 0))
+            rows_out.append(EditorRow(
                 ref,
                 (action.current_value(record) or "").strip(),
                 refused_probe.get(ref.key),
-            )
-            for record in records
-            for ref in (_ref_for(action.child, record),)
-        )
+                leftover=leftover_text(action.leftover_kind, none, total) if action.leftover_kind else None,
+                no_leftover=bool(total) and none == total,
+            ))
+        editor = tuple(rows_out)
 
     updates = [(ref.key, action.form_for(record, new)) for record, ref, _old, new in candidates]
     rejected = dict(service.apply_many_and_commit(config, updates, dry_run=dry_run)) if updates else {}

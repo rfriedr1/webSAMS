@@ -1686,6 +1686,28 @@ button.record-action-download:hover {
   color: var(--muted);
 }
 
+/* Storage locations: a sample (or its preps) with nothing left. */
+.record-action-leftover-cell {
+  white-space: nowrap;
+}
+
+.record-action-leftover-chip {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--warn-line);
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.record-action-leftover-chip.is-partly {
+  border-style: dashed;
+  background: transparent;
+}
+
 .record-action-editor .record-action-reason {
   display: block;
   margin-top: 0.15rem;

@@ -337,3 +337,42 @@ def test_clearing_returned_is_never_blocked_by_leftover(service):
     outcome = ra.apply(service, action, "project", 11, [])
     assert outcome.changed == 1
     assert service.session.get(Project, 11).returned_to_sender == 0
+
+
+# ---- Storage locations: No Leftover per sample ------------------------------
+
+
+def test_sample_storage_editor_marks_samples_without_leftover(service):
+    _sample(service, 101).s_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "sample.s_storage_loc.edit")
+    data = ra.plan(service, action, "project", 10, []).as_json()
+    rows = {r["ref"]: r for r in data["editor"]["rows"]}
+    assert rows["101"]["leftover"] == "No leftover" and rows["101"]["no_leftover"] is True
+    assert rows["100"]["leftover"] is None and rows["100"]["no_leftover"] is False
+    assert data["editor"]["leftover"] == {
+        "kind": "sample", "column": "No Leftover", "count": 1, "partly": 0, "total": 3,
+    }
+
+
+def test_prep_storage_editor_counts_preps_per_sample(service):
+    # Sample 100 has preps 1 and 2; sample 101 has prep 1.
+    service.session.get(Preparation, (100, 1)).p_no_leftover = 1
+    service.session.get(Preparation, (101, 1)).p_no_leftover = 1
+    service.session.commit()
+    action = ra.action_for("project", "sample.prep_storage_loc.edit")
+    data = ra.plan(service, action, "project", 10, []).as_json()
+    rows = {r["ref"]: r for r in data["editor"]["rows"]}
+    assert rows["100"]["leftover"] == "1 of 2 preps no leftover" and rows["100"]["no_leftover"] is False
+    assert rows["101"]["leftover"] == "No leftover" and rows["101"]["no_leftover"] is True
+    assert rows["102"]["leftover"] is None
+    assert data["editor"]["leftover"]["count"] == 1
+    assert data["editor"]["leftover"]["partly"] == 1
+    assert data["editor"]["leftover"]["column"] == "Prep No Leftover"
+
+
+def test_leftover_text():
+    assert ra.leftover_text("sample", 0, 1) is None
+    assert ra.leftover_text("sample", 1, 1) == "No leftover"
+    assert ra.leftover_text("preparation", 2, 2) == "No leftover (all 2 preps)"
+    assert ra.leftover_text("preparation", 1, 3) == "1 of 3 preps no leftover"

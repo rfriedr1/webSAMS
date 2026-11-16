@@ -297,8 +297,10 @@
       button.addEventListener("click", () => {
         const byRef = new Map(editorInputs.map((input) => [input.dataset.ref, input]));
         const changed = editorInputs.some((input) => input.value.trim() !== input.dataset.initialValue);
+        const leftover = plan.editor.leftover;
         const headers = [...plan.editor.columns, plan.field];
         if (changed) headers.push(`New ${plan.field}`);
+        if (leftover) headers.push(leftover.column);
         const rows = plan.editor.rows.map((row) => {
           const line = [row.ref, row.label || "", row.value || ""];
           if (changed) {
@@ -306,6 +308,7 @@
             const next = input ? input.value.trim() : row.value || "";
             line.push(next !== (row.value || "") ? next : "");
           }
+          if (leftover) line.push(row.leftover || "");
           return line;
         });
         // The value columns stay text: "007" or "266" is a place, not a number.
@@ -329,6 +332,22 @@
         ? `${rows.length} ${plural(rows.length, child.singular, child.plural)} from the ticked rows. Change a value, or fill them all.`
         : `All ${rows.length} ${plural(rows.length, child.singular, child.plural)} of this record. Tick rows first to edit only those.`;
       body.append(el("p", "record-action-from", fromLine));
+
+      // Storage locations: which samples (or their preps) have nothing left.
+      const leftover = plan.editor.leftover;
+      if (leftover) {
+        const what = leftover.kind === "sample" ? "no leftover" : "no prep leftover";
+        const line = el("p", "record-action-leftover");
+        line.append(
+          el("strong", "", `${leftover.count} of ${leftover.total} ${plural(leftover.total, child.singular, child.plural)}`),
+          document.createTextNode(` ${leftover.count === 1 ? "has" : "have"} ${what}`),
+        );
+        if (leftover.partly) {
+          line.append(document.createTextNode(` · ${leftover.partly} partly (some preps)`));
+        }
+        line.append(document.createTextNode("."));
+        body.append(line);
+      }
 
       // Fill all: copies one value into every editable box.
       const fill = el("div", "record-action-fill");
@@ -409,6 +428,15 @@
         const ref = el("td", "record-action-ref-cell");
         ref.append(recordLink(row));
         tr.append(ref, el("td", "record-action-label", row.label || "—"));
+        if (leftover) {
+          const note = el("td", "record-action-leftover-cell");
+          if (row.leftover) {
+            const chip = el("span", `record-action-leftover-chip${row.no_leftover ? "" : " is-partly"}`, row.leftover);
+            note.append(chip);
+          }
+          tr.append(note);
+          tr.classList.toggle("has-no-leftover", Boolean(row.no_leftover));
+        }
         const cell = el("td", "record-action-value-cell");
         const input = el("input", "record-action-value");
         input.type = "text";
