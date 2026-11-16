@@ -8,12 +8,15 @@ The Magic Nav input box (in `templates/base.html`) accepts a small grammar:
 - `pr:123`           → opens project 123
 - `sub:210`          → opens submitter 210
 - `sub:meier`        → looks a submitter up by last name
+- `s:mosaic`         → Search → Samples for "mosaic" (loose, case-insensitive)
 - `/prep`, `/graph`, `/ana` → opens the lab workflow page
 
 Prefixes follow one rule: prefix, optional separator (`:`, space, or
 nothing), value. Digits are a number, a value starting with a letter is a
 name (only for prefixes in `MAGIC_IDENTIFIER_NAME_PREFIXES`). The colon form
-is what the UI documents; `sub210` / `pr123` keep working.
+is what the UI documents; `sub210` / `pr123` keep working. A search prefix
+(`s:`) is the exception: its colon is required and the value is any text,
+so `s:` never collides with `sub:` or a number.
 
 This module owns:
 
@@ -60,6 +63,15 @@ MAGIC_IDENTIFIER_NAME_PREFIXES: dict[str, tuple[str, str]] = {
 }
 MAGIC_IDENTIFIER_NAME_LABELS: dict[str, str] = {
     "sub": "submitter last name",
+}
+# Search prefixes (`s:mosaic`): a shortcut to the Search page with a context
+# and phrase filled in — no search of their own. The colon is required, the
+# value is any text (labels hold digits and spaces: `s:R-EVA 3521`).
+MAGIC_IDENTIFIER_SEARCH_PREFIXES: dict[str, str] = {
+    "s": "samples",
+}
+MAGIC_IDENTIFIER_SEARCH_LABELS: dict[str, str] = {
+    "s": "sample label search",
 }
 MAGIC_IDENTIFIER_SAMPLE_LABEL = "sample number"
 MAGIC_IDENTIFIER_PREPARATION_LABEL = "preparation"
@@ -134,6 +146,16 @@ class SubmitterNameNav:
 
 
 @dataclass(frozen=True)
+class SearchNav:
+    """`s:mosaic` — opens the Search page for `context` with `phrase`
+    filled in. Always "exists": an empty result is the search page's answer."""
+
+    target: str
+    context: str
+    phrase: str
+
+
+@dataclass(frozen=True)
 class CommandNav:
     target: str
     command: str
@@ -146,6 +168,7 @@ NavTarget = (
     | ProjectNav
     | SubmitterNav
     | SubmitterNameNav
+    | SearchNav
     | CommandNav
 )
 
@@ -173,13 +196,32 @@ def _resolve_name_lookup(raw: str) -> NavTarget | None:
     return None
 
 
+_SEARCH_PATTERN = re.compile(r"([a-z]+)\s*:\s*(\S.*)", re.IGNORECASE | re.DOTALL)
+
+
+def _resolve_search(raw: str) -> NavTarget | None:
+    match = _SEARCH_PATTERN.fullmatch(raw)
+    if match is None:
+        return None
+    context = MAGIC_IDENTIFIER_SEARCH_PREFIXES.get(match.group(1).lower())
+    if context is None:
+        return None
+    phrase = match.group(2).strip()
+    return SearchNav(
+        target="/search?" + urlencode({"context": context, "phrase": phrase}),
+        context=context,
+        phrase=phrase,
+    )
+
+
 # ---- Parser ---------------------------------------------------------------
 
 
 def resolve_magic_identifier(raw: str) -> NavTarget | None:
     """Parse `raw` into a `NavTarget`, or return `None` if no pattern matches.
 
-    Patterns tried in order: command literal (`/prep`), 3-part numeric
+    Patterns tried in order: command literal (`/prep`), search prefix
+    (`s:mosaic`), 3-part numeric
     (`12345.1.1`), 2-part numeric (`12345.1`), bare digits (`12345`),
     prefixed number (`pr:123`, `sub210`), prefixed name (`sub:meier`).
     Comparison is case-insensitive; a name keeps the case it was typed in.
@@ -191,6 +233,11 @@ def resolve_magic_identifier(raw: str) -> NavTarget | None:
     command_target = MAGIC_IDENTIFIER_COMMAND_ROUTES.get(value)
     if command_target is not None:
         return CommandNav(target=command_target, command=value)
+
+    # Before the number forms, so `s:123` searches labels for "123".
+    search = _resolve_search(raw.strip())
+    if search is not None:
+        return search
 
     target_ref = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", value)
     if target_ref is not None:
@@ -253,7 +300,7 @@ def nav_exists(nav: NavTarget, service: _NavService) -> bool:
     `CommandNav` targets are pre-built routes that always exist.
     """
     match nav:
-        case CommandNav():
+        case CommandNav() | SearchNav():
             return True
         case SampleNav(sample_nr=s):
             return service.sample_exists(s)
@@ -272,8 +319,8 @@ def nav_exists(nav: NavTarget, service: _NavService) -> bool:
 def nav_not_found_message(nav: NavTarget) -> str:
     """User-facing not-found message keyed to the identifier shape."""
     match nav:
-        case CommandNav():
-            return ""  # commands always exist; never reached
+        case CommandNav() | SearchNav():
+            return ""  # commands and searches always "exist"; never reached
         case SampleNav(sample_nr=s):
             return f"Sample #{s} was not found."
         case PreparationNav(sample_nr=s, prep_nr=p):
@@ -365,6 +412,18 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
                 ),
             }
         )
+    for prefix in sorted(MAGIC_IDENTIFIER_SEARCH_PREFIXES.keys()):
+        rules.append(
+            {
+                "pattern": f"{prefix}:<text>",
+                "example": f"{prefix}:mosaic",
+                "description": (
+                    f"Opens Search → {MAGIC_IDENTIFIER_SEARCH_PREFIXES[prefix].capitalize()} for the text: every sample "
+                    "whose label (or other sample text) contains it, ignoring case "
+                    f"(label: {MAGIC_IDENTIFIER_SEARCH_LABELS.get(prefix, 'search')}). The colon is required."
+                ),
+            }
+        )
     for command in sorted(MAGIC_IDENTIFIER_COMMAND_ROUTES.keys()):
         command_target = MAGIC_IDENTIFIER_COMMAND_ROUTES[command]
         label = MAGIC_IDENTIFIER_COMMAND_LABELS.get(command, "magic command")
@@ -380,7 +439,7 @@ def build_magic_nav_rules() -> list[dict[str, str]]:
 
 INVALID_MAGIC_NAV_MESSAGE = (
     "Invalid Magic Nav ID. Use 12345, 12345.1, 12345.1.1, "
-    "pr:456, sub:210, sub:meier, or a command: /prep, /graph, /ana, /ea, /sub, /proj, /import."
+    "pr:456, sub:210, sub:meier, s:mosaic, or a command: /prep, /graph, /ana, /ea, /sub, /proj, /import."
 )
 
 
@@ -391,6 +450,7 @@ __all__ = [
     "ProjectNav",
     "SubmitterNav",
     "SubmitterNameNav",
+    "SearchNav",
     "CommandNav",
     "NavTarget",
     "resolve_magic_identifier",
@@ -407,6 +467,8 @@ __all__ = [
     "MAGIC_IDENTIFIER_SAMPLE_LABEL",
     "MAGIC_IDENTIFIER_PREPARATION_LABEL",
     "MAGIC_IDENTIFIER_TARGET_LABEL",
+    "MAGIC_IDENTIFIER_SEARCH_PREFIXES",
+    "MAGIC_IDENTIFIER_SEARCH_LABELS",
     "MAGIC_IDENTIFIER_COMMAND_ROUTES",
     "MAGIC_IDENTIFIER_COMMAND_LABELS",
 ]

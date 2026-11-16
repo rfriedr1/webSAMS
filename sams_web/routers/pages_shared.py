@@ -15,6 +15,7 @@ from sams_web.config import get_settings
 from sams_web.magic_nav import (
     MAGIC_IDENTIFIER_COMMAND_LABELS,
     MAGIC_IDENTIFIER_NAME_LABELS,
+    MAGIC_IDENTIFIER_SEARCH_LABELS,
     MAGIC_IDENTIFIER_PREFIX_LABELS,
     MAGIC_IDENTIFIER_PREPARATION_LABEL,
     MAGIC_IDENTIFIER_SAMPLE_LABEL,
@@ -82,6 +83,7 @@ def format_table_cell_value(key: Any, value: Any) -> Any:
 
 templates.env.globals["magic_identifier_prefix_labels"] = MAGIC_IDENTIFIER_PREFIX_LABELS
 templates.env.globals["magic_identifier_name_labels"] = MAGIC_IDENTIFIER_NAME_LABELS
+templates.env.globals["magic_identifier_search_labels"] = MAGIC_IDENTIFIER_SEARCH_LABELS
 templates.env.globals["magic_identifier_sample_label"] = MAGIC_IDENTIFIER_SAMPLE_LABEL
 templates.env.globals["magic_identifier_preparation_label"] = MAGIC_IDENTIFIER_PREPARATION_LABEL
 templates.env.globals["magic_identifier_target_label"] = MAGIC_IDENTIFIER_TARGET_LABEL
@@ -123,7 +125,7 @@ templates.env.globals["app_database"] = get_settings().database_name
 # load page-specific CSS/JS while still hitting the same cached asset URL
 # the base template uses. Bump on every release-touching-static-assets.
 templates.env.globals["app_version"] = __version__
-templates.env.globals["css_v"] = "20261116-11"
+templates.env.globals["css_v"] = "20261116-12"
 
 
 def parse_positive_int(raw_value: str) -> int | None:
