@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{#- Photo bench (Samples → Photos): photograph samples with the webcam of
+    this PC and file the pictures in the photo folder (Setup → Sample
+    Photos). Python side: sams_web/photo_bench.py; behaviour:
+    static/js/photo-bench.js. Photo first, number second: a shot's label
+    code suggests the sample, the operator confirms it (Enter) before
+    anything is saved; without a readable label the number is typed or
+    scanned, like on the other benches. -#}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/style-benches.css?v={{ css_v }}" />
+<link rel="stylesheet" href="/static/style-photos.css?v={{ css_v }}" />
+<link rel="stylesheet" href="/static/style-photo-bench.css?v={{ css_v }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/bench-common.js?v={{ css_v }}" defer></script>
+<script src="/static/js/sample-photos.js?v={{ css_v }}" defer></script>
+<script src="/static/vendor/zxing-wasm/zxing-reader.iife.js?v={{ css_v }}" defer></script>
+<script src="/static/js/photo-bench.js?v={{ css_v }}" defer></script>
+{% endblock %}
+
+{% from "_bench_macros.html" import stepper_buttons %}
+{% block content %}
+{% set can_edit = can("edit_records") %}
+<div
+  class="photo-bench"
+  data-photo-bench
+  data-page-label="Photo bench"
+  data-photo-bench-can-edit="{{ '1' if can_edit else '0' }}"
+  data-photo-bench-max-files="{{ photo_max_files }}"
+  data-photo-bench-max-mb="{{ photo_max_mb }}"
+  data-photo-bench-wasm-url="/static/vendor/zxing-wasm/zxing_reader.wasm?v={{ css_v }}"
+>
+  <section class="panel bench-panel" aria-label="Photo bench">
+    <form method="get" action="/samples/photos" class="bench-lookup" data-photo-bench-lookup-form>
+      {# Text, not number: a barcode scan must never be dropped. #}
+      <div class="bench-lookup-field is-sample">
+        <label for="photo-bench-sample-nr">{{ field_label('sample_nr') }}</label>
+        <div class="prep-bench-stepper">
+          <input
+            id="photo-bench-sample-nr"
+            type="text"
+            name="sample_nr"
+            value="{{ photo_sample_query }}"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Scan or type"
+            data-photo-bench-sample-input
+          />
+          {{ stepper_buttons("data-photo-bench-sample-step", "sample number") }}
+        </div>
+      </div>
+      <button type="submit" class="bench-button bench-load">Load</button>
+      <a
+        class="bench-open-link"
+        data-photo-bench-open
+        href="{{ '/samples/' ~ photo_bench_entry.sample.sample_nr if photo_bench_entry else '#' }}"
+        {% if not photo_bench_entry %}hidden{% endif %}
+      >Open sample <span aria-hidden="true">›</span></a>
+    </form>
+
+    <div data-photo-bench-facts aria-live="polite">{% include "_photo_bench_facts.html" %}</div>
+
+    <div class="photo-bench-work">
+      {#- Left: the camera. -#}
+      <div class="photo-bench-camera">
+        <div class="photo-bench-stage" data-photo-bench-stage>
+          <video class="photo-bench-video" data-photo-bench-video playsinline muted autoplay></video>
+          <p class="photo-bench-live-hint" data-photo-bench-live-hint hidden></p>
+          <div class="photo-bench-camera-note" data-photo-bench-camera-note role="status">
+            <p class="photo-bench-camera-title">Starting the camera…</p>
+          </div>
+        </div>
+
+        <div class="photo-bench-capture-row">
+          <button type="button" class="bench-button is-primary photo-bench-capture" data-photo-bench-capture disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            Take photo <kbd>Space</kbd>
+          </button>
+          <label class="bench-button is-ghost photo-bench-add-file" title="Add a JPEG from this computer or a phone">
+            Add file…
+            <input type="file" accept="image/jpeg,.jpg,.jpeg" multiple data-photo-bench-file class="sr-only" />
+          </label>
+          <span class="photo-bench-resolution" data-photo-bench-resolution></span>
+        </div>
+
+        <details class="photo-bench-controls" data-photo-bench-controls>
+          <summary>Camera settings</summary>
+          <div class="photo-bench-control-grid" data-photo-bench-control-grid>
+            <div class="photo-bench-control is-device" data-photo-bench-device-row hidden>
+              <label for="photo-bench-device">Camera</label>
+              <select id="photo-bench-device" data-photo-bench-device data-no-searchable></select>
+            </div>
+          </div>
+          <p class="photo-bench-controls-note" data-photo-bench-controls-note hidden></p>
+          <div class="photo-bench-controls-foot">
+            <span class="photo-bench-controls-hint">Remembered on this computer.</span>
+            <button type="button" class="bench-button is-ghost" data-photo-bench-reset>Reset</button>
+          </div>
+        </details>
+      </div>
+
+      {#- Right: what is being added, and what is already on file. -#}
+      <div class="photo-bench-side">
+        {#- The suggestion card: a label read from a shot names a sample the
+            bench is not on. Nothing changes until the operator confirms. -#}
+        <section class="photo-bench-suggestion" data-photo-bench-suggestion aria-labelledby="photo-bench-suggestion-title" hidden>
+          <h3 class="photo-bench-suggestion-title" id="photo-bench-suggestion-title" data-photo-bench-suggestion-title></h3>
+          <div class="photo-bench-suggestion-facts" data-photo-bench-suggestion-facts></div>
+          <p class="photo-bench-suggestion-note" data-photo-bench-suggestion-note hidden></p>
+          <div class="photo-bench-suggestion-actions">
+            <button type="button" class="bench-button is-ghost" data-photo-bench-suggestion-reject>Not this sample <kbd>Esc</kbd></button>
+            <button type="button" class="bench-button is-primary" data-photo-bench-suggestion-confirm>Confirm <kbd>Enter</kbd></button>
+          </div>
+        </section>
+
+        <section class="photo-bench-shots" aria-labelledby="photo-bench-shots-title">
+          <h3 class="fact-group-title" id="photo-bench-shots-title">New photos <span class="bench-count" data-photo-bench-shot-count></span></h3>
+          <ul class="photo-bench-tray" data-photo-bench-tray aria-live="polite"></ul>
+          <p class="photo-bench-tray-empty" data-photo-bench-tray-empty>
+            Take a photo with the label in view: the bench reads the label's code and suggests the sample.
+          </p>
+        </section>
+
+        <section
+          class="record-strip sample-photos photo-bench-on-file"
+          data-sample-photos
+          data-photos-manual
+          data-sample-nr="{{ photo_bench_entry.sample.sample_nr if photo_bench_entry else '' }}"
+          data-photos-url="{{ '/api/samples/' ~ photo_bench_entry.sample.sample_nr ~ '/photos' if photo_bench_entry else '' }}"
+        >
+          <div class="sample-photos-head">
+            <h3 class="fact-group-title">On file <span class="sample-photos-count" data-photos-count hidden></span></h3>
+            <button type="button" class="photo-icon-button" data-photos-refresh title="Rescan the photo folder" aria-label="Rescan the photo folder">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
+            </button>
+          </div>
+          <div class="sample-photos-body" data-photos-body aria-live="polite">
+            <p class="sample-photos-note">{% if photo_bench_entry %}Loading photos…{% else %}Load a sample to see its photos.{% endif %}</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    {% if can_edit %}
+    <div class="bench-actions" data-photo-bench-actions>
+      <button type="button" class="bench-button is-ghost" data-photo-bench-discard disabled>Discard photos</button>
+      <div class="bench-actions-main">
+        <button type="button" class="bench-button" data-photo-bench-save="save" disabled>Save</button>
+        <button type="button" class="bench-button is-primary" data-photo-bench-save="next" disabled>Save &amp; next</button>
+      </div>
+    </div>
+    {% else %}
+    <p class="view-only-note">View only: you can take photos, but not save them.</p>
+    {% endif %}
+  </section>
+
+  {#- Asked by photo-bench.js; every answer is a button value. -#}
+  <dialog class="photo-bench-dialog" data-photo-bench-dialog aria-labelledby="photo-bench-dialog-title">
+    <form method="dialog">
+      <h3 id="photo-bench-dialog-title" data-photo-bench-dialog-title></h3>
+      <p data-photo-bench-dialog-text></p>
+      <div class="photo-bench-dialog-actions" data-photo-bench-dialog-actions></div>
+    </form>
+  </dialog>
+</div>
+{% endblock %}

@@ -203,6 +203,7 @@
             <dt><kbd>/sub</kbd></dt><dd>Jump to Submitters</dd>
             <dt><kbd>/proj</kbd></dt><dd>Jump to Projects</dd>
             <dt><kbd>/import</kbd></dt><dd>Jump to Sample Import</dd>
+            <dt><kbd>/photo</kbd></dt><dd>Jump to the photo bench (Samples/Photos)</dd>
           </dl>
           <p class="shortcut-cheatsheet-hint">The colon is optional: <kbd>pr456</kbd>, <kbd>sub210</kbd> and <kbd>sub meier</kbd> work too — except in <kbd>s:</kbd>, where it is required.</p>
           <p class="shortcut-cheatsheet-hint">Or press <kbd>Ctrl/⌘ K</kbd> to open the full command palette.</p>

@@ -111,6 +111,10 @@ Open **Setup** in the top bar:
 3. **Sample Photos** — the folder with the sample photos, as this computer sees it
    (e.g. `R:\SAMS Images` when the drive is connected, or `\\<server>\<share>\SAMS Images`).
    Photos whose file name starts with the sample number then appear on the sample page.
+   The photo bench (Samples → Photos) saves new photos there too, so this computer
+   needs write access to the folder. Its camera works when the page is opened as
+   `http://localhost:8502` on this computer; for other PCs see the server guide
+   ("Photo bench: the camera on a lab PC").
 
 Settings are saved to `sams_web/setup_data.json` inside the folder. It is not in
 git, so it survives updates; back it up if you customise a lot.

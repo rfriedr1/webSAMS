@@ -16,6 +16,11 @@
   margin-bottom: var(--space-2);
 }
 
+/* Camera icon → photo bench: sits with the refresh icon on the right. */
+.photo-bench-sample-link {
+  margin-left: auto;
+}
+
 .sample-photos-count {
   margin-left: var(--space-1);
   padding: 0.05rem 0.4rem;

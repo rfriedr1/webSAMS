@@ -313,15 +313,23 @@
   const SCAN_POLL_MS = 2000;
   const SCAN_POLL_LIMIT = 40;
 
-  installers.installSamplePhotos = () => {
-    const root = document.querySelector("[data-sample-photos]");
-    if (!root) return;
+  // One viewer per page, shared by the strip and the photo bench's tray.
+  let sharedViewer = null;
+  const openViewer = (list, index) => {
+    sharedViewer = sharedViewer || createViewer();
+    sharedViewer.open(list, index);
+  };
+
+  // Mounts the strip on `root` and returns `{ load(refresh), setSample(nr) }`.
+  // The sample page mounts it once; the photo bench switches it from
+  // sample to sample (`setSample`) and reloads it after a save.
+  const mountSamplePhotos = (root) => {
     const body = root.querySelector("[data-photos-body]");
     const count = root.querySelector("[data-photos-count]");
     const refreshButton = root.querySelector("[data-photos-refresh]");
-    const url = root.dataset.photosUrl;
-    const sampleNr = root.dataset.sampleNr;
-    let viewer = null;
+    let url = root.dataset.photosUrl;
+    let sampleNr = root.dataset.sampleNr;
+    let loadSerial = 0;
     let pollTimer = 0;
     let polls = 0;
 
@@ -352,10 +360,7 @@
           img.alt = photo.name;
           img.src = photo.url;
           thumb.appendChild(img);
-          thumb.addEventListener("click", () => {
-            viewer = viewer || createViewer();
-            viewer.open(viewable, viewable.indexOf(photo));
-          });
+          thumb.addEventListener("click", () => openViewer(viewable, viewable.indexOf(photo)));
           item.appendChild(thumb);
         } else {
           // TIFF / HEIC: browsers cannot draw them, so offer the file only.
@@ -462,6 +467,8 @@
 
     const load = async (refresh) => {
       window.clearTimeout(pollTimer);
+      if (!url) return;
+      const serial = (loadSerial += 1);
       refreshButton.disabled = true;
       refreshButton.classList.add("is-busy");
       let data;
@@ -480,6 +487,8 @@
           },
         };
       }
+      // The bench may have moved on to another sample meanwhile.
+      if (serial !== loadSerial) return;
       render(data);
       // The first listing of a big share outlasts one request; ask again.
       if (data.state === "scanning" && polls < SCAN_POLL_LIMIT) {
@@ -496,6 +505,34 @@
       polls = 0;
       load(true);
     });
-    load(false);
+
+    const setSample = (nr) => {
+      sampleNr = nr ? String(nr) : "";
+      root.dataset.sampleNr = sampleNr;
+      url = sampleNr ? `/api/samples/${encodeURIComponent(sampleNr)}/photos` : "";
+      root.dataset.photosUrl = url;
+      polls = 0;
+      if (!url) {
+        window.clearTimeout(pollTimer);
+        loadSerial += 1;
+        setCount(0);
+        body.replaceChildren(note("Load a sample to see its photos."));
+        return;
+      }
+      body.replaceChildren(note("Loading photos…"));
+      load(false);
+    };
+
+    if (url) load(false);
+    return { load, setSample };
+  };
+
+  window.SAMSSamplePhotos = { mount: mountSamplePhotos, openViewer };
+
+  installers.installSamplePhotos = () => {
+    // `data-photos-manual`: the owning script mounts it (photo bench).
+    const root = document.querySelector("[data-sample-photos]:not([data-photos-manual])");
+    if (!root) return;
+    mountSamplePhotos(root);
   };
 })();
