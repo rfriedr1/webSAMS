@@ -31,7 +31,7 @@
           <li><kbd>{{ rule.example }}</kbd> — {{ rule.description }}</li>
           {% endfor %}
           <li><kbd>/prep</kbd> · <kbd>/graph</kbd> · <kbd>/ana</kbd> · <kbd>/ea</kbd> jump to the matching Lab page (<kbd>/ea</kbd> = EA Checks).</li>
-          <li><kbd>/sub</kbd> · <kbd>/proj</kbd> · <kbd>/import</kbd> jump to Submitters, Projects, and Sample&nbsp;Import.</li>
+          <li><kbd>/sub</kbd> · <kbd>/proj</kbd> · <kbd>/import</kbd> · <kbd>/photo</kbd> jump to Submitters, Projects, Sample&nbsp;Import and the photo bench.</li>
           <li>
             A command always starts with <kbd>/</kbd>, so <kbd>/sub</kbd> (the submitter <em>list</em>)
             and <kbd>sub:210</kbd> (submitter&nbsp;210's <em>record</em>) are different things.
@@ -76,6 +76,17 @@
         A photo of several samples appears on each of them (<code>25328-25337.jpg</code>, <code>11584-7.jpg</code>, <code>16191_16192.jpg</code>) and carries a <em>Group photo</em> badge.
         The download icon saves the original file. Just added a photo? Click the refresh icon next to <em>Photos</em>.
         If the photo folder cannot be reached, the <em>Photos</em> box says why (e.g. file server unreachable, access refused, too many connections) and what to do, with a <em>Try again</em> button.
+      </p>
+      <p>
+        <strong>Photo bench</strong> (<a href="/samples/photos">Samples → Photos</a>, <kbd>/photo</kbd>, or the camera icon next to a sample's <em>Photos</em>):
+        photographs samples with the webcam of this PC and saves the pictures in the photo folder.
+        Hold the sample with its label in view and press <kbd>Space</kbd> (or <em>Take photo</em>): the bench reads the label's QR / DataMatrix code and suggests the sample.
+        Check the label against the record shown and press <kbd>Enter</kbd> to confirm, or <kbd>Esc</kbd> if it is the wrong sample. Nothing is saved under a number you have not confirmed or typed.
+        Without a readable label, type or scan the <em>Sample #</em>. More photos of the same sample need no further confirmation; a photo whose label names another sample is marked <em>≠</em> and asked about before saving.
+        <em>Save &amp; next</em> files the photos as <code>48211.jpg</code>, <code>48211_2.jpg</code>, &hellip; in the range folder of the number (<code>45001-50000</code>) and clears the bench for the next sample;
+        photographing the next sample's label straight away offers to save the current ones and switch in one step.
+        <em>Camera settings</em> (brightness, contrast, exposure, white balance, focus, zoom — whatever the webcam offers) are remembered on that PC.
+        The camera only works on an <code>https://</code> page or on the server itself; on a lab PC the page explains the one-time browser setting needed until then.
       </li>
       <li>
         <strong>Back</strong>:

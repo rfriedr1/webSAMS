@@ -34,5 +34,6 @@
     installers.installPreparationBench?.();
     installers.installGraphitizationBench?.();
     installers.installSamplePhotos?.();
+    installers.installPhotoBench?.();
   });
 })();

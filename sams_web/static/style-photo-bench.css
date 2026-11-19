@@ -1,0 +1,500 @@
+/* Photo bench (Samples → Photos): webcam feed on the left, the new photos,
+   the label suggestion and the photos on file on the right. Loaded only
+   on that page (extra_styles), after style-benches.css (lookup row, facts
+   line, action bar) and style-photos.css (the On file strip, viewer). */
+
+.photo-bench .bench-ctx {
+  margin-bottom: var(--space-3);
+}
+
+.photo-bench-work {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.photo-bench-camera,
+.photo-bench-side {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* ---- Camera ---------------------------------------------------------- */
+
+.photo-bench-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: var(--ink-strong);
+}
+
+.photo-bench-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.photo-bench-stage.is-off .photo-bench-video {
+  visibility: hidden;
+}
+
+/* A short white flash when a photo is taken. */
+.photo-bench-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--surface-solid);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.photo-bench-stage.is-flash::after {
+  animation: photo-bench-flash 0.35s ease-out;
+}
+
+@keyframes photo-bench-flash {
+  from {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-bench-stage.is-flash::after {
+    animation: none;
+  }
+}
+
+.photo-bench-camera-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  overflow: auto;
+  color: var(--surface-solid);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.photo-bench-camera-note p,
+.photo-bench-camera-note ol {
+  margin: 0;
+  color: inherit;
+}
+
+.photo-bench-camera-note .photo-bench-camera-title {
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+
+.photo-bench-camera-note code {
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--surface-solid);
+  overflow-wrap: anywhere;
+}
+
+.photo-bench-steps {
+  padding-left: 1.2rem;
+}
+
+/* What the live feed reads: orientation only, never changes the sample. */
+.photo-bench-live-hint {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  margin: 0;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(16, 46, 61, 0.78);
+  color: var(--surface-solid);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-bench-live-hint.is-match {
+  background: var(--success);
+}
+
+.photo-bench-capture-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.photo-bench-capture {
+  gap: 0.45rem;
+  min-height: 2.8rem;
+  padding-inline: 1.4rem;
+  font-size: var(--text-md);
+}
+
+.photo-bench-capture svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.photo-bench .bench-button {
+  gap: 0.4rem;
+}
+
+.photo-bench kbd {
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.photo-bench-add-file {
+  cursor: pointer;
+}
+
+.photo-bench-add-file:focus-within {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
+.photo-bench-resolution {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Camera settings ------------------------------------------------- */
+
+.photo-bench-controls {
+  border-top: 1px solid var(--line-soft);
+  padding-top: var(--space-2);
+}
+
+.photo-bench-controls summary {
+  color: var(--brand-deep);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.photo-bench-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.photo-bench-control {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.photo-bench-control-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.photo-bench-control label,
+.photo-bench-control-head label {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.photo-bench-control-value {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-bench-control input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand);
+}
+
+.photo-bench-control.is-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: end;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.photo-bench-control.is-switch input {
+  margin: 0;
+}
+
+.photo-bench-controls-note {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.photo-bench-controls-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.photo-bench-controls-hint {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ---- Suggestion card ------------------------------------------------- */
+
+.photo-bench-suggestion {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--brand);
+  border-radius: 12px;
+  background: var(--brand-tint);
+}
+
+.photo-bench-suggestion-title {
+  margin: 0;
+  color: var(--brand-deep);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-bench-suggestion .bench-ctx {
+  margin: 0;
+}
+
+.photo-bench-suggestion-facts p {
+  margin: 0;
+}
+
+.photo-bench-suggestion-loading,
+.photo-bench-suggestion-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.photo-bench-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ---- New photos tray ------------------------------------------------- */
+
+.photo-bench-tray {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-bench-shot {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  overflow: hidden;
+}
+
+/* Not saved yet: the same dot as an unsaved field. */
+.photo-bench-shot::before {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  z-index: 1;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--brand-accent);
+  box-shadow: 0 0 0 2px var(--surface-solid);
+}
+
+.photo-bench-shot-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--brand-tint);
+  cursor: zoom-in;
+}
+
+.photo-bench-shot-thumb:hover {
+  transform: none;
+  box-shadow: none;
+  filter: brightness(1.05);
+}
+
+.photo-bench-shot-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-bench-shot-remove {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background: var(--surface-solid);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.photo-bench-shot-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+}
+
+.photo-bench-shot-name {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-bench-chip {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-bench-chip.is-ok {
+  border-color: var(--success-line);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.photo-bench-chip.is-info {
+  border-color: var(--line-strong);
+  background: var(--brand-tint);
+  color: var(--brand-deep);
+}
+
+.photo-bench-chip.is-warn {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.photo-bench-chip.is-muted {
+  border-style: dashed;
+  font-weight: 600;
+}
+
+.photo-bench-tray-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+.photo-bench-on-file {
+  margin: 0;
+}
+
+.photo-bench-on-file .sample-photo-grid {
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+/* ---- Dialog ------------------------------------------------------------ */
+
+.photo-bench-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.photo-bench-dialog::backdrop {
+  background: rgba(16, 46, 61, 0.38);
+}
+
+.photo-bench-dialog form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.photo-bench-dialog h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.photo-bench-dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.photo-bench-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ---- Responsive ---------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .photo-bench-work {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .photo-bench-resolution {
+    display: none;
+  }
+
+  .photo-bench-capture {
+    flex: 1 1 100%;
+  }
+
+  .photo-bench-camera-note {
+    padding: var(--space-3);
+  }
+}

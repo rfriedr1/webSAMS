@@ -86,6 +86,7 @@ MAGIC_IDENTIFIER_COMMAND_ROUTES: dict[str, str] = {
     "/sub": "/submitters",
     "/proj": "/projects",
     "/import": "/samples/import",
+    "/photo": "/samples/photos",
 }
 MAGIC_IDENTIFIER_COMMAND_LABELS: dict[str, str] = {
     "/prep": "magic command: preparation",
@@ -95,6 +96,7 @@ MAGIC_IDENTIFIER_COMMAND_LABELS: dict[str, str] = {
     "/sub": "magic command: submitters",
     "/proj": "magic command: projects",
     "/import": "magic command: sample import",
+    "/photo": "magic command: photo bench",
 }
 
 

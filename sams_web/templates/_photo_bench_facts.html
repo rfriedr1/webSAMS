@@ -1,0 +1,35 @@
+{#- One sample's facts on the photo bench (sams_web/photo_bench.py
+    `facts_view`). Rendered into the page, and fetched on its own by
+    photo-bench.js (`/samples/photos/facts`) when the sample changes or a
+    label read from a shot suggests one: the suggestion card shows it so the
+    operator can compare the printed label with the record.
+    `data-photo-facts-sample` is empty when there is no such sample. -#}
+{% from "_bench_macros.html" import ctx_item, ctx_flag %}
+{%- set entry = photo_bench_entry -%}
+<div
+  class="photo-bench-facts"
+  data-photo-facts
+  data-photo-facts-sample="{{ entry.sample.sample_nr if entry else '' }}"
+  data-photo-facts-nr="{{ photo_sample_nr if photo_sample_nr is not none else '' }}"
+>
+  {%- if entry %}
+  {%- set sample = entry.sample %}
+  {%- set project = entry.project %}
+  {%- set user = entry.user %}
+  <div class="bench-ctx" aria-label="Sample context">
+    {#- No Sample # here: the lookup field (and the card's title) already say it. -#}
+    {{ ctx_item(field_label("user_label"), "user_label", sample.user_label) }}
+    {% if format_table_cell_value("user_label_nr", sample.user_label_nr)|string|trim %}{{ ctx_item(field_label("user_label_nr"), "user_label_nr", sample.user_label_nr) }}{% endif %}
+    {{ ctx_item("Project", "project", project.project if project else none, "/projects/" ~ project.project_nr if project and project.project_nr else none) }}
+    {{ ctx_item("Submitter", "last_name", user.last_name if user else none, "/submitters/" ~ user.user_nr if user and user.user_nr else none) }}
+    {{ ctx_item(field_label("material"), "material", sample.material) }}
+    {{ ctx_item(field_label("type"), "type", sample.type) }}
+    <span class="bench-analysis" role="group" aria-label="Extra analyses">
+      {{ ctx_flag(field_label("c_n_isotop_a"), sample.c_n_isotop_a) }}
+      {{ ctx_flag(field_label("dendro_a"), sample.dendro_a) }}
+    </span>
+  </div>
+  {%- elif photo_error %}
+  <p class="error bench-notice">{{ photo_error }}</p>
+  {%- endif %}
+</div>

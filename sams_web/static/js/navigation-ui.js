@@ -476,6 +476,7 @@
           { label: "Samples: Sample", href: "/samples" },
           { label: "Samples: Projects", href: "/projects" },
           { label: "Samples: Submitters", href: "/submitters" },
+          { label: "Samples: Photos (photo bench)", href: "/samples/photos" },
           { label: "Lab: Preparation", href: "/lab/preparation" },
           { label: "Lab: Graphitization", href: "/lab/graphitization" },
           { label: "Lab: Analysis", href: "/lab/analysis" },
@@ -526,6 +527,7 @@
         "/sub": "/submitters",
         "/proj": "/projects",
         "/import": "/samples/import",
+        "/photo": "/samples/photos",
       };
       if (Object.prototype.hasOwnProperty.call(magicCommandMap, normalized)) {
         return {

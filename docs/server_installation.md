@@ -271,7 +271,8 @@ nssm restart webSAMS
 ```
 
 To show sample photos the service account must also be able to **read the photo
-share**. A local account like the one above cannot authenticate against a file
+share**; to save photos from the photo bench (Samples → Photos) it must be able to
+**write** to it (create files and the range sub-folders such as `95001-100000`). A local account like the one above cannot authenticate against a file
 server in a domain; use a domain account (`nssm set webSAMS ObjectName
 "DOMAIN\svc-websams" "<the password>"`) or grant the server's computer account
 read access on the share.
@@ -325,8 +326,24 @@ Open **Setup** in SAMS Web and work through:
    drives such as `R:` belong to a logged-in user and do not exist for a service.
    After saving, **Folder check** on the same page must report the number of photos
    found. The account the service runs as needs *read* access to that share
-   (section 7) — **LocalSystem** reaches the network as the computer account, which
-   usually has none.
+   (section 7), and *write* access for the photo bench — **LocalSystem** reaches the
+   network as the computer account, which usually has neither.
+
+### Photo bench: the camera on a lab PC
+
+Samples → **Photos** uses the webcam of the PC the browser runs on. Browsers allow
+the camera only on `https://` pages or on `localhost`, so on
+`http://<server>:8502` it stays blocked until webSAMS runs behind HTTPS (section 13).
+Until then, on **each bench PC** (once):
+
+1. In Chrome open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+   (Edge: `edge://flags/#unsafely-treat-insecure-origin-as-secure`).
+2. Enter `http://<server>:8502` (exactly as in the address bar), set it to
+   **Enabled** and relaunch the browser.
+3. Open Samples → Photos and allow the camera when asked.
+
+The page shows these steps itself when the camera is blocked. Camera settings
+(brightness, exposure, …) are remembered per PC in the browser.
 
 7. **EA Checks** and **Lab Staff** — the elemental analyzers with their check standard
    (acetanilide: reference values, pass window, lot), and the names shown as chips when

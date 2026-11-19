@@ -22,14 +22,15 @@ Three pieces:
   request ever waits on the filesystem for longer than `wait_seconds`;
   it gets a `scanning` answer instead and the browser asks again.
 - `SamplePhotos` — what the routes talk to: list the photos of one
-  sample, resolve one of them to a real path for serving.
+  sample, resolve one of them to a real path for serving, and save new
+  photos from the photo bench (`save_new`, the only write to the folder).
 
 Nothing here touches the database.
 """
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 import errno
 import getpass
@@ -67,6 +68,14 @@ _LEADING_NUMBER_CHAIN = re.compile(r"\d+(?:[-_+]\d+)*")
 #: further apart than this is not a second sample number but something
 #: else that happens to be numeric (a date, a customer's own label).
 GROUP_MAX_SPAN = 100
+
+#: New photos go into the top-level range folder holding their number
+#: (`90001-95000`). When none exists, one this wide is created, aligned
+#: like the lab's own (`95001-100000`).
+PHOTO_RANGE_WIDTH = 5000
+_RANGE_FOLDER = re.compile(r"(\d+)-(\d+)")
+#: What the photo bench writes: always a JPEG.
+NEW_PHOTO_EXTENSION = ".jpg"
 
 STATE_OK = "ok"
 STATE_NOT_CONFIGURED = "not_configured"
@@ -485,6 +494,10 @@ class SamplePhotoLibrary:
         self._lock = threading.Lock()
         self._index: _Index | None = None
         self._scan: _Scan | None = None
+        #: Files saved while a scan was walking the folder. The scan may
+        #: have passed their folder already, so they are added again when
+        #: its result is swapped in.
+        self._added_during_scan: list[tuple[Path, str]] = []
 
     def index_for(self, root: Path, *, refresh: bool = False) -> tuple[_Index | None, bool]:
         """Return `(index, scanning)` for `root`.
@@ -559,9 +572,133 @@ class SamplePhotoLibrary:
             # A scan of a folder that has since been replaced in Setup must
             # not overwrite the index of the new one.
             if self._scan is scan:
-                self._index = index
+                added = [path for root, path in self._added_during_scan if root == scan.root]
+                self._added_during_scan = []
+                self._index = _with_files(index, added) if problem is None else index
                 self._scan = None
         scan.done.set()
+
+    def add_files(self, root: Path, relative_paths: list[str]) -> None:
+        """Put files just written into the index, without a rescan, so the
+        next listing and `resolve` see them at once."""
+        if not relative_paths:
+            return
+        with self._lock:
+            if self._scan is not None and self._scan.root == root:
+                self._added_during_scan.extend((root, path) for path in relative_paths)
+            if self._index is not None and self._index.root == root and self._index.problem is None:
+                self._index = _with_files(self._index, relative_paths)
+
+
+def _with_files(index: _Index, relative_paths: list[str]) -> _Index:
+    files = dict(index.files)
+    for relative_path in relative_paths:
+        for sample_nr in sample_nrs_from_filename(PurePosixPath(relative_path).name):
+            paths = files.get(sample_nr, ())
+            if relative_path not in paths:
+                files[sample_nr] = tuple(sorted((*paths, relative_path), key=_natural_key))
+    return replace(index, files=files)
+
+
+# --- Writing new photos (photo bench) ----------------------------------------
+
+
+def photo_target_folder(root: Path, sample_nr: int) -> str:
+    """Name of the top-level range folder a new photo of `sample_nr` goes
+    into, creating it when there is none.
+
+    Existing folders are matched by name (`1-10000`, `90001-95000`), so the
+    lab's odd first range keeps working. Only *writing* uses the number to
+    pick a folder; reading still matches on file names alone, because
+    several hundred older photos sit in the wrong range.
+    """
+    with os.scandir(root) as entries:
+        for entry in entries:
+            match = _RANGE_FOLDER.fullmatch(entry.name)
+            if match is None or not entry.is_dir():
+                continue
+            if int(match.group(1)) <= sample_nr <= int(match.group(2)):
+                return entry.name
+    start = ((sample_nr - 1) // PHOTO_RANGE_WIDTH) * PHOTO_RANGE_WIDTH + 1
+    name = f"{start}-{start + PHOTO_RANGE_WIDTH - 1}"
+    os.makedirs(root / name, exist_ok=True)
+    return name
+
+
+def _own_stems(sample_nr: int, relative_paths: tuple[str, ...] | list[str]) -> set[str]:
+    """Lower-case stems of the sample's *own* photos (group photos excluded)."""
+    return {
+        PurePosixPath(path).stem.lower()
+        for path in relative_paths
+        if sample_nrs_from_filename(PurePosixPath(path).name) == (sample_nr,)
+    }
+
+
+def photo_name_candidates(sample_nr: int, taken_stems: set[str]):
+    """New file names for `sample_nr`, best first: `<nr>.jpg` while the
+    sample has no photo of its own, then `<nr>_2.jpg`, `<nr>_3.jpg`, ...
+    skipping every stem already taken (whatever its extension)."""
+    if not taken_stems:
+        yield f"{sample_nr}{NEW_PHOTO_EXTENSION}"
+    counter = 2
+    while True:
+        stem = f"{sample_nr}_{counter}"
+        if stem not in taken_stems:
+            yield f"{stem}{NEW_PHOTO_EXTENSION}"
+        counter += 1
+
+
+def next_photo_name(sample_nr: int, existing_paths: tuple[str, ...] | list[str] = ()) -> str:
+    """The name the next photo of `sample_nr` gets, given its existing photos."""
+    return next(photo_name_candidates(sample_nr, _own_stems(sample_nr, existing_paths)))
+
+
+def write_new_photos(
+    root: Path, sample_nr: int, existing_paths: tuple[str, ...], images: list[bytes]
+) -> list[str]:
+    """Write `images` as new photos of `sample_nr`; returns their relative paths.
+
+    Each file is created with `"xb"` (exclusive): a name that turns out to
+    exist — another bench saved the same sample a moment ago, or a file the
+    index has not seen yet — is skipped, never overwritten. A failed write
+    removes its half-written file. Blocking: call it off the request thread.
+    """
+    folder = photo_target_folder(root, sample_nr)
+    taken = _own_stems(sample_nr, existing_paths)
+    written: list[str] = []
+    for data in images:
+        for name in photo_name_candidates(sample_nr, taken):
+            path = root / folder / name
+            try:
+                handle = open(path, "xb")
+            except FileExistsError:
+                taken.add(PurePosixPath(name).stem.lower())
+                continue
+            try:
+                with handle:
+                    handle.write(data)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            except BaseException:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+                raise
+            taken.add(PurePosixPath(name).stem.lower())
+            written.append(f"{folder}/{name}")
+            break
+    return written
+
+
+class PhotoSaveError(Exception):
+    """A photo could not be saved. `problem` says why the folder failed,
+    when it did; `message` is one line for a toast."""
+
+    def __init__(self, message: str, problem: FolderProblem | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.problem = problem
 
 
 # --- Facade used by the routes ----------------------------------------------
@@ -633,9 +770,16 @@ def _is_plain_missing(exc: OSError) -> bool:
 
 
 class SamplePhotos:
-    def __init__(self, settings: SamplePhotoSettingsStore, library: SamplePhotoLibrary) -> None:
+    def __init__(
+        self,
+        settings: SamplePhotoSettingsStore,
+        library: SamplePhotoLibrary,
+        *,
+        write_timeout_seconds: float = 15.0,
+    ) -> None:
         self._settings = settings
         self._library = library
+        self.write_timeout_seconds = write_timeout_seconds
 
     def list_for_sample(self, sample_nr: int, *, refresh: bool = False) -> PhotoListing:
         root = self._settings.folder()
@@ -698,6 +842,72 @@ class SamplePhotos:
             return None
         path = root / relative_path
         return path if path.is_file() else None
+
+    def save_new(self, sample_nr: int, images: list[bytes]) -> list[SamplePhoto]:
+        """Save `images` (JPEG bytes) as new photos of `sample_nr`.
+
+        Names follow `next_photo_name`, the folder `photo_target_folder`.
+        The share is written in a worker thread that the request waits on
+        for at most `write_timeout_seconds`: a dead mount must not hang the
+        bench. Raises `PhotoSaveError`.
+        """
+        root = self._settings.folder()
+        if root is None:
+            raise PhotoSaveError(
+                "No photo folder is configured yet: set it in Setup → Sample Photos."
+            )
+        index, _scanning = self._library.index_for(root)
+        if index is None:
+            raise PhotoSaveError(
+                "webSAMS is still reading the photo folder. Try again in a moment.",
+                _stalled_problem(root) if self._library.scan_is_stalled(root) else None,
+            )
+        if index.problem is not None:
+            raise PhotoSaveError(index.problem.title, index.problem)
+        existing = index.files.get(sample_nr, ())
+
+        outcome: dict[str, Any] = {}
+
+        def work() -> None:
+            try:
+                outcome["paths"] = write_new_photos(root, sample_nr, existing, images)
+            except BaseException as exc:  # noqa: BLE001 - handed to the request thread
+                outcome["error"] = exc
+
+        worker = threading.Thread(target=work, name="sample-photo-write", daemon=True)
+        worker.start()
+        worker.join(self.write_timeout_seconds)
+        if worker.is_alive():
+            raise PhotoSaveError(
+                "The photo folder is not answering; the photos were not saved.",
+                _stalled_problem(root),
+            )
+        error = outcome.get("error")
+        if isinstance(error, OSError):
+            problem = diagnose_folder_error(error, root)
+            logger.warning("Saving photos of sample %s failed: %s", sample_nr, problem.as_text())
+            raise PhotoSaveError(problem.title, problem)
+        if error is not None:
+            raise error
+        paths: list[str] = outcome["paths"]
+        self._library.add_files(root, paths)
+        saved: list[SamplePhoto] = []
+        for relative_path in paths:
+            stat = (root / relative_path).stat()
+            saved.append(
+                SamplePhoto(
+                    sample_nr=sample_nr,
+                    relative_path=relative_path,
+                    size=stat.st_size,
+                    modified=stat.st_mtime,
+                    viewable=True,
+                )
+            )
+        logger.info(
+            "Saved %d photo(s) of sample %s: %s",
+            len(saved), sample_nr, ", ".join(paths),
+        )
+        return saved
 
     def status(self, *, refresh: bool = False) -> dict[str, Any]:
         """Folder health for the Setup page."""

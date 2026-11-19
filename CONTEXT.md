@@ -23,6 +23,10 @@ _Avoid_: Specimen, Material.
 A picture taken of a **Sample** when it is received, stored as an image file in the lab's shared photo folder. Belongs to a sample purely by file name — the name starts with the sample number (`48211.jpg`, `48211b.jpg`). A sample may have several. A *group photo* shows several samples at once and names them all (`25328-25337.jpg`, `16191_16192.jpg`); it belongs to each of them. A short number after a dash abbreviates a range (`11584-7.jpg` = 11584–11587); a number after an underscore counts photos of one sample (`36231_2.jpg`). Not recorded in the database.
 _Avoid_: Image, Picture, Foto.
 
+**Photo bench**:
+The page (Samples → Photos) where samples are photographed with the bench PC's webcam and the pictures saved as **Sample photos** (`<nr>.jpg`, `<nr>_2.jpg`, … in the range folder of the number). The label code read from a shot only *suggests* the sample; the operator confirms it. Writes files, never the database.
+_Avoid_: Photo station, Camera page.
+
 **Standard**:
 A reference material (oxalic acid, IAEA-C, blanks, etc.) used to calibrate AMS measurements. Stored as a row in `sample_t` whose `type` matches a `sampletype_t` row flagged as a standard (certified `f14c`, `d13c_nom`, or `blank` values populated). Standards travel through **Prep batches**, **Graph batches**, and **Magazines** alongside submitter samples but have no meaningful **Submitter** or **Project**.
 _Avoid_: Reference, Calibrator, Standard sample (verbose).
