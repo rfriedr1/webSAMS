@@ -18,6 +18,7 @@
 <script src="/static/js/bench-common.js?v={{ css_v }}" defer></script>
 <script src="/static/js/sample-photos.js?v={{ css_v }}" defer></script>
 <script src="/static/vendor/zxing-wasm/zxing-reader.iife.js?v={{ css_v }}" defer></script>
+<script src="/static/js/label-locator.js?v={{ css_v }}" defer></script>
 <script src="/static/js/photo-bench.js?v={{ css_v }}" defer></script>
 {% endblock %}
 
@@ -46,13 +47,19 @@
             value="{{ photo_sample_query }}"
             inputmode="numeric"
             autocomplete="off"
-            placeholder="Scan or type"
+            placeholder="From photo"
             data-photo-bench-sample-input
           />
           {{ stepper_buttons("data-photo-bench-sample-step", "sample number") }}
         </div>
       </div>
       <button type="submit" class="bench-button bench-load">Load</button>
+      {#- Photo first: the label's code fills Sample #; scanning or typing
+          is the fallback. photo-bench.js swaps the text once a number
+          read from a photo was confirmed. -#}
+      <p class="photo-bench-lookup-hint" data-photo-bench-lookup-hint aria-live="polite">
+        Take a photo first: the number is read from the label's code. Check it, or scan or type it here if it was not found.
+      </p>
       <a
         class="bench-open-link"
         data-photo-bench-open
@@ -108,7 +115,12 @@
             bench is not on. Nothing changes until the operator confirms. -#}
         <section class="photo-bench-suggestion" data-photo-bench-suggestion aria-labelledby="photo-bench-suggestion-title" hidden>
           <h3 class="photo-bench-suggestion-title" id="photo-bench-suggestion-title" data-photo-bench-suggestion-title></h3>
-          <div class="photo-bench-suggestion-facts" data-photo-bench-suggestion-facts></div>
+          <div class="photo-bench-suggestion-body">
+            {#- The label around the code that was read, outlined (drawn over
+                the picture, never into the saved photo). -#}
+            <div class="photo-bench-suggestion-closeup" data-photo-bench-suggestion-closeup hidden></div>
+            <div class="photo-bench-suggestion-facts" data-photo-bench-suggestion-facts></div>
+          </div>
           <p class="photo-bench-suggestion-note" data-photo-bench-suggestion-note hidden></p>
           <div class="photo-bench-suggestion-actions">
             <button type="button" class="bench-button is-ghost" data-photo-bench-suggestion-reject>Not this sample <kbd>Esc</kbd></button>

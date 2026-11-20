@@ -418,6 +418,59 @@
   will-change: transform;
 }
 
+/* Outlines over the photo (photo bench: the label code it read). Same
+   transform as the image. */
+.photo-viewer-marks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* A code outline (photo bench tray, close-up and viewer). The white halo
+   under the line keeps it visible on dark and light picture parts alike;
+   strokes stay the same width whatever the zoom. */
+.photo-mark,
+.photo-mark-halo {
+  fill: none;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.photo-mark-halo {
+  stroke: var(--surface-solid);
+  stroke-width: 5;
+  opacity: 0.85;
+}
+
+.photo-mark {
+  stroke: var(--brand-2);
+  stroke-width: 2.5;
+}
+
+.photo-mark.is-ok {
+  stroke: var(--success);
+}
+
+.photo-mark.is-warn {
+  stroke: var(--warn-text);
+}
+
+.photo-mark.is-muted {
+  stroke: var(--muted);
+  stroke-dasharray: 6 4;
+}
+
+.photo-viewer-marks .photo-mark-halo {
+  stroke-width: 6;
+}
+
+.photo-viewer-marks .photo-mark {
+  stroke-width: 3;
+}
+
 .photo-viewer-note {
   position: absolute;
   inset: 0;

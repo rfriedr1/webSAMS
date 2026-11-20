@@ -17,7 +17,14 @@
 //
 // Label decoding: the browser's own BarcodeDetector where it exists
 // (macOS Chrome), otherwise zxing-wasm 3.1.6, vendored under
-// /static/vendor/zxing-wasm (no internet needed).
+// /static/vendor/zxing-wasm (no internet needed). When the whole picture
+// yields nothing, label-locator.js cuts out code-like blobs and each is
+// read on its own — zxing gives up on a DataMatrix whose L edge is touched
+// by printed text, as on the lab's labels.
+//
+// Where a code was read is outlined over the picture (tray ring, the
+// suggestion card's close-up, the viewer) as SVG — never drawn into the
+// JPEG that is saved.
 (() => {
   const installers = (window.SAMSAppInstallers = window.SAMSAppInstallers || {});
   const SETTINGS_KEY = "sams_photo_bench_camera";
@@ -26,6 +33,14 @@
   const LIVE_MAX_WIDTH = 960;
   const LIVE_HINT_HOLD_MS = 1500;
   const LABEL_FORMATS = ["QRCode", "DataMatrix", "MicroQRCode"];
+  // The label locator (label-locator.js) works on at most this many pixels
+  // per side (a 12 MP phone picture is scaled down first) and tries the
+  // most code-like blobs first: fewer on the live feed.
+  const LOCATE_MAX_SIDE = 2400;
+  const SHOT_LOCATE_BLOBS = 10;
+  const LIVE_LOCATE_BLOBS = 4;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const CLOSEUP_SIDE = 320;
 
   // ---- label text → sample number -------------------------------------
   // Mirrors `sample_nr_from_label` in sams_web/photo_bench.py: the number
@@ -91,6 +106,12 @@
     });
 
   // ---- label decoder ------------------------------------------------------
+  // `read(canvas)` answers the codes found as `[{text, corners}]`, corners
+  // in canvas pixels (for the outline drawn over the shot), or null when
+  // no reader could start.
+  const imageDataOf = (canvas) =>
+    canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
+
   const createDecoder = (wasmUrl) => {
     let ready = null;
 
@@ -101,7 +122,9 @@
         const wanted = ["qr_code", "data_matrix"].filter((format) => supported.includes(format));
         if (!wanted.length) return null;
         const detector = new window.BarcodeDetector({ formats: wanted });
-        return async (source) => (await detector.detect(source)).map((code) => code.rawValue);
+        // Takes a canvas or an ImageData.
+        return async (source) =>
+          (await detector.detect(source)).map((code) => ({ text: code.rawValue, corners: code.cornerPoints || [] }));
       } catch (_error) {
         return null;
       }
@@ -116,16 +139,55 @@
         },
         fireImmediately: true,
       });
-      return async (source, quick) => {
-        const imageData = source instanceof ImageData ? source : null;
-        if (!imageData) return [];
+      return async (source, { quick = false, single = false } = {}) => {
+        const imageData = source instanceof ImageData ? source : imageDataOf(source);
         const results = await zxing.readBarcodes(imageData, {
           formats: LABEL_FORMATS,
-          tryHarder: !quick,
-          maxNumberOfSymbols: 4,
+          tryHarder: !quick || single,
+          maxNumberOfSymbols: single ? 1 : 4,
         });
-        return results.filter((result) => result.isValid).map((result) => result.text);
+        return results
+          .filter((result) => result.isValid)
+          .map((result) => {
+            const p = result.position;
+            return { text: result.text, corners: [p.topLeft, p.topRight, p.bottomRight, p.bottomLeft] };
+          });
       };
+    };
+
+    // Second chance (label-locator.js): codes the reader missed because
+    // printed text runs into them. Each code-like blob is cut out, turned
+    // upright and read on its own; corners are mapped back to `canvas`.
+    const readLocated = async (decoder, canvas, maxBlobs) => {
+      const locator = window.SAMSLabelLocator;
+      if (!locator) return [];
+      const factor = Math.min(1, LOCATE_MAX_SIDE / Math.max(canvas.width, canvas.height));
+      let source = canvas;
+      if (factor < 1) {
+        source = document.createElement("canvas");
+        source.width = Math.round(canvas.width * factor);
+        source.height = Math.round(canvas.height * factor);
+        source.getContext("2d", { willReadFrequently: true }).drawImage(canvas, 0, 0, source.width, source.height);
+      }
+      const found = locator.locate(imageDataOf(source), { maxBlobs });
+      const codes = [];
+      for (const blob of found.blobs) {
+        for (const crop of found.cropsFor(blob)) {
+          const hit = (await decoder.read(crop.image, { single: true }))[0];
+          if (!hit) continue;
+          if (!codes.some((code) => code.text === hit.text)) {
+            codes.push({
+              text: hit.text,
+              corners: hit.corners.map((point) => {
+                const mapped = crop.toSource(point.x, point.y);
+                return { x: mapped.x / factor, y: mapped.y / factor };
+              }),
+            });
+          }
+          break;
+        }
+      }
+      return codes;
     };
 
     const init = () => {
@@ -145,15 +207,15 @@
       return ready;
     };
 
-    // Reads every label code on `canvas`. Returns the decoded texts.
+    // Reads every label code on `canvas`: the whole picture first, then
+    // the located blobs. `quick` (the live feed) tries fewer blobs.
     const read = async (canvas, { quick = false } = {}) => {
       const decoder = await init();
       if (!decoder) return null;
       try {
-        if (decoder.kind === "native") return await decoder.read(canvas);
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        return await decoder.read(imageData, quick);
+        const codes = await decoder.read(canvas, { quick });
+        if (codes.length) return codes;
+        return await readLocated(decoder, canvas, quick ? LIVE_LOCATE_BLOBS : SHOT_LOCATE_BLOBS);
       } catch (error) {
         console.warn("Photo bench: label decoding failed", error);
         return [];
@@ -164,8 +226,9 @@
   };
 
   // What a shot's label codes say: one number, several, or none.
-  const interpretCodes = (texts) => {
-    if (texts === null) return { state: "noreader", nrs: [], text: "" };
+  const interpretCodes = (codes) => {
+    if (codes === null) return { state: "noreader", nrs: [], text: "" };
+    const texts = codes.map((code) => code.text);
     const nrs = [...new Set(texts.map(labelSampleNr).filter((nr) => nr !== null))];
     return { state: nrs.length === 1 ? "one" : nrs.length > 1 ? "several" : "none", nrs, text: texts[0] || "" };
   };
@@ -222,6 +285,9 @@
     const suggestionTitle = q("[data-photo-bench-suggestion-title]");
     const suggestionFacts = q("[data-photo-bench-suggestion-facts]");
     const suggestionNote = q("[data-photo-bench-suggestion-note]");
+    const suggestionCloseup = q("[data-photo-bench-suggestion-closeup]");
+    const lookupHint = q("[data-photo-bench-lookup-hint]");
+    const lookupHintText = lookupHint?.textContent.trim() || "";
     const confirmButton = q("[data-photo-bench-suggestion-confirm]");
     const rejectButton = q("[data-photo-bench-suggestion-reject]");
     const tray = q("[data-photo-bench-tray]");
@@ -313,6 +379,62 @@
       }
     };
 
+    // ---- code outlines --------------------------------------------------
+    // Where the label code was found, drawn as an SVG over the picture so
+    // the operator sees what was read. Never drawn into the JPEG: the
+    // saved file is the shot as taken.
+    const markKind = (code) => {
+      const nr = labelSampleNr(code.text);
+      if (nr === null) return "muted";
+      if (current === null) return "info";
+      return nr === current ? "ok" : "warn";
+    };
+
+    const codeGeometry = (code) => {
+      const n = code.corners.length || 1;
+      const cx = code.corners.reduce((sum, p) => sum + p.x, 0) / n;
+      const cy = code.corners.reduce((sum, p) => sum + p.y, 0) / n;
+      const radius = Math.max(...code.corners.map((p) => Math.hypot(p.x - cx, p.y - cy)), 1);
+      // A little outside the code, so the line does not hide its edge.
+      const points = code.corners.map((p) => ({ x: cx + (p.x - cx) * 1.18, y: cy + (p.y - cy) * 1.18 }));
+      return { cx, cy, radius, points };
+    };
+
+    const svgShape = (tag, attributes) => {
+      const node = document.createElementNS(SVG_NS, tag);
+      Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, String(value)));
+      return node;
+    };
+
+    // `view` = [x, y, width, height] of the picture the svg lies over.
+    // `ring`: a circle instead of the outline, for thumbnails, where a
+    // small code is only a few pixels wide.
+    const marksSvg = (shot, view, { ring = false, fit = "xMidYMid slice" } = {}) => {
+      const svg = svgShape("svg", { class: "photo-bench-marks", viewBox: view.join(" "), preserveAspectRatio: fit, "aria-hidden": "true" });
+      shot.codes.forEach((code) => {
+        const kind = markKind(code);
+        const { cx, cy, radius, points } = codeGeometry(code);
+        ["photo-mark-halo", `photo-mark is-${kind}`].forEach((className) => {
+          svg.appendChild(
+            ring
+              ? svgShape("circle", { class: className, cx, cy, r: Math.max(radius * 1.7, shot.width * 0.045) })
+              : svgShape("polygon", { class: className, points: points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") })
+          );
+        });
+      });
+      return svg;
+    };
+
+    const openShotViewer = (index) => {
+      const list = shots.map((s, i) => ({
+        name: `New photo ${i + 1} (not saved)`,
+        url: s.url,
+        download_url: s.url,
+        marks: s.codes.map((code) => ({ points: codeGeometry(code).points, kind: markKind(code) })),
+      }));
+      window.SAMSSamplePhotos?.openViewer(list, index);
+    };
+
     const renderTray = () => {
       const items = shots.map((shot, index) => {
         const item = el("li", "photo-bench-shot");
@@ -324,10 +446,8 @@
         img.alt = `New photo ${index + 1}`;
         img.src = shot.url;
         thumb.appendChild(img);
-        thumb.addEventListener("click", () => {
-          const list = shots.map((s, i) => ({ name: `New photo ${i + 1} (not saved)`, url: s.url, download_url: s.url }));
-          window.SAMSSamplePhotos?.openViewer(list, index);
-        });
+        if (shot.codes.length) thumb.appendChild(marksSvg(shot, [0, 0, shot.width, shot.height], { ring: true }));
+        thumb.addEventListener("click", () => openShotViewer(index));
         const remove = el("button", "photo-icon-button photo-bench-shot-remove", "×");
         remove.type = "button";
         remove.title = `Drop photo ${index + 1}`;
@@ -360,7 +480,9 @@
     const dropShots = (ids) => {
       const drop = new Set(ids);
       shots.forEach((shot) => {
-        if (drop.has(shot.id)) URL.revokeObjectURL(shot.url);
+        if (!drop.has(shot.id)) return;
+        URL.revokeObjectURL(shot.url);
+        if (shot.closeup) URL.revokeObjectURL(shot.closeup.url);
       });
       shots = shots.filter((shot) => !drop.has(shot.id));
       renderTray();
@@ -385,10 +507,16 @@
     };
 
     // Puts `nr` on the bench (facts line, Open link, On file strip, URL).
-    const setCurrent = (nr, fragment) => {
+    // `fromLabel`: confirmed from a label read in a photo, which the hint
+    // beside Sample # then says.
+    const setCurrent = (nr, fragment, { fromLabel = false } = {}) => {
       current = nr;
       factsHost.replaceChildren(fragment);
       sampleInput.value = nr === null ? "" : String(nr);
+      if (lookupHint) {
+        lookupHint.textContent = fromLabel ? "✓ Read from the label in the photo" : lookupHintText;
+        lookupHint.classList.toggle("is-read", fromLabel);
+      }
       if (openLink) {
         openLink.hidden = nr === null;
         openLink.href = nr === null ? "#" : `/samples/${nr}`;
@@ -580,10 +708,33 @@
       updateActions();
     };
 
+    // The label around the code that was read, outlined; a click shows the
+    // whole photo.
+    const renderCloseup = (shot) => {
+      if (!suggestionCloseup) return;
+      suggestionCloseup.hidden = !shot.closeup;
+      if (!shot.closeup) {
+        suggestionCloseup.replaceChildren();
+        return;
+      }
+      const index = shots.indexOf(shot);
+      const button = el("button", "photo-bench-closeup");
+      button.type = "button";
+      button.title = `View photo ${index + 1}`;
+      button.setAttribute("aria-label", `View photo ${index + 1}`);
+      const img = el("img");
+      img.alt = `Label in photo ${index + 1}`;
+      img.src = shot.closeup.url;
+      button.append(img, marksSvg(shot, shot.closeup.view, { fit: "none" }));
+      button.addEventListener("click", () => openShotViewer(shots.indexOf(shot)));
+      suggestionCloseup.replaceChildren(button);
+    };
+
     const openSuggestion = async (shot) => {
       const nr = shot.label.nrs[0];
       suggestion = { nr, shot, known: false };
       suggestionTitle.textContent = `Label reads ${nr}`;
+      renderCloseup(shot);
       suggestionFacts.replaceChildren(el("p", "photo-bench-suggestion-loading", "Looking it up…"));
       suggestionNote.hidden = true;
       confirmButton.hidden = false;
@@ -646,7 +797,7 @@
         }
       }
       closeSuggestion();
-      setCurrent(nr, fragment);
+      setCurrent(nr, fragment, { fromLabel: true });
     };
 
     const rejectSuggestion = () => {
@@ -664,6 +815,30 @@
     rejectButton.addEventListener("click", rejectSuggestion);
 
     // ---- shots ------------------------------------------------------------
+    // A close-up of the label around the code that was read, for the
+    // suggestion card: the operator compares it with the record.
+    const makeCloseup = async (canvas, code) => {
+      const xs = code.corners.map((p) => p.x);
+      const ys = code.corners.map((p) => p.y);
+      const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+      const side = Math.min(Math.max(size * 7, 200), canvas.width, canvas.height);
+      const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+      const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+      const x = Math.min(Math.max(0, cx - side / 2), canvas.width - side);
+      const y = Math.min(Math.max(0, cy - side / 2), canvas.height - side);
+      const out = document.createElement("canvas");
+      out.width = CLOSEUP_SIDE;
+      out.height = CLOSEUP_SIDE;
+      const context = out.getContext("2d");
+      context.imageSmoothingQuality = "high";
+      context.drawImage(canvas, x, y, side, side, 0, 0, CLOSEUP_SIDE, CLOSEUP_SIDE);
+      try {
+        return { url: URL.createObjectURL(await canvasToBlob(out)), view: [x, y, side, side] };
+      } catch (_error) {
+        return null;
+      }
+    };
+
     const addShot = async (blob, canvas) => {
       shotSerial += 1;
       const shot = {
@@ -672,12 +847,22 @@
         url: URL.createObjectURL(blob),
         name: `photo-${shotSerial}.jpg`,
         label: { state: "pending", nrs: [], text: "" },
+        width: canvas.width,
+        height: canvas.height,
+        codes: [],
+        closeup: null,
       };
       shots.push(shot);
       renderTray();
-      const texts = await decoder.read(canvas);
-      shot.label = interpretCodes(texts);
-      if (!shots.includes(shot)) return;
+      const codes = await decoder.read(canvas);
+      shot.label = interpretCodes(codes);
+      shot.codes = (codes || []).filter((code) => code.corners.length >= 3);
+      const named = shot.codes.find((code) => labelSampleNr(code.text) !== null);
+      if (named) shot.closeup = await makeCloseup(canvas, named);
+      if (!shots.includes(shot)) {
+        if (shot.closeup) URL.revokeObjectURL(shot.closeup.url);
+        return;
+      }
       renderTray();
       if (shot.label.state === "one" && shot.label.nrs[0] !== current && !suggestion) {
         openSuggestion(shot);
@@ -766,8 +951,8 @@
         liveCanvas.width = Math.round(video.videoWidth * scale);
         liveCanvas.height = Math.round(video.videoHeight * scale);
         liveCanvas.getContext("2d", { willReadFrequently: true }).drawImage(video, 0, 0, liveCanvas.width, liveCanvas.height);
-        const texts = await decoder.read(liveCanvas, { quick: true });
-        const label = interpretCodes(texts || []);
+        const codes = await decoder.read(liveCanvas, { quick: true });
+        const label = interpretCodes(codes || []);
         if (label.state === "none") return;
         const text =
           label.state === "several"
