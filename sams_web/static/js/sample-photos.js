@@ -88,10 +88,15 @@
     const image = el("img", "photo-viewer-image");
     image.alt = "";
     image.draggable = false;
+    // Optional outlines over the photo (the photo bench marks the label
+    // code it read): an SVG in image pixels that pans and zooms with it.
+    const marks = document.createElementNS(SVG_NS, "svg");
+    marks.setAttribute("class", "photo-viewer-marks");
+    marks.setAttribute("aria-hidden", "true");
     const note = el("p", "photo-viewer-note", "Loading…");
     const previousButton = iconButton("previous", "Previous photo (←)", "photo-viewer-nav is-previous");
     const nextButton = iconButton("next", "Next photo (→)", "photo-viewer-nav is-next");
-    stage.append(image, note, previousButton, nextButton);
+    stage.append(image, marks, note, previousButton, nextButton);
 
     dialog.append(bar, stage);
     document.body.appendChild(dialog);
@@ -117,6 +122,7 @@
       x = drawnWidth <= width ? (width - drawnWidth) / 2 : Math.min(0, Math.max(width - drawnWidth, x));
       y = drawnHeight <= height ? (height - drawnHeight) / 2 : Math.min(0, Math.max(height - drawnHeight, y));
       image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      marks.style.transform = image.style.transform;
       zoomLevel.textContent = `${Math.round(scale * 100)}%`;
       zoomOutButton.disabled = scale <= fitScale + 0.0005;
       zoomInButton.disabled = scale >= maxScale() - 0.0005;
@@ -155,6 +161,8 @@
       const photo = photos[current];
       loaded = false;
       image.hidden = true;
+      marks.replaceChildren();
+      marks.hidden = true;
       note.hidden = false;
       note.textContent = "Loading…";
       nameLabel.textContent = photo.name;
@@ -166,10 +174,30 @@
       image.src = photo.url;
     };
 
+    // `photo.marks`: [{points: [{x, y}, …], kind}] in image pixels.
+    const drawMarks = (photo) => {
+      const shapes = Array.isArray(photo.marks) ? photo.marks : [];
+      marks.setAttribute("width", String(image.naturalWidth));
+      marks.setAttribute("height", String(image.naturalHeight));
+      marks.setAttribute("viewBox", `0 0 ${image.naturalWidth} ${image.naturalHeight}`);
+      marks.replaceChildren();
+      shapes.forEach((shape) => {
+        const points = shape.points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+        ["photo-mark-halo", `photo-mark is-${shape.kind || "info"}`].forEach((className) => {
+          const polygon = document.createElementNS(SVG_NS, "polygon");
+          polygon.setAttribute("class", className);
+          polygon.setAttribute("points", points);
+          marks.appendChild(polygon);
+        });
+      });
+      marks.hidden = !shapes.length;
+    };
+
     image.addEventListener("load", () => {
       loaded = true;
       note.hidden = true;
       image.hidden = false;
+      drawMarks(photos[current]);
       fit();
     });
     image.addEventListener("error", () => {
