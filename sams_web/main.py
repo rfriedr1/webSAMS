@@ -256,8 +256,46 @@ def _is_client_hangup_noise(context: dict[str, Any]) -> bool:
     return "_call_connection_lost" in source
 
 
+def _finish_connection_lost(context: dict[str, Any]) -> None:
+    """Do the clean-up asyncio skipped when the hangup report was raised.
+
+    `_call_connection_lost` shuts the socket down *before* it closes it and
+    detaches the transport from its server. When that shutdown raises
+    (WinError 10054), the rest never runs: the socket stays open and the
+    asyncio server keeps counting the connection as active. Python 3.12+
+    `Server.wait_closed()` waits for that count to reach zero, so on Ctrl+C
+    uvicorn hung after "Shutting down" for ever, although the app was
+    already stopped. Best effort on asyncio internals: anything unexpected
+    is left alone, and the launchers' `--timeout-graceful-shutdown` still
+    ends the wait.
+    """
+    callback = getattr(context.get("handle"), "_callback", None)
+    transport = getattr(callback, "__self__", None)
+    if transport is None or getattr(transport, "_called_connection_lost", True):
+        return
+    try:
+        sock = transport._sock
+        if sock is not None:
+            try:
+                sock.close()
+            except OSError:
+                pass
+            transport._sock = None
+        server = transport._server
+        if server is not None:
+            try:
+                server._detach(transport)  # Python 3.12.1+
+            except TypeError:
+                server._detach()  # Python 3.11
+            transport._server = None
+        transport._called_connection_lost = True
+    except Exception:  # noqa: BLE001 - never let clean-up break the loop
+        logger.debug("Could not finish a dropped client connection", exc_info=True)
+
+
 def _quiet_loop_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
     if _is_client_hangup_noise(context):
+        _finish_connection_lost(context)
         return
     loop.default_exception_handler(context)
 

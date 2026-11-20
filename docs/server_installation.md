@@ -214,7 +214,12 @@ Invoke-RestMethod http://localhost:8502/api/dashboard/counts  # queue numbers
 Then open `http://localhost:8502/` in a browser on the server. The header shows
 which database is connected — confirm it is the one you intended.
 
-Stop with **Ctrl+C**.
+Stop with **Ctrl+C**. The Windows launchers pass `--timeout-graceful-shutdown 10`,
+so a stop never waits longer than 10 s for open browser connections; when it
+has to cut one off it logs *Cancel N running task(s), timeout graceful shutdown
+exceeded*, which is harmless. (Before 2026-11 a stop could hang after "Shutting
+down" for ever once a browser had dropped a connection — an asyncio bug on Windows
+that the app now also cleans up after, see `main._finish_connection_lost`.)
 
 > For the service use `start_server_windows.bat`. `start_webapp_windows.bat` also
 > works on a server — it listens on the lab network too, and it is the easiest way to

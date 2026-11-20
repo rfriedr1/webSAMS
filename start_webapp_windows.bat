@@ -100,7 +100,7 @@ echo [run] No login yet - everyone on the lab network can edit data.
 :printed
 echo [run] Press Ctrl+C to stop
 echo.
-".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %HOST% --port %PORT% --log-config sams_web\log_config.json %RELOAD%
+".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %HOST% --port %PORT% --timeout-graceful-shutdown 10 --log-config sams_web\log_config.json %RELOAD%
 if errorlevel 1 pause
 endlocal
 exit /b 0

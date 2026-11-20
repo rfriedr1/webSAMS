@@ -41,5 +41,5 @@ if "%SAMS_PORT%"=="" set "SAMS_PORT=8502"
 rem One worker on purpose: the settings file is written by a single process.
 title webSAMS server - port %SAMS_PORT%
 echo [run] webSAMS listening on %SAMS_HOST%:%SAMS_PORT% - press Ctrl+C to stop
-".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %SAMS_HOST% --port %SAMS_PORT% --workers 1 --log-config sams_web\log_config.json
+".venv\Scripts\python.exe" -m uvicorn sams_web.main:app --host %SAMS_HOST% --port %SAMS_PORT% --workers 1 --timeout-graceful-shutdown 10 --log-config sams_web\log_config.json
 exit /b %ERRORLEVEL%
