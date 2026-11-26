@@ -40,8 +40,19 @@
   <details class="table-collapsible" open data-table-filter data-table-download-name="{{ queue.title }}">
     <summary class="table-summary">
       <span class="table-summary-title">{{ queue.title }}</span>
-      <span class="badge table-summary-count">{{ rows|length }} rows</span>
+      <span class="badge table-summary-count">{{ rows|length }} rows{% if queue.standards_toggle and include_standards %} · {{ queue.standards_count }} standard{{ '' if queue.standards_count == 1 else 's' }}{% endif %}</span>
     </summary>
+    {% if queue.standards_toggle %}
+    {#- Analysis: standards (oxa2, blanks, IAEA C…) are left out unless
+        asked for; the open magazine stays open across the switch. -#}
+    <form method="get" action="/lab/analysis" class="queue-options">
+      {% if magazine_query %}<input type="hidden" name="magazine" value="{{ magazine_query }}" />{% endif %}
+      <label class="dash-toggle" title="List graphitized standards (oxa2, blanks, IAEA C…) waiting for a magazine too">
+        <input type="checkbox" name="include_standards" value="true" {% if include_standards %}checked{% endif %} onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" />
+        Include standards
+      </label>
+    </form>
+    {% endif %}
     {% if rows %}
     {% set ns = namespace(visible_keys=[]) %}
     {% set hidden_helper_keys = ['project_nr', 'user_nr'] %}
@@ -92,6 +103,7 @@
     <span class="panel-bar-count">{{ magazine_rows|length }} target{{ '' if magazine_rows|length == 1 else 's' }} in {{ magazine_query }}</span>
     {% endif %}
     <form method="get" action="/lab/analysis" class="panel-bar-actions magazine-form" role="search">
+      {% if include_standards %}<input type="hidden" name="include_standards" value="true" />{% endif %}
       <label class="sr-only" for="analysis-magazine">{{ field_label('magazine') }}</label>
       <div class="search-field magazine-field{% if magazine_error %} has-error{% endif %}">
         <input
@@ -104,7 +116,7 @@
           autocomplete="off"
         />
         {% if magazine_query %}
-        <a href="/lab/analysis" class="magazine-clear" title="Clear magazine" aria-label="Clear magazine">&times;</a>
+        <a href="/lab/analysis{% if include_standards %}?include_standards=true{% endif %}" class="magazine-clear" title="Clear magazine" aria-label="Clear magazine">&times;</a>
         {% endif %}
       </div>
       <datalist id="analysis-magazine-list">

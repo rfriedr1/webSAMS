@@ -14,6 +14,7 @@ from sams_web import magazine_rename
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
 from sams_web.preparation_bench import PreparationBench
+from sams_web.repositories import WAITING_FOR_MEAS_STANDARD_TYPES
 from sams_web.routers.pages_ea_checks import ea_strip_context
 from sams_web.search import SEARCH_CONTEXTS
 from sams_web.routers.pages_shared import logger, parse_positive_int, templates
@@ -366,10 +367,12 @@ async def lab_graphitization_bench_save_batch(
 def lab_analysis_page(
     request: Request,
     magazine: str = Query(default=""),
+    include_standards: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
-    data = service.get_dashboard(show_on_hold=False)
-    rows = data["tables"].get("waiting_for_meas", [])
+    rows = service.list_waiting_for_meas(include_standards=include_standards)
+    standard_types = set(WAITING_FOR_MEAS_STANDARD_TYPES)
+    standards_count = sum(1 for row in rows if row.get("type") in standard_types) if include_standards else 0
     magazine_query = magazine.strip()
     magazine_options = service.list_magazines()
     magazine_error: str | None = None
@@ -385,7 +388,16 @@ def lab_analysis_page(
         {
             "request": request,
             "title": "Analysis",
-            "queue_tables": [{"key": "waiting_for_meas", "title": "Waiting for measurement", "rows": rows}],
+            "queue_tables": [
+                {
+                    "key": "waiting_for_meas",
+                    "title": "Waiting for measurement",
+                    "rows": rows,
+                    "standards_toggle": True,
+                    "standards_count": standards_count,
+                }
+            ],
+            "include_standards": include_standards,
             "show_on_hold": False,
             "magazine_lookup_enabled": True,
             "magazine_query": magazine_query,
