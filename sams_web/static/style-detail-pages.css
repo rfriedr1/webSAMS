@@ -2165,6 +2165,86 @@ button.record-action-download:hover {
   text-decoration: underline;
 }
 
+/* The project's sample table as a tree: each sample with its preps and
+   targets under it (`data-table-child` rows, kept together by
+   table-tools.js). Sample rows are the parents; child rows are smaller,
+   indented by their tree mark, and carry their facts in one cell. */
+.project-sample-tree tbody tr.project-tree-sample:not(.is-childless) td {
+  background: var(--surface-tint);
+}
+
+.project-sample-tree tbody tr.project-tree-sample td {
+  border-top: 1px solid var(--line);
+}
+
+.project-sample-tree tbody tr.project-tree-child td {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  border-top: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.project-sample-tree.is-children-hidden tr[data-table-child] {
+  display: none;
+}
+
+.project-sample-tree.is-children-hidden tbody tr.project-tree-sample td {
+  background: transparent;
+}
+
+.project-tree-ref {
+  white-space: nowrap;
+}
+
+.project-tree-child.is-target .record-tree-branch {
+  margin-left: 1.3rem;
+}
+
+.project-tree-kind::before,
+.project-tree-fact::before {
+  content: attr(data-label);
+  margin-right: 0.3rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* The facts cell spans the sample-only columns (child_row_layout) and
+   wraps between facts, never inside one. Facts and prep / target comments
+   sit in a zero-width box that fills its cell: it adds nothing to the
+   column sizing, so the sample values alone decide the widths and a long
+   target comment never squeezes the sample label into two lines. */
+.project-tree-facts {
+  white-space: normal;
+}
+
+.project-tree-fit {
+  width: 0;
+  min-width: 100%;
+  white-space: normal;
+}
+
+.project-tree-fact {
+  display: inline-block;
+  margin-right: var(--space-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-tree-child.is-discarded td {
+  color: var(--muted);
+}
+
+.project-tree-discarded {
+  font-size: var(--text-xs);
+}
+
+.record-related-note {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
 @media (max-width: 1024px) {
   .fact-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));

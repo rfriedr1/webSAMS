@@ -421,6 +421,18 @@ class SamsRepository:
             stmt = stmt.where(Target.prep_nr == prep_nr)
         return int(self.session.scalar(stmt) or 0)
 
+    def count_project_preps_and_targets(self, project_nr: int) -> int:
+        """Preparations plus targets of a project's samples (two counts,
+        no rows loaded): decides whether the project page lists them."""
+        samples = select(Sample.sample_nr).where(Sample.project_nr == project_nr)
+        preps = self.session.scalar(
+            select(func.count()).select_from(Preparation).where(Preparation.sample_nr.in_(samples))
+        )
+        targets = self.session.scalar(
+            select(func.count()).select_from(Target).where(Target.sample_nr.in_(samples))
+        )
+        return int(preps or 0) + int(targets or 0)
+
     def list_targets_by_samples(self, sample_nrs: list[int]) -> list[Target]:
         """Targets of several samples in one query, in sample / prep / target order."""
         if not sample_nrs:

@@ -46,10 +46,20 @@
 </section>
 
 <section class="panel record-related">
-  <section data-table-filter id="project-samples">
+  {#- Samples with their preps and targets under them (`sample_tree`), as on
+      the sample page. The child rows carry `data-table-child`, so
+      table-tools.js keeps them under their sample when sorting and
+      filtering, counts and exports the samples only, and adds the
+      *Preps & targets* switch. Fact labels are drawn from `data-label`
+      (CSS), so the filter matches values, not the word "Batch" on every row. -#}
+  {% set tree_shown = sample_tree is not none and sample_tree_child_count > 0 %}
+  <section data-table-filter id="project-samples"{% if tree_shown %} data-table-children-label="Preps &amp; targets" data-table-children-key="project_samples"{% endif %}>
     <h3 class="record-related-title">Samples <span class="record-related-count">{{ samples|length }}</span></h3>
+    {% if sample_tree is none %}
+    <p class="record-related-note">{{ '{:,}'.format(sample_tree_child_count) }} preparations and targets are too many to list here: open a sample to see its own.</p>
+    {% endif %}
     <div class="table-wrap">
-      <table class="table-compact" data-project-samples-table>
+      <table class="table-compact{% if tree_shown %} project-sample-tree{% endif %}" data-project-samples-table>
         <thead>
           <tr>
             {% if project_can_edit and samples %}{{ record_action_tick_head('samples') }}{% endif %}
@@ -58,10 +68,34 @@
         </thead>
         <tbody>
           {% for row in sample_rows %}
-          <tr>
+          {% set children = sample_tree.get(row.sample_nr, []) if tree_shown else [] %}
+          <tr{% if tree_shown %} class="project-tree-sample{% if not children %} is-childless{% endif %}"{% endif %}>
             {% if project_can_edit %}{{ record_action_tick(row.sample_nr, 'sample ' ~ row.sample_nr) }}{% endif %}
             {% for key in sample_columns %}<td>{{ table_cell(key, row) }}</td>{% endfor %}
           </tr>
+          {% for child in children %}
+          <tr data-table-child class="project-tree-child is-{{ child.kind }}{% if child.discarded %} is-discarded{% endif %}">
+            {% if project_can_edit %}<td></td>{% endif %}
+            {% for part in child_layout %}
+            {% if part.slot == 'ref' %}
+            <td class="project-tree-ref"><span class="record-tree-branch" aria-hidden="true">└</span><span class="project-tree-kind" data-label="{{ 'Prep' if child.kind == 'prep' else 'Target' }}" aria-hidden="true"></span><a href="{{ child.url }}" class="table-link" aria-label="{{ 'Preparation' if child.kind == 'prep' else 'Target' }} {{ child.ref }}">{{ child.ref }}</a></td>
+            {% elif part.slot == 'facts' %}
+            <td colspan="{{ part.span }}" class="project-tree-facts"><div class="project-tree-fit">
+              {%- for fact in child.facts %}<span class="project-tree-fact" data-label="{{ fact.label }}">{{ fact.value }}</span>{% endfor -%}
+              {%- if child.discarded %}<span class="badge project-tree-discarded">{{ field_label('stop') }}</span>{% endif -%}
+            </div></td>
+            {% elif part.slot == 'c14_age' %}
+            <td>{{ child.c14_age or '' }}</td>
+            {% elif part.slot == 'c14_age_sig' %}
+            <td>{{ child.c14_age_sig or '' }}</td>
+            {% elif part.slot == 'comment' %}
+            <td>{% if child.comment %}<div class="project-tree-fit">{{ child.comment }}</div>{% endif %}</td>
+            {% else %}
+            <td{% if part.span > 1 %} colspan="{{ part.span }}"{% endif %}></td>
+            {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
           {% else %}
           <tr>
             <td colspan="{{ sample_columns|length }}" class="table-empty-row">

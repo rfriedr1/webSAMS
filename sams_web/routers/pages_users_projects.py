@@ -18,6 +18,7 @@ from sams_web.routers.pages_shared import logger, resolve_jump_redirect_url, tem
 from sams_web.record_actions import action_menu
 from sams_web.services import SamsService
 from sams_web.viewmodels.detail_sections_common import table_rows
+from sams_web.viewmodels.project_sample_tree import child_row_layout
 from sams_web.viewmodels.detail_sections_user_project import (
     PROJECT_DETAIL_PAGE,
     PROJECT_SAMPLE_COLUMNS,
@@ -36,6 +37,11 @@ def _project_extra_keys(data: dict[str, object]) -> dict[str, object]:
         "sample_rows": table_rows(samples),
         "sample_columns": PROJECT_SAMPLE_COLUMNS,
         "sample_count": len(samples),
+        # `sample_nr -> [prep / target rows]`, or None when the project has
+        # too many to list (then the table shows samples only).
+        "sample_tree": data["sample_tree"],
+        "sample_tree_child_count": data["sample_tree_child_count"],
+        "child_layout": child_row_layout(PROJECT_SAMPLE_COLUMNS),
         "record_action_menu": action_menu("project"),
     }
 

@@ -17,6 +17,7 @@ from sams_web.viewmodels.detail_sections_sample_lab import (
     SAMPLE_DETAIL,
     TARGET_DETAIL,
 )
+from sams_web.viewmodels.project_sample_tree import PROJECT_TREE_MAX_CHILD_ROWS, build_sample_tree
 from sams_web.viewmodels.detail_sections_user_project import (
     PROJECT_DETAIL,
     SUBMITTER_DETAIL,
@@ -250,10 +251,24 @@ class SamsService:
         user = self.repo.get_submitter(project.user_nr) if project.user_nr else None
         previous_project_nr, next_project_nr = self.repo.get_adjacent_project_nrs(project_nr)
         project_count, max_project_nr = self.repo.get_project_stats()
+        samples = self.repo.list_samples_by_project(project_nr)
+        # The sample table lists each sample's preps and targets under it,
+        # unless there are too many for one page (see PROJECT_TREE_MAX_CHILD_ROWS).
+        child_count = self.repo.count_project_preps_and_targets(project_nr) if samples else 0
+        sample_tree = None
+        if child_count <= PROJECT_TREE_MAX_CHILD_ROWS:
+            sample_nrs = [sample.sample_nr for sample in samples]
+            sample_tree = build_sample_tree(
+                sample_nrs,
+                self.repo.list_preparations_by_samples(sample_nrs),
+                self.repo.list_targets_by_samples(sample_nrs),
+            )
         return {
             "project": project,
             "user": user,
-            "samples": self.repo.list_samples_by_project(project_nr),
+            "samples": samples,
+            "sample_tree": sample_tree,
+            "sample_tree_child_count": child_count,
             "previous_project_nr": previous_project_nr,
             "next_project_nr": next_project_nr,
             "project_count": project_count,
