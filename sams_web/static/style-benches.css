@@ -891,3 +891,11 @@
     height: 1.25rem;
   }
 }
+
+/* Lab → Analysis: the *Include standards* switch, one line between the
+   queue title and the table toolbar. */
+.queue-options {
+  display: flex;
+  align-items: center;
+  margin: 0 0 var(--space-2);
+}

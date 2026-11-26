@@ -415,6 +415,9 @@ class SamsService:
     def list_targets_by_magazine(self, magazine_query: str) -> list[dict[str, Any]]:
         return self.repo.list_targets_by_magazine(magazine_query)
 
+    def list_waiting_for_meas(self, include_standards: bool = False) -> list[dict[str, Any]]:
+        return self.repo.list_waiting_for_meas(include_standards=include_standards)
+
     def list_magazines(self) -> list[str]:
         return self.repo.list_magazines()
 

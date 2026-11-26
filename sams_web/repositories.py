@@ -35,6 +35,12 @@ TO_PREP_MATERIAL_QUEUES: dict[str, str] = {
     "to_prep_tooth": "tooth",
 }
 
+# Standards (`sample_t.type`) left out of *Waiting for measurement* unless
+# Lab → Analysis asks for them (*Include standards*). The dashboard count
+# and bar always leave them out. Standards of the excluded projects (798
+# CO2 HD has its own oxa / blanks) stay hidden either way.
+WAITING_FOR_MEAS_STANDARD_TYPES: tuple[str, ...] = ("oxa2", "blank", "C1", "C2", "C3", "C6", "C7", "C8")
+
 
 class SamsRepository:
     """DB repository mirroring core `_dm.pas` data functions."""
@@ -1162,8 +1168,8 @@ class SamsRepository:
         """
 
     @staticmethod
-    def _sql_waiting_for_meas() -> str:
-        return """
+    def _sql_waiting_for_meas(include_standards: bool = False) -> str:
+        sql = """
         SELECT target_id, type, user_label, user_label_nr, last_name, target_comment,
                co2_final, target_p.desired_date,
                DATEDIFF(target_p.desired_date, CURDATE()) AS days_to_deadline,
@@ -1177,9 +1183,14 @@ class SamsRepository:
           AND target_p.target_stop = 0
           AND target_p.not_tobedated = 0
           AND target_p.project_nr NOT IN ('798', '129', '767', '795', '1032', '1083', '1174', '1658', '1759', '2295')
-          AND target_p.type NOT IN ('oxa2', 'blank', 'C1', 'C2', 'C3', 'C6', 'C7', 'C8')
-        ORDER BY target_id
         """
+        if not include_standards:
+            types = ", ".join(f"'{t}'" for t in WAITING_FOR_MEAS_STANDARD_TYPES)
+            sql += f" AND target_p.type NOT IN ({types})"
+        return sql + " ORDER BY target_id"
+
+    def list_waiting_for_meas(self, include_standards: bool = False) -> list[dict[str, Any]]:
+        return self._fetch_rows(self._sql_waiting_for_meas(include_standards=include_standards))
 
     @staticmethod
     def _sql_waiting_express() -> str:
