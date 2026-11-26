@@ -349,6 +349,37 @@
     clearButton.append(svgIcon("M6 6l12 12M18 6L6 18"));
     const downloadButton = ensureDownloadButton(container, table);
 
+    // Child rows (`data-table-child`, e.g. a sample's preps and targets)
+    // get a switch to fold them away, named by `data-table-children-label`.
+    // Its state is remembered per browser under `data-table-children-key`.
+    const childrenLabel = container.dataset.tableChildrenLabel || "";
+    if (childrenLabel && table.querySelector("tbody tr[data-table-child]")) {
+      const storageKey = container.dataset.tableChildrenKey ? `sams_table_children_${container.dataset.tableChildrenKey}` : "";
+      let shown = true;
+      try {
+        shown = !storageKey || window.localStorage.getItem(storageKey) !== "hidden";
+      } catch (_error) {
+        shown = true;
+      }
+      const toggle = document.createElement("label");
+      toggle.className = "table-tool-toggle";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = shown;
+      box.setAttribute("data-table-children-toggle", "");
+      toggle.append(box, document.createTextNode(childrenLabel));
+      tools.append(toggle);
+      table.classList.toggle("is-children-hidden", !shown);
+      box.addEventListener("change", () => {
+        table.classList.toggle("is-children-hidden", !box.checked);
+        try {
+          if (storageKey) window.localStorage.setItem(storageKey, box.checked ? "shown" : "hidden");
+        } catch (_error) {
+          // per-browser convenience only
+        }
+      });
+    }
+
     let visible = container.querySelector("[data-table-visible]");
     let total = container.querySelector("[data-table-total]");
     if (!visible || !total) {
@@ -466,15 +497,29 @@
     }
     ensureTableWrap(table);
 
+    // A row marked `data-table-child` belongs to the data row above it: it
+    // sorts with it, hides with it and is not counted or exported on its
+    // own (the project page's preps and targets under each sample). The
+    // filter's "All columns" search also looks into a row's children.
     const rows = Array.from(tbody.querySelectorAll("tr"));
-    const entries = rows
-      .filter((row) => !row.querySelector("td[colspan]"))
-      .map((row, index) => ({
-        index,
+    const entries = [];
+    rows.forEach((row) => {
+      if (row.hasAttribute("data-table-child")) {
+        entries[entries.length - 1]?.children.push(row);
+        return;
+      }
+      if (row.querySelector("td[colspan]")) {
+        return;
+      }
+      entries.push({
+        index: entries.length,
         row,
+        children: [],
         cells: [],
         cellsLower: [],
-      }));
+        childrenLower: "",
+      });
+    });
     if (entries.length === 0) {
       const generated = createTableTools(container, table, headers, 0);
       const emptyDownloadButton = generated.downloadButton || ensureDownloadButton(container, table);
@@ -521,6 +566,9 @@
         const cells = Array.from(entry.row.cells).map((cell) => extractCellValue(cell));
         entry.cells = cells;
         entry.cellsLower = cells.map((value) => foldForSearch(value));
+        entry.childrenLower = entry.children
+          .map((child) => foldForSearch(normalizeWhitespace(child.textContent || "")))
+          .join(" ");
       });
     };
 
@@ -560,7 +608,10 @@
       } else {
         ordered.sort((left, right) => left.index - right.index);
       }
-      ordered.forEach((entry) => tbody.appendChild(entry.row));
+      ordered.forEach((entry) => {
+        tbody.appendChild(entry.row);
+        entry.children.forEach((child) => tbody.appendChild(child));
+      });
       renderSortState();
     };
 
@@ -570,9 +621,13 @@
       const columnIndex = Number(columnSelect.value);
       let visible = 0;
       entries.forEach((entry) => {
-        const haystack = columnIndex >= 0 ? entry.cellsLower[columnIndex] || "" : entry.cellsLower.join(" ");
+        const haystack =
+          columnIndex >= 0 ? entry.cellsLower[columnIndex] || "" : `${entry.cellsLower.join(" ")} ${entry.childrenLower}`;
         const isVisible = term === "" || haystack.includes(term);
         entry.row.hidden = !isVisible;
+        entry.children.forEach((child) => {
+          child.hidden = !isVisible;
+        });
         if (isVisible) {
           visible += 1;
         }
@@ -585,7 +640,9 @@
 
     const collectExportRows = () => {
       const scope = resolveDownloadScope(container);
-      const sourceRows = Array.from(tbody.querySelectorAll("tr")).filter((row) => !row.querySelector("td[colspan]"));
+      const sourceRows = Array.from(tbody.querySelectorAll("tr")).filter(
+        (row) => !row.hasAttribute("data-table-child") && !row.querySelector("td[colspan]")
+      );
       const exportRows = scope === "all" ? sourceRows : sourceRows.filter((row) => !row.hidden);
       // Control columns (`data-table-skip`, e.g. tick boxes) are not exported.
       const keep = headers.map((header) => !header.hasAttribute("data-table-skip"));
