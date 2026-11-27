@@ -1,6 +1,7 @@
 {#-
   Magazine actions on Lab → Analysis: Rename (sams_web/magazine_rename.py,
-  ADR-0009) and Fetch LE/HE currents (sams_web/raw_currents.py, ADR-0011).
+  ADR-0009), Fetch LE/HE currents (sams_web/raw_currents.py, ADR-0011)
+  and Transfer results to samples (sams_web/sample_transfer.py, ADR-0002).
 
     magazine_actions_menu(magazine)
       → the "Actions" button for the Magazine panel bar, its menu, the
@@ -32,9 +33,20 @@
         </span>
       </li>
     </ul>
+    <p class="record-actions-group">Its samples</p>
+    <ul class="record-actions-list">
+      <li class="record-actions-item">
+        <span class="record-actions-label">Results to samples</span>
+        <span class="record-actions-verbs">
+          <button type="button" class="record-actions-verb" data-sample-transfer-open
+                  title="Transfer the measured results of magazine {{ magazine }}'s targets to their samples">Transfer…</button>
+        </span>
+      </li>
+    </ul>
   </div>
   <a hidden data-command-link data-command-label="Action: Rename magazine {{ magazine }}" href="#action=rename-magazine">Rename magazine</a>
   <a hidden data-command-link data-command-label="Action: Fetch LE/HE currents of magazine {{ magazine }}" href="#action=fetch-currents">Fetch LE/HE currents</a>
+  <a hidden data-command-link data-command-label="Action: Transfer results of magazine {{ magazine }} to samples" href="#action=transfer-results">Transfer results to samples</a>
 
   <dialog class="record-action-dialog magazine-rename-dialog" data-magazine-rename-dialog aria-labelledby="magazine-rename-title">
     <form method="post" action="/lab/analysis/magazine/rename" data-magazine-rename-form>
@@ -77,6 +89,29 @@
       <div class="record-action-dialog-foot">
         <button type="button" class="detail-edit-cancel" data-raw-currents-cancel>Cancel</button>
         <button type="submit" class="detail-edit-save" data-raw-currents-submit disabled>Fetch</button>
+      </div>
+    </form>
+  </dialog>
+
+  {#- Transfer results to samples (sample_transfer.py, ADR-0002). Built by
+      js/sample-transfer.js with textContent only; `choices` carries the
+      ticks as JSON. -#}
+  <dialog class="record-action-dialog sample-transfer-dialog" data-sample-transfer-dialog aria-labelledby="sample-transfer-title">
+    <form method="post" action="/lab/analysis/magazine/transfer" data-sample-transfer-form>
+      <input type="hidden" name="magazine" value="{{ magazine }}" />
+      <input type="hidden" name="choices" value="" data-sample-transfer-choices />
+      <header class="record-action-dialog-head">
+        <h3 id="sample-transfer-title">Transfer results of magazine {{ magazine }} to samples</h3>
+        <button type="button" class="record-action-dialog-close" data-sample-transfer-cancel aria-label="Close">×</button>
+      </header>
+      <div class="record-action-dialog-body">
+        <div class="sample-transfer-body" data-sample-transfer-body aria-live="polite">
+          <p class="record-action-loading">Reading the samples and their targets …</p>
+        </div>
+      </div>
+      <div class="record-action-dialog-foot">
+        <button type="button" class="detail-edit-cancel" data-sample-transfer-cancel>Cancel</button>
+        <button type="submit" class="detail-edit-save" data-sample-transfer-submit disabled>Transfer</button>
       </div>
     </form>
   </dialog>

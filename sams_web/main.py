@@ -67,6 +67,7 @@ _JS_BUNDLE_FILES: tuple[str, ...] = (
     "js/magazine-rename.js",
     "js/raw-currents.js",
     "js/magazine-list.js",
+    "js/sample-transfer.js",
     "js/detail-empty-fields.js",
     "js/anchor-details.js",
     "js/tab-panels.js",

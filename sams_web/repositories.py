@@ -821,6 +821,68 @@ class SamsRepository:
         self.session.expire_all()
         return written
 
+    # ---- Transfer results to samples (ADR-0002, `sample_transfer.py`) ------
+
+    #: Target results a transfer reads (BATS-owned, ADR-0003: read only).
+    TRANSFER_TARGET_FIELDS = (
+        "fm", "fm_sig", "dc13", "c14_age", "c14_age_sig", "cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max",
+    )
+    #: Sample columns a transfer writes.
+    TRANSFER_SAMPLE_FIELDS = (
+        "c14_age", "c14_age_sig", "av_fm", "av_fm_sig", "av_dc13", "cal1s_min", "cal1s_max", "cal2s_min", "cal2s_max",
+    )
+
+    def transfer_sources(self, magazine: str) -> list[dict[str, Any]]:
+        """The samples measured in `magazine`, each with its stored results
+        and **all** its targets (other preps, other magazines too), because a
+        sample's result may be one of them or a mean of several."""
+        sample_nrs = select(Target.sample_nr).where(Target.magazine == magazine).distinct()
+        samples = self.session.execute(
+            select(
+                Sample.sample_nr, Sample.user_label, Sample.type,
+                *(getattr(Sample, field) for field in self.TRANSFER_SAMPLE_FIELDS),
+            )
+            .where(Sample.sample_nr.in_(sample_nrs))
+            .order_by(Sample.sample_nr)
+        ).mappings().all()
+        targets = self.session.execute(
+            select(
+                Target.sample_nr, Target.prep_nr, Target.target_nr, Target.magazine, Target.position,
+                Target.stop, Target.editallowed,
+                *(getattr(Target, field) for field in self.TRANSFER_TARGET_FIELDS),
+            )
+            .where(Target.sample_nr.in_(sample_nrs))
+            .order_by(Target.sample_nr, Target.prep_nr, Target.target_nr)
+        ).mappings().all()
+        by_sample: dict[int, list[dict[str, Any]]] = {}
+        for target in targets:
+            by_sample.setdefault(int(target["sample_nr"]), []).append(dict(target))
+        return [
+            {**dict(sample), "targets": by_sample.get(int(sample["sample_nr"]), [])}
+            for sample in samples
+        ]
+
+    def set_sample_results(self, changes: list[dict[str, Any]]) -> int:
+        """Write transferred results onto samples; no commit. Each change
+        names the sample and the `TRANSFER_SAMPLE_FIELDS` to write (a None
+        value clears the column)."""
+        written = 0
+        table = Sample.__table__
+        for change in changes:
+            values = {
+                Sample.__mapper__.columns[field].name: change[field]
+                for field in self.TRANSFER_SAMPLE_FIELDS
+                if field in change
+            }
+            if not values:
+                continue
+            written += self.session.execute(
+                update(table).where(table.c.sample_nr == change["sample_nr"]).values(**values)
+            ).rowcount or 0
+        self.session.flush()
+        self.session.expire_all()
+        return written
+
     def count_targets_by_prep(self, sample_nr: int) -> dict[int, int]:
         stmt = (
             select(Target.prep_nr, func.count(Target.target_nr))
