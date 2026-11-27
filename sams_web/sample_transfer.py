@@ -45,7 +45,7 @@ import json
 import math
 from typing import TYPE_CHECKING, Any
 
-from sams_web.repositories import WAITING_FOR_MEAS_STANDARD_TYPES
+from sams_web.repositories import FIRST_CUSTOMER_SAMPLE_NR, WAITING_FOR_MEAS_STANDARD_TYPES
 
 if TYPE_CHECKING:
     from sams_web.services import SamsService
@@ -54,7 +54,6 @@ if TYPE_CHECKING:
 AGE_FACTOR = 8033.0  # Libby mean life: age = −8033·ln(F14C)
 MIN_FM_SIGMA = 0.0005  # legacy floor for the limit-age test
 LIMIT_AGE_SIGMA = 99999.0  # legacy marker of a lower-limit age
-FIRST_CUSTOMER_SAMPLE_NR = 10000  # below: standards (as the Waiting for measurement queue)
 STANDARD_TYPES = frozenset(WAITING_FOR_MEAS_STANDARD_TYPES)
 NOTHING_CHANGED = "Nothing was changed."
 

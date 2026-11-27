@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 
-from sqlalchemy import String, and_, case, cast, delete, exists, false, func, or_, select, text, tuple_, union, update
+from sqlalchemy import String, and_, case, cast, delete, distinct, exists, false, func, or_, select, text, tuple_, union, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, selectinload
 
@@ -40,6 +40,9 @@ TO_PREP_MATERIAL_QUEUES: dict[str, str] = {
 # and bar always leave them out. Standards of the excluded projects (798
 # CO2 HD has its own oxa / blanks) stay hidden either way.
 WAITING_FOR_MEAS_STANDARD_TYPES: tuple[str, ...] = ("oxa2", "blank", "C1", "C2", "C3", "C6", "C7", "C8")
+#: Sample numbers below this are standards (Waiting for measurement queue,
+#: transfer to samples, magazine list).
+FIRST_CUSTOMER_SAMPLE_NR = 10000
 
 # Raw AMS databases by magazine prefix (ADR-0011): the AMS that measures a
 # magazine writes its raw data into its own database. Same map as pyBATS'
@@ -666,7 +669,37 @@ class SamsRepository:
         condition = self._magazine_name_filter(names, find)
         if condition is not None:
             stmt = stmt.where(condition)
-        return [dict(row) for row in self.session.execute(stmt).mappings()]
+        rows = [dict(row) for row in self.session.execute(stmt).mappings()]
+        transfer = self._magazine_transfer_counts([row["magazine"] for row in rows if row["measured_targets"]])
+        for row in rows:
+            row["customer_samples"], row["to_transfer"] = transfer.get(row["magazine"], (0, 0))
+        return rows
+
+    def _magazine_transfer_counts(self, magazines: list[str]) -> dict[str, tuple[int, int]]:
+        """Per magazine: customer samples with a result in it, and how many of
+        them have no result of their own yet (`sample_t.c14_age`). Nothing
+        records a transfer, so "transferred" is derived from this; a
+        re-measured sample still holding its old result counts as
+        transferred. Only for the listed magazines: over all of `target_t`
+        the join took 0.35 s."""
+        if not magazines:
+            return {}
+        stmt = (
+            select(
+                Target.magazine,
+                func.count(distinct(Target.sample_nr)),
+                func.count(distinct(case((Sample.c14_age.is_(None), Target.sample_nr)))),
+            )
+            .join(Sample, Sample.sample_nr == Target.sample_nr)
+            .where(
+                Target.magazine.in_(magazines),
+                Target.c14_age.is_not(None),
+                Sample.sample_nr >= FIRST_CUSTOMER_SAMPLE_NR,
+                or_(Sample.type.is_(None), Sample.type.not_in(WAITING_FOR_MEAS_STANDARD_TYPES)),
+            )
+            .group_by(Target.magazine)
+        )
+        return {str(name): (int(samples), int(todo)) for name, samples, todo in self.session.execute(stmt).all()}
 
     def count_magazines(self, find: str | None = None) -> int:
         """How many magazines `list_recent_magazines` could list without its limit."""

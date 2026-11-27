@@ -158,9 +158,12 @@
         <li>
           <a href="{{ row.href }}" class="magazine-list-item is-{{ row.state }}{% if row.magazine == mlist.current %} is-current{% endif %}"
              {% if row.magazine == mlist.current %}aria-current="page"{% endif %}
-             title="{{ row.magazine }} &middot; {{ row.measured_text }}">
+             title="{{ row.magazine }} &middot; {{ row.measured_text }}{% if row.transfer %} &middot; {{ row.transfer_text }}{% endif %}">
             <span class="magazine-list-name">{{ row.magazine }}</span>
-            <span class="magazine-list-state">{{ row.measured_text }}</span>
+            <span class="magazine-list-state">{{ row.measured_text }}
+              {%- if row.transfer %} &middot; <span class="magazine-list-transfer is-{{ row.transfer }}">
+                {%- if row.transfer == "done" %}<span aria-hidden="true">✓ </span>{% endif %}{{ row.transfer_text }}</span>{% endif -%}
+            </span>
           </a>
         </li>
         {% endfor %}
