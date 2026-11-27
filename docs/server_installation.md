@@ -373,6 +373,22 @@ voiding a check). Until a table or column exists the pages say "not set up yet" 
 what is missing, instead of failing.
 Background: [ADR-0005](adr/0005-qc-signoff-and-ea-checks.md).
 
+### LE / HE currents from the raw AMS databases
+
+*Fetch LE/HE currents* on Lab → Analysis reads the raw databases `db_dc14` (MA magazines)
+and `db_ac14` (MB) through one stored procedure in `db_dmams`. Run
+[`docs/sql/0011_ams_raw_currents.sql`](sql/0011_ams_raw_currents.sql) once on each database
+(test database first) as an account that may `SELECT` in `db_dc14` and `db_ac14`: it becomes
+the procedure's definer, whose rights the procedure uses. The app's own account needs
+**`EXECUTE` on that procedure** and nothing in the raw databases (the `GRANT` line is at the
+end of the script).
+
+It is a procedure and not a view on purpose: a view that points to a missing database stops
+a mysqldump / HeidiSQL export of `db_dmams`. If the raw databases are missing, renamed or
+locked, only the Fetch window reports it (and changes nothing); every other page works as
+usual. Until the script has run, the window says "Not set up yet".
+Background: [ADR-0011](adr/0011-raw-ams-currents.md).
+
 ---
 
 ## 10. Updating and rolling back
@@ -420,7 +436,7 @@ SAMS itself keeps almost nothing on the server — the data is in MySQL. Back up
 
 | What | Why |
 |---|---|
-| The MySQL database | All lab data. Handled by your database backup routine. |
+| The MySQL database | All lab data. Handled by your database backup routine. For mysqldump / HeidiSQL exports include stored routines (`--routines`), so `ams_raw_currents` is in the backup. |
 | `C:\ProgramData\webSAMS\setup_data.json` | Settings, e-mail templates, SMTP password. |
 | `C:\webSAMS\.env` | Database connection. Store the backup securely — it contains the password. |
 

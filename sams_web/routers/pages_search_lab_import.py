@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Form, Query, Request
 from sams_web.access import Permission, guarded
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from sams_web import magazine_rename
+from sams_web import magazine_rename, raw_currents
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
 from sams_web.preparation_bench import PreparationBench
@@ -409,6 +409,8 @@ def lab_analysis_page(
                 "user_label",
                 "c14_age",
                 "c14_age_sig",
+                "le_curr",
+                "he_curr",
                 "project",
                 "user_last_name",
             ),
@@ -452,3 +454,34 @@ def magazine_rename_run(
         return RedirectResponse(url=_analysis_href(magazine.strip(), action_error=str(exc)), status_code=303)
     logger.info("Magazine renamed: %s -> %s", magazine.strip(), renamed)
     return RedirectResponse(url=_analysis_href(renamed, action_notice=notice), status_code=303)
+
+
+# ---- Fetch LE/HE currents from the raw AMS databases (ADR-0011) ------------
+
+
+@router.get("/lab/analysis/magazine/currents/preview", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_currents_preview(
+    magazine: str = Query(...),
+    service: SamsService = Depends(get_service),
+):
+    """Stored vs raw currents per target (JSON). A raw database that cannot
+    be read is not an HTTP error: the payload carries `problem`."""
+    try:
+        payload = raw_currents.plan(service, magazine)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    return JSONResponse(payload)
+
+
+@router.post("/lab/analysis/magazine/currents", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_currents_fetch(
+    magazine: str = Form(...),
+    service: SamsService = Depends(get_service),
+):
+    target = magazine.strip()
+    try:
+        notice = raw_currents.apply(service, target)
+    except ValueError as exc:
+        return RedirectResponse(url=_analysis_href(target, action_error=str(exc)), status_code=303)
+    logger.info("Raw currents fetched: %s", notice)
+    return RedirectResponse(url=_analysis_href(target, action_notice=notice), status_code=303)
