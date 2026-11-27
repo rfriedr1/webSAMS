@@ -3,7 +3,9 @@
 Beside the chosen magazine's targets the Magazine panel lists the magazines
 the lab worked on last, newest `magazine_t.last_changed` first, so nobody
 has to know a magazine's name to open it (the legacy SAMS's "recent
-magazines" list, whose length was a spin box on the form). How many are
+magazines" list, whose length was a spin box on the form). Each entry
+says how much is measured and, once measured, whether its results were
+transferred to the samples (`transfer_state`). How many are
 listed is Setup → *Analysis* (`analysis.magazine_limit`, default 200).
 
 The list is capped, so its table filter only searches the rows shown. The
@@ -85,10 +87,26 @@ def measured_text(targets: int, measured: int) -> str:
     return f"{measured} of {targets} measured"
 
 
+def transfer_state(customer_samples: int, to_transfer: int) -> tuple[str | None, str]:
+    """Whether a magazine's results were transferred to its samples, derived
+    (nothing records a transfer): every customer sample with a result in the
+    magazine has one of its own → *transferred*; otherwise *N to transfer*.
+    None when no customer sample has a result there (unmeasured, or
+    standards only), so the list says nothing about it."""
+    if customer_samples <= 0:
+        return None, ""
+    if to_transfer <= 0:
+        return "done", "transferred"
+    return "todo", f"{to_transfer} to transfer"
+
+
 def _row(row: dict[str, Any], href: str) -> dict[str, Any]:
     targets = int(row.get("target_count") or 0)
     measured = int(row.get("measured_targets") or 0)
+    transfer, transfer_text = transfer_state(int(row.get("customer_samples") or 0), int(row.get("to_transfer") or 0))
     return {
+        "transfer": transfer,
+        "transfer_text": transfer_text,
         "magazine": row["magazine"],
         "href": href,
         "target_count": targets,

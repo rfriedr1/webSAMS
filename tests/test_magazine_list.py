@@ -170,3 +170,47 @@ def test_a_single_match_opens_it_and_none_says_so(service, cleanup_overrides):
 def test_standards_switch_survives_list_links(service, cleanup_overrides):
     html = _client(service).get("/lab/analysis?include_standards=true").text
     assert 'href="/lab/analysis?magazine=MA261120&amp;include_standards=true#tbl-magazine-targets"' in html
+
+
+# ---- Transferred or not (derived) ------------------------------------------------
+
+def _add_transfer_magazine(service: SamsService, name: str, stored_results: dict[int, float | None]) -> None:
+    """A magazine with one measured target per customer sample; the value is
+    the sample's own stored C14 age (None = not transferred yet)."""
+    session = service.session
+    for position, (sample_nr, stored) in enumerate(stored_results.items(), start=1):
+        if session.get(Sample, sample_nr) is None:
+            session.add(Sample(sample_nr=sample_nr, project_nr=10, user_label=f"S{sample_nr}", type="arch", c14_age=stored))
+            session.add(Preparation(sample_nr=sample_nr, prep_nr=1))
+        session.add(Target(sample_nr=sample_nr, prep_nr=1, target_nr=position, magazine=name,
+                           position=str(position), fm=0.5, c14_age=5568))
+    session.execute(magazine_table.insert(), [{"name": name, "last_changed": datetime(2026, 11, 28, 9, position)}])
+    session.commit()
+
+
+def test_transfer_state_in_words():
+    assert ml.transfer_state(0, 0) == (None, "")
+    assert ml.transfer_state(27, 0) == ("done", "transferred")
+    assert ml.transfer_state(27, 3) == ("todo", "3 to transfer")
+
+
+def test_list_derives_whether_a_magazine_was_transferred(service):
+    _add_transfer_magazine(service, "MB261128", {20001: 5568.0, 20002: None, 20003: None})
+    _add_transfer_magazine(service, "MA261128", {20011: 5568.0, 20012: 6000.0})
+    # a standard without a sample result and an unmeasured target never count
+    service.session.add(Sample(sample_nr=20020, project_nr=10, user_label="Oxa", type="oxa2"))
+    service.session.add(Preparation(sample_nr=20020, prep_nr=1))
+    service.session.add(Target(sample_nr=20020, prep_nr=1, target_nr=1, magazine="MA261128", fm=1.3, c14_age=-2100))
+    service.session.add(Target(sample_nr=20011, prep_nr=1, target_nr=9, magazine="MA261128"))
+    service.session.commit()
+    rows = {row["magazine"]: row for row in ml.build_magazine_list(service, current="", find="", include_standards=False)["rows"]}
+    assert (rows["MB261128"]["transfer"], rows["MB261128"]["transfer_text"]) == ("todo", "2 to transfer")
+    assert (rows["MA261128"]["transfer"], rows["MA261128"]["transfer_text"]) == ("done", "transferred")
+    # sample 100 is a standard number; unmeasured magazines say nothing
+    assert rows["MA261120"]["transfer"] is None and rows["MB261127ICOS"]["transfer"] is None
+
+
+def test_page_shows_the_transfer_state(service, cleanup_overrides):
+    _add_transfer_magazine(service, "MB261128", {20001: None})
+    html = _client(service).get("/lab/analysis").text
+    assert 'class="magazine-list-transfer is-todo">1 to transfer</span>' in html

@@ -862,6 +862,17 @@ a:hover {
   font-weight: 600;
 }
 
+/* Transferred or not (derived, magazine_list.transfer_state): the words
+   carry it; "to transfer" is warning-tinted, "✓ transferred" stays quiet. */
+.magazine-list-transfer.is-todo {
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+.magazine-list-transfer.is-done {
+  color: var(--muted);
+}
+
 .magazine-list-note {
   margin: var(--space-2) 0 0 0.48rem;
   font-size: var(--text-xs);
