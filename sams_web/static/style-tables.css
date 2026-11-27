@@ -767,6 +767,132 @@ a:hover {
   text-decoration: none;
 }
 
+/* Magazine list beside the open magazine (magazine_list.py, 2026-11): a
+   slim rail of names like the legacy SAMS's list, the targets beside it
+   behind one rule. A navigation list, not a data table: entries are links,
+   newest change first, the field in the panel bar searches all of them. */
+.magazine-browser {
+  display: grid;
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  margin-top: var(--space-3);
+}
+
+.magazine-list {
+  min-width: 0;
+  padding-right: var(--space-3);
+  border-right: 1px solid var(--line-soft);
+}
+
+.magazine-detail {
+  min-width: 0;
+}
+
+.magazine-list-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: var(--section-title-rule);
+}
+
+/* The head carries the rule, so the title and the × share one line. */
+.panel .magazine-list-head .fact-group-title {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-bottom: var(--space-1);
+  border-bottom: 0;
+}
+
+.magazine-list-count {
+  margin: var(--space-1) 0 var(--space-2) 0.48rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.magazine-list-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(62dvh, 36rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.magazine-list-item {
+  display: block;
+  padding: 0.32rem 0.48rem;
+  border-left: 3px solid transparent;
+  border-radius: 0 8px 8px 0;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.magazine-list-item:hover {
+  background: var(--surface-tint);
+  text-decoration: none;
+}
+
+.magazine-list-item.is-current {
+  background: var(--brand-tint);
+  border-left-color: var(--brand-2);
+}
+
+.magazine-list-name {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--brand-deep);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.magazine-list-state {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Not measured yet is what the operator looks for: say it a little louder
+   (the words carry it; the weight only helps the eye). */
+.magazine-list-item.is-open .magazine-list-state,
+.magazine-list-item.is-partly .magazine-list-state {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.magazine-list-note {
+  margin: var(--space-2) 0 0 0.48rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.magazine-detail-empty {
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 860px) {
+  .magazine-browser {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .magazine-list {
+    padding-right: 0;
+    padding-bottom: var(--space-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .magazine-list-items {
+    max-height: 15rem;
+  }
+
+  .magazine-detail-empty {
+    margin-top: var(--space-2);
+  }
+}
+
 @media (max-width: 640px) {
   .search-form .search-context,
   .search-field,

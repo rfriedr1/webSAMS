@@ -13,6 +13,7 @@ SETUP_SECTION_EMAIL = "email_settings"
 SETUP_SECTION_SAMPLE_PHOTOS = "sample_photos"
 SETUP_SECTION_EA_CHECKS = "ea_checks"
 SETUP_SECTION_LAB_STAFF = "lab_staff"
+SETUP_SECTION_ANALYSIS = "analysis"
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,14 @@ SETUP_SECTIONS: tuple[SetupSection, ...] = (
         editable=True,
         status="active",
         form_action="/setup/lab_staff",
+    ),
+    SetupSection(
+        key=SETUP_SECTION_ANALYSIS,
+        title="Analysis",
+        description="Lab → Analysis: how many magazines the Magazine panel lists, most recently changed first.",
+        editable=True,
+        status="active",
+        form_action="/setup/analysis",
     ),
 )
 

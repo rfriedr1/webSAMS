@@ -442,6 +442,12 @@ class SamsService:
     def resolve_existing_magazine(self, magazine_query: str) -> str | None:
         return self.repo.resolve_existing_magazine(magazine_query)
 
+    def list_recent_magazines(self, limit: int, find: str | None = None) -> list[dict[str, Any]]:
+        return self.repo.list_recent_magazines(limit, find)
+
+    def count_magazines(self, find: str | None = None) -> int:
+        return self.repo.count_magazines(find)
+
     def project_exists(self, project_nr: int) -> bool:
         return self.repo.get_project(project_nr) is not None
 

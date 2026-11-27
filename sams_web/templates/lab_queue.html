@@ -93,13 +93,16 @@
 {% endfor %}
 
 {% if magazine_lookup_enabled %}
-{#- Analysis: look up one magazine's targets, below the queue (the queue
-    is the page's daily job). The table only appears once a magazine is
-    chosen. -#}
+{#- Analysis: the magazines, below the queue (the queue is the page's daily
+    job). Left the most recently changed magazines (magazine_list.py; how
+    many is Setup → Analysis), right the open magazine's targets. The field
+    opens a magazine by name; part of a name lists every magazine containing
+    it, so the capped list never hides one. -#}
+{% set mlist = magazine_list %}
 <section class="panel" id="tbl-magazine-targets" data-page-label="Analysis">
   <div class="panel-bar">
     <h2 class="panel-bar-title is-small">Magazine</h2>
-    {% if magazine_query and not magazine_error %}
+    {% if magazine_open %}
     <span class="panel-bar-count">{{ magazine_rows|length }} target{{ '' if magazine_rows|length == 1 else 's' }} in {{ magazine_query }}</span>
     {% endif %}
     <form method="get" action="/lab/analysis" class="panel-bar-actions magazine-form" role="search">
@@ -110,13 +113,14 @@
           id="analysis-magazine"
           type="text"
           name="magazine"
-          value="{{ magazine_query or '' }}"
+          value="{{ magazine_query or mlist.find or '' }}"
           list="analysis-magazine-list"
-          placeholder="Magazine, e.g. {{ (magazine_options or ['130710'])[0] }}"
+          placeholder="Name or part of it"
+          title="A magazine's name opens it; part of a name lists every magazine containing it"
           autocomplete="off"
         />
-        {% if magazine_query %}
-        <a href="/lab/analysis{% if include_standards %}?include_standards=true{% endif %}" class="magazine-clear" title="Clear magazine" aria-label="Clear magazine">&times;</a>
+        {% if magazine_query or mlist.find %}
+        <a href="/lab/analysis{% if include_standards %}?include_standards=true{% endif %}#tbl-magazine-targets" class="magazine-clear" title="Clear magazine and search" aria-label="Clear magazine and search">&times;</a>
         {% endif %}
       </div>
       <datalist id="analysis-magazine-list">
@@ -126,41 +130,86 @@
       </datalist>
       <button type="submit" class="search-submit">Show</button>
     </form>
-    {% if magazine_query and not magazine_error and can("edit_records") %}
+    {% if magazine_open and can("edit_records") %}
     {{ magazine_actions_menu(magazine_query) }}
     {% endif %}
   </div>
 
-  {% if magazine_error %}
-  <p class="error">{{ magazine_error }}</p>
-  {% elif magazine_query and magazine_rows %}
-  {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
-  <section data-table-filter data-table-download-name="magazine-{{ magazine_query }}">
-    <div class="table-wrap table-wrap-horizontal">
-      <table>
-        <thead>
-          <tr>
-            {% for key in visible_magazine_columns %}
-            <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in magazine_rows %}
-          <tr>
-            {% for key in visible_magazine_columns %}
-            <td>{{ table_cell(key, row) }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="magazine-browser">
+    {#- A navigation rail like the legacy SAMS's list of names, not a data
+        table: each entry is a link with how much of it is measured, newest
+        change first (the date itself is not shown, by the lab's choice).
+        The field above searches all magazines. -#}
+    <nav class="magazine-list" aria-labelledby="magazine-list-title" data-magazine-list>
+      <div class="magazine-list-head">
+        <h3 class="fact-group-title" id="magazine-list-title">Magazines</h3>
+        {% if mlist.find %}
+        <a href="{{ mlist.clear_find_href }}" class="magazine-clear" title="Back to the most recently changed magazines" aria-label="Clear the name search">&times;</a>
+        {% endif %}
+      </div>
+      <p class="magazine-list-count">
+        {%- if mlist.find %}{{ mlist.total }} containing &ldquo;{{ mlist.find }}&rdquo;{% if mlist.capped %}, newest {{ mlist.rows|length }} listed{% endif %}
+        {%- elif mlist.capped %}Latest {{ mlist.rows|length }} of {{ mlist.total }}
+        {%- else %}{{ mlist.total }}, latest first{% endif -%}
+      </p>
+      {% if mlist.rows %}
+      <ol class="magazine-list-items">
+        {% for row in mlist.rows %}
+        <li>
+          <a href="{{ row.href }}" class="magazine-list-item is-{{ row.state }}{% if row.magazine == mlist.current %} is-current{% endif %}"
+             {% if row.magazine == mlist.current %}aria-current="page"{% endif %}
+             title="{{ row.magazine }} &middot; {{ row.measured_text }}">
+            <span class="magazine-list-name">{{ row.magazine }}</span>
+            <span class="magazine-list-state">{{ row.measured_text }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if mlist.capped and not mlist.find %}
+      <p class="magazine-list-note">
+        Type part of a name above to search all {{ mlist.total }}{% if can("manage_setup") %}; how many are listed is set in <a href="/setup?section=analysis">Setup &rarr; Analysis</a>{% endif %}.
+      </p>
+      {% endif %}
+      {% elif not mlist.find %}
+      <p class="table-empty">No magazines yet. Targets get a magazine on the graphitization bench.</p>
+      {% endif %}
+    </nav>
+
+    <div class="magazine-detail">
+      {% if magazine_error %}
+      <p class="error">{{ magazine_error }}</p>
+      {% elif magazine_open and magazine_rows %}
+      {% set visible_magazine_columns = magazine_table_columns or magazine_rows[0].keys() %}
+      <section data-table-filter data-table-download-name="magazine-{{ magazine_query }}">
+        <div class="table-wrap table-wrap-horizontal">
+          <table class="table-compact">
+            <thead>
+              <tr>
+                {% for key in visible_magazine_columns %}
+                <th class="table-sortable" title="Click to sort">{{ format_table_header_label(key) }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in magazine_rows %}
+              <tr>
+                {% for key in visible_magazine_columns %}
+                <td>{{ table_cell(key, row) }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
+      </section>
+      {% elif magazine_open %}
+      <p class="table-empty">No targets are assigned to magazine {{ magazine_query }} yet.</p>
+      {% else %}
+      <p class="table-empty magazine-detail-empty">Pick a magazine from the list to see its targets, or type its name above.</p>
+      {% endif %}
     </div>
-    <p class="table-empty table-empty-filter" data-table-empty hidden>No matching rows.</p>
-  </section>
-  {% elif magazine_query %}
-  <p class="table-empty">No targets are assigned to magazine {{ magazine_query }} yet.</p>
-  {% endif %}
+  </div>
 </section>
 {% endif %}
 

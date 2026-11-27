@@ -622,6 +622,61 @@ class SamsRepository:
         stmt = select(names.c.name).order_by(names.c.name.asc())
         return [value for value in self.session.scalars(stmt) if value is not None]
 
+    def _magazine_name_filter(self, names, find: str | None):
+        """Names containing `find`, ignoring case (the legacy list's filter)."""
+        text_ = (find or "").strip().lower()
+        return func.lower(names.c.name).contains(text_, autoescape=True) if text_ else None
+
+    def list_recent_magazines(self, limit: int, find: str | None = None) -> list[dict[str, Any]]:
+        """The magazine list on Lab → Analysis: newest `magazine_t.last_changed`
+        first (the database triggers stamp it on every change to the
+        magazine's targets or sequence), like the legacy SAMS since two AMS
+        made sorting by name useless. Magazines from before `magazine_t`
+        existed (2023) have no date and come last.
+
+        Target counts are grouped over `target_t` once and joined: there is
+        no index on `target_t.magazine`, and joining the targets per
+        magazine took ~15x longer (0.7 s for 200 magazines)."""
+        names = self._magazine_names()
+        counts = (
+            select(
+                Target.magazine.label("magazine"),
+                func.count().label("target_count"),
+                func.sum(case((or_(Target.fm.is_not(None), Target.c14_age.is_not(None)), 1), else_=0)).label(
+                    "measured_targets"
+                ),
+            )
+            .where(Target.magazine.is_not(None), Target.magazine != "")
+            .group_by(Target.magazine)
+            .subquery()
+        )
+        stmt = (
+            select(
+                names.c.name.label("magazine"),
+                magazine_table.c.last_changed,
+                func.coalesce(counts.c.target_count, 0).label("target_count"),
+                func.coalesce(counts.c.measured_targets, 0).label("measured_targets"),
+            )
+            .select_from(names)
+            .join(magazine_table, magazine_table.c.name == names.c.name, isouter=True)
+            .join(counts, counts.c.magazine == names.c.name, isouter=True)
+            .order_by(magazine_table.c.last_changed.desc(), names.c.name.desc())
+            .limit(max(int(limit), 1))
+        )
+        condition = self._magazine_name_filter(names, find)
+        if condition is not None:
+            stmt = stmt.where(condition)
+        return [dict(row) for row in self.session.execute(stmt).mappings()]
+
+    def count_magazines(self, find: str | None = None) -> int:
+        """How many magazines `list_recent_magazines` could list without its limit."""
+        names = self._magazine_names()
+        stmt = select(func.count()).select_from(names)
+        condition = self._magazine_name_filter(names, find)
+        if condition is not None:
+            stmt = stmt.where(condition)
+        return int(self.session.scalar(stmt) or 0)
+
     def resolve_existing_magazine(self, magazine_query: str) -> str | None:
         query = magazine_query.strip()
         if not query:

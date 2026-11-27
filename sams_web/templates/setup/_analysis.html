@@ -1,0 +1,30 @@
+{#- Setup editor for sections of kind "analysis" (see setup_handlers.py, magazine_list.py). Included by setup.html. -#}
+<form method="post" action="{{ active_section.form_action }}">
+  <h4 class="setup-subhead">Magazine list</h4>
+  <div class="setup-threshold-list">
+    <div class="setup-threshold-row">
+      <label class="setup-threshold-label" for="analysis-magazine-limit">
+        <strong>Magazines listed</strong>
+        <span class="setup-note">
+          Typing part of a name in the panel's magazine field still searches all magazines.
+        </span>
+      </label>
+      <div class="setup-threshold-input">
+        <input
+          id="analysis-magazine-limit"
+          type="number"
+          min="{{ active_section.magazine_limit_min }}"
+          max="{{ active_section.magazine_limit_max }}"
+          step="1"
+          name="magazine_limit"
+          value="{{ active_section.magazine_limit }}"
+          required
+        />
+        <span class="setup-threshold-unit">magazines</span>
+      </div>
+    </div>
+  </div>
+  <div class="setup-actions">
+    <button type="submit" class="setup-save">Save</button>
+  </div>
+</form>
