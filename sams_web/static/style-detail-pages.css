@@ -2519,6 +2519,10 @@ button.record-action-download:hover {
   white-space: nowrap;
 }
 
+.sample-transfer-calcset {
+  color: var(--ink-soft);
+}
+
 .sample-transfer-target.is-unmeasured td {
   color: var(--muted);
 }

@@ -21,6 +21,11 @@ Per sample the operator ticks targets (`choices`: sample_nr → target refs
   T against χ² at 95 %) and shown, never enforced;
 - **none** → the sample is left alone.
 
+Each target's result comes from one BATS evaluation (`target_t.calcset`;
+a magazine may have several calc sets, the operator picks per target in
+BATS). The preview names it per target and, for the chosen ones, per
+sample — as the legacy grid did — but never chooses between evaluations.
+
 Defaults: a sample with exactly one measured target has it ticked; a sample
 with several has **nothing** ticked — the operator decides (lab's choice).
 
@@ -215,6 +220,12 @@ def default_refs(targets: list[dict[str, Any]]) -> list[str]:
 
 # ---- Preview and transfer ---------------------------------------------------------
 
+def _calcset(target: dict[str, Any]) -> str | None:
+    """The BATS evaluation (calc set) that wrote the target's result."""
+    name = str(target.get("calcset") or "").strip()
+    return name or None
+
+
 def _target_row(target: dict[str, Any], magazine: str, chosen: set[str]) -> dict[str, Any]:
     ref = target_ref(target)
     return {
@@ -222,6 +233,7 @@ def _target_row(target: dict[str, Any], magazine: str, chosen: set[str]) -> dict
         "target_id": f"{int(target['sample_nr'])}.{ref}",
         "magazine": target.get("magazine"),
         "position": target.get("position"),
+        "calcset": _calcset(target),
         "in_magazine": target.get("magazine") == magazine,
         "discarded": bool(_num(target.get("stop"))),
         "frozen": _num(target.get("editallowed")) == 2,
@@ -259,6 +271,7 @@ def _sample_row(sample: dict[str, Any], magazine: str, refs: list[str] | None) -
         "stored_limit": stored["c14_age_sig"] == LIMIT_AGE_SIGMA,
         "targets": [],
         "chosen": [],
+        "calcsets": [],
         "mode": None,
         "result": None,
         "limit": False,
@@ -272,6 +285,7 @@ def _sample_row(sample: dict[str, Any], magazine: str, refs: list[str] | None) -
     not_measured = [ref for ref in chosen_refs if not is_measured(by_ref[ref])]
     chosen = [by_ref[ref] for ref in chosen_refs if is_measured(by_ref[ref])]
     row["chosen"] = [target_ref(t) for t in chosen]
+    row["calcsets"] = list(dict.fromkeys(name for name in (_calcset(t) for t in chosen) if name))
     row["targets"] = [_target_row(t, magazine, set(row["chosen"])) for t in targets]
     if not measured:
         row["status"] = STATUS_NOT_MEASURED

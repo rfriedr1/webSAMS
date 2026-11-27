@@ -848,7 +848,7 @@ class SamsRepository:
         targets = self.session.execute(
             select(
                 Target.sample_nr, Target.prep_nr, Target.target_nr, Target.magazine, Target.position,
-                Target.stop, Target.editallowed,
+                Target.stop, Target.editallowed, Target.calcset,
                 *(getattr(Target, field) for field in self.TRANSFER_TARGET_FIELDS),
             )
             .where(Target.sample_nr.in_(sample_nrs))
