@@ -448,6 +448,21 @@ class SamsService:
     def count_magazines(self, find: str | None = None) -> int:
         return self.repo.count_magazines(find)
 
+    def transfer_sources(self, magazine: str) -> list[dict[str, Any]]:
+        return self.repo.transfer_sources(magazine)
+
+    def transfer_sample_results(self, changes: list[dict[str, Any]]) -> int:
+        """Write transferred results onto samples in one commit. Bypasses
+        `apply_detail_update` on purpose: the sample config keeps the result
+        fields read-only on the sample page. The change log hooks in here."""
+        try:
+            written = self.repo.set_sample_results(changes)
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+        return written
+
     def project_exists(self, project_nr: int) -> bool:
         return self.repo.get_project(project_nr) is not None
 

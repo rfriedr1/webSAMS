@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Form, Query, Request
 from sams_web.access import Permission, guarded
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from sams_web import magazine_rename, raw_currents
+from sams_web import magazine_rename, raw_currents, sample_transfer
 from sams_web.magazine_list import build_magazine_list
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
@@ -504,4 +504,38 @@ def magazine_currents_fetch(
     except ValueError as exc:
         return RedirectResponse(url=_analysis_href(target, action_error=str(exc)), status_code=303)
     logger.info("Raw currents fetched: %s", notice)
+    return RedirectResponse(url=_analysis_href(target, action_notice=notice), status_code=303)
+
+
+# ---- Transfer results from targets to samples (ADR-0002) -----------------------
+
+
+@router.get("/lab/analysis/magazine/transfer/preview", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_transfer_preview(
+    magazine: str = Query(...),
+    choices: str = Query(default=""),
+    service: SamsService = Depends(get_service),
+):
+    """Per sample of the magazine: its targets, the ticked ones, the result
+    a transfer would write and how it compares with what is stored (JSON).
+    `choices` is the dialog's ticks, `{"48211": ["1.1", "2.1"]}`."""
+    try:
+        payload = sample_transfer.plan(service, magazine, choices or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    return JSONResponse(payload)
+
+
+@router.post("/lab/analysis/magazine/transfer", dependencies=guarded(Permission.EDIT_RECORDS))
+def magazine_transfer_run(
+    magazine: str = Form(...),
+    choices: str = Form(default=""),
+    service: SamsService = Depends(get_service),
+):
+    target = magazine.strip()
+    try:
+        notice = sample_transfer.apply(service, target, choices or None)
+    except ValueError as exc:
+        return RedirectResponse(url=_analysis_href(target, action_error=str(exc)), status_code=303)
+    logger.info("Results transferred to samples: %s", notice)
     return RedirectResponse(url=_analysis_href(target, action_notice=notice), status_code=303)

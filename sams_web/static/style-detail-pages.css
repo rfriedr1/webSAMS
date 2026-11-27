@@ -2400,3 +2400,152 @@ button.record-action-download:hover {
 .raw-currents-chip.is-no_raw {
   border-style: dashed;
 }
+
+/* ---- Transfer results to samples (Lab → Analysis, ADR-0002) ------------- */
+/* Reuses the raw-currents chips, note and problem styles. One <tbody> per
+   sample: its row, then (unfolded) its targets with a tick box each. */
+
+.sample-transfer-dialog {
+  width: min(60rem, calc(100vw - 2rem));
+}
+
+.sample-transfer-dialog form,
+.sample-transfer-dialog .record-action-dialog-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sample-transfer-body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.sample-transfer-wrap {
+  max-width: 100%;
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+}
+
+.sample-transfer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.sample-transfer-table > thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-tint);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sample-transfer-head > td {
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.sample-transfer-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sample-transfer-label {
+  max-width: 14rem;
+  overflow-wrap: break-word;
+}
+
+.sample-transfer-result strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sample-transfer-sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.sample-transfer-agree {
+  color: var(--ink-strong);
+}
+
+.sample-transfer-disagree {
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+.sample-transfer-stored {
+  color: var(--ink-soft);
+}
+
+.sample-transfer-sample.is-same .sample-transfer-head > td,
+.sample-transfer-sample.is-not_measured .sample-transfer-head > td {
+  color: var(--muted);
+}
+
+.sample-transfer-fold {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-2);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sample-transfer-fold:hover {
+  text-decoration: underline;
+}
+
+.sample-transfer-targets > td {
+  padding: 0 var(--space-2) var(--space-2) var(--space-5);
+}
+
+.sample-transfer-target-table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.sample-transfer-target-table td {
+  padding: 2px var(--space-2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.sample-transfer-target.is-unmeasured td {
+  color: var(--muted);
+}
+
+.sample-transfer-tick input {
+  margin: 0;
+}
+
+.raw-currents-chip.is-choose,
+.raw-currents-chip.is-invalid,
+.raw-currents-chip.is-discarded {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.raw-currents-chip.is-replaces {
+  border-color: var(--warn-line);
+  color: var(--warn-text);
+}
+
+.raw-currents-chip.is-skip,
+.raw-currents-chip.is-not_measured {
+  border-style: dashed;
+}
+
+.raw-currents-chip.is-here {
+  border-color: var(--brand-2);
+  color: var(--brand-2);
+}

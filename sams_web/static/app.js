@@ -29,6 +29,7 @@
     installers.installMagazineRename?.();
     installers.installRawCurrents?.();
     installers.installMagazineList?.();
+    installers.installSampleTransfer?.();
     installers.installDetailEmptyFields?.();
     installers.installAnchorDetails?.();
     installers.installTabPanels?.();
