@@ -9,7 +9,7 @@ The data-evaluation software **BATS** (separate application sharing the same MyS
 - `editallowed` (`target_t`) — tri-state: `0` = not yet evaluated, `1` = evaluated but edit still possible, `2` = evaluated and frozen
 - `editable` (`sample_t`) — sample-level lock with the same tri-state convention, also written by BATS
 
-A second upstream system, **`db_dc14`**, holds the raw measurement currents (`le_curr`, `he_curr`). webSAMS will need to pull these into `target_t` eventually but does not yet.
+A second upstream system, the raw AMS databases **`db_dc14`** / **`db_ac14`**, holds the raw measurement currents (`le_curr`, `he_curr`). webSAMS copies them into `target_t` on request since 2026-11, see [ADR-0011](0011-raw-ams-currents.md); the currents are raw values, not BATS results.
 
 webSAMS' Transfer-to-Sample workflow (see [ADR-0002](0002-sample-aggregation-math.md)) reads BATS-owned target fields and writes them to corresponding `sample_t` columns — this is allowed because the write target is sample-level, not target-level.
 

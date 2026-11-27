@@ -57,8 +57,9 @@ Per-**Target** elemental yields measured during graphitization, from the actual 
 A separate data-evaluation application that shares the `db_dmams` MySQL database with webSAMS. Owns post-measurement processing: writes `fm`, `dc13`, `c14_age`, calibration ranges, `cal_curve`, `calib`, and `calcset` on `target_t`, plus the `calc_*_t` tables. webSAMS displays these values but never writes them. See [ADR-0003](docs/adr/0003-calibration-owned-by-bats.md).
 _Avoid_: Calibration tool, Eval app.
 
-**db_dc14**:
-A third upstream database (separate from `db_dmams`) that holds the raw AMS measurement currents. webSAMS will eventually pull `le_curr` / `he_curr` from it into `target_t`. Not integrated yet.
+**db_dc14 / db_ac14** (raw AMS databases):
+Upstream databases on the same MariaDB server as `db_dmams`, one per AMS: `db_dc14` (AMS.03, magazines **MA…**) and `db_ac14` (AMS.38, magazines **MB…**). Written by the AMS software; `workfinal` holds the final row per target (`ANA` = LE current, `A` = HE current). webSAMS reads them only through the `ams_raw_currents` procedure in `db_dmams`, from the *Fetch LE/HE currents* action on Lab → Analysis, which copies the currents into `target_t.le_curr / he_curr`. See [ADR-0011](docs/adr/0011-raw-ams-currents.md).
+_Avoid_: raw view, third database.
 
 **Preparation**:
 A chemical pre-treatment run on a **Sample**, executed as up to five sequential method steps. One sample may have multiple preparations (different protocols, replicates, or re-runs).

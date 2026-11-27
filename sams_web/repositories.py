@@ -41,6 +41,22 @@ TO_PREP_MATERIAL_QUEUES: dict[str, str] = {
 # CO2 HD has its own oxa / blanks) stay hidden either way.
 WAITING_FOR_MEAS_STANDARD_TYPES: tuple[str, ...] = ("oxa2", "blank", "C1", "C2", "C3", "C6", "C7", "C8")
 
+# Raw AMS databases by magazine prefix (ADR-0011): the AMS that measures a
+# magazine writes its raw data into its own database. Same map as pyBATS'
+# `AMS_SCHEMAS`.
+AMS_RAW_SYSTEMS: dict[str, str] = {"MA": "db_dc14", "MB": "db_ac14"}
+
+
+class RawDataError(Exception):
+    """Reading the raw AMS data failed (ADR-0011). `code` is the MariaDB
+    error number (None when the driver gave none), `detail` its message.
+    `raw_currents.describe_problem` turns it into words for the operator."""
+
+    def __init__(self, code: int | None, detail: str) -> None:
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
+
 
 class SamsRepository:
     """DB repository mirroring core `_dm.pas` data functions."""
@@ -574,6 +590,9 @@ class SamsRepository:
                 Sample.user_label.label("user_label"),
                 Target.c14_age.label("c14_age"),
                 Target.c14_age_sig.label("c14_age_sig"),
+                Target.le_curr.label("le_curr"),
+                Target.he_curr.label("he_curr"),
+                Target.editallowed.label("editallowed"),
                 Project.project_nr.label("project_nr"),
                 Project.project.label("project"),
                 Submitter.user_nr.label("user_nr"),
@@ -690,6 +709,62 @@ class SamsRepository:
         self.session.flush()
         self.session.expire_all()
         return {"sequence": int(sequence or 0), "targets": int(targets or 0)}
+
+    # ---- Raw AMS currents (ADR-0011, `raw_currents.py`) ---------------------
+
+    RAW_CURRENTS_PROCEDURE = "ams_raw_currents"
+    RAW_CALL_LOCK_SECONDS = 5
+    RAW_CALL_MAX_SECONDS = 15
+
+    def raw_currents_for_magazine(self, magazine: str) -> list[dict[str, Any]]:
+        """LE / HE currents of a magazine's targets from the raw database of
+        its AMS, through the `ams_raw_currents` procedure
+        (docs/sql/0011_ams_raw_currents.sql). Reads only.
+
+        The **only** place the app touches the raw databases. They may be
+        missing, locked or unreadable at any time, so: the call is limited
+        in time (a locked or slow table ends in an error after seconds,
+        never a hanging request), and every database error is rolled back
+        and raised as `RawDataError` with its MariaDB code, which the
+        caller turns into a message."""
+        sql = text(
+            f"SET STATEMENT lock_wait_timeout={self.RAW_CALL_LOCK_SECONDS},"
+            f" max_statement_time={self.RAW_CALL_MAX_SECONDS}"
+            f" FOR CALL {self.RAW_CURRENTS_PROCEDURE}(:magazine)"
+        )
+        try:
+            result = self.session.execute(sql, {"magazine": magazine})
+            rows = [dict(row) for row in result.mappings().all()] if result.returns_rows else []
+        except DBAPIError as exc:
+            self.session.rollback()
+            orig = exc.orig
+            args = getattr(orig, "args", ()) or ()
+            code = args[0] if args and isinstance(args[0], int) else None
+            detail = str(args[1]) if len(args) > 1 else str(orig or exc)
+            raise RawDataError(code, detail) from exc
+        return rows
+
+    def set_target_currents(self, changes: list[dict[str, Any]]) -> int:
+        """Write LE / HE currents onto targets; no commit. Each change names
+        the target and only the fields to write (`le_curr`, `he_curr`)."""
+        written = 0
+        table = Target.__table__
+        for change in changes:
+            values = {key: change[key] for key in ("le_curr", "he_curr") if key in change}
+            if not values:
+                continue
+            written += self.session.execute(
+                update(table)
+                .where(
+                    table.c.sample_nr == change["sample_nr"],
+                    table.c.prep_nr == change["prep_nr"],
+                    table.c.target_nr == change["target_nr"],
+                )
+                .values(**values)
+            ).rowcount or 0
+        self.session.flush()
+        self.session.expire_all()
+        return written
 
     def count_targets_by_prep(self, sample_nr: int) -> dict[int, int]:
         stmt = (

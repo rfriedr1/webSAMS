@@ -189,6 +189,21 @@
     </ul>
   </div>
 
+  <div class="card" id="help-raw-currents">
+    <h3>LE / HE currents from the AMS</h3>
+    <p>
+      On <strong>Lab → Analysis</strong>, open a measured magazine and choose <strong>Actions → Fetch…</strong>.
+      The window reads the LE and HE currents of every target from the raw database of the AMS that measured it
+      (<em>MA…</em> magazines from db_dc14, <em>MB…</em> from db_ac14) and shows them next to what is stored:
+      <em>New</em>, <em>Replaces</em>, <em>Same</em> or <em>No raw data</em>. Only <em>Fetch</em> saves, and only new and changed values;
+      a target without raw data keeps what it has.
+    </p>
+    <p class="muted">
+      If the raw database cannot be read, the window says why and nothing is changed. The rest of the app does not use the raw databases,
+      so it works as usual. On the command palette: <em>Action: Fetch LE/HE currents …</em>.
+    </p>
+  </div>
+
   <div class="card" id="help-benches">
     <h3>Lab benches</h3>
     <ul>

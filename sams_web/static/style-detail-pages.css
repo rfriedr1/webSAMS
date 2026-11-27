@@ -2280,3 +2280,123 @@ button.record-action-download:hover {
     gap: var(--space-2);
   }
 }
+
+/* ---- Fetch LE/HE currents (Lab → Analysis, ADR-0011) -------------------- */
+
+.raw-currents-dialog {
+  width: min(52rem, calc(100vw - 2rem));
+}
+
+/* Grid items default to min-width: auto, so the wide table would push the
+   whole dialog body past a phone's width; keep it inside, the table scrolls. */
+.raw-currents-dialog form,
+.raw-currents-dialog .record-action-dialog-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.raw-currents-body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.raw-currents-problem-title {
+  font-weight: 700;
+}
+
+.raw-currents-problem-detail {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.raw-currents-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.raw-currents-wrap {
+  max-width: 100%;
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+}
+
+.raw-currents-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.raw-currents-table th {
+  position: sticky;
+  top: 0;
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-tint);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.raw-currents-table td {
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.raw-currents-num,
+.raw-currents-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.raw-currents-value {
+  text-align: right;
+}
+
+.raw-currents-old {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.raw-currents-label {
+  max-width: 14rem;
+  overflow-wrap: break-word;
+}
+
+.raw-currents-table tr.is-same td,
+.raw-currents-table tr.is-no_raw td {
+  color: var(--muted);
+}
+
+.raw-currents-status {
+  white-space: nowrap;
+}
+
+.raw-currents-chip {
+  display: inline-block;
+  margin-right: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.raw-currents-chip.is-new {
+  border-color: var(--success-line);
+  background: var(--success-bg);
+  color: var(--ink-strong);
+}
+
+.raw-currents-chip.is-differs,
+.raw-currents-chip.is-frozen {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.raw-currents-chip.is-no_raw {
+  border-style: dashed;
+}

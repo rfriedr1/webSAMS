@@ -191,6 +191,24 @@ class SamsService:
             raise
         return counts
 
+    def raw_currents_for_magazine(self, magazine: str) -> list[dict[str, Any]]:
+        """Raw LE / HE currents of a magazine (ADR-0011); raises
+        `RawDataError` when the raw database cannot be read."""
+        return self.repo.raw_currents_for_magazine(magazine)
+
+    def fetch_raw_currents(self, changes: list[dict[str, Any]]) -> int:
+        """Store fetched LE / HE currents on targets and commit (ADR-0011,
+        `raw_currents.py`, which compares first). Bypasses the target's
+        DetailUpdateConfig on purpose: there the currents are read-only.
+        The change log will hook in here once login exists (ADR-0006)."""
+        try:
+            written = self.repo.set_target_currents(changes)
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+        return written
+
     def apply_many_and_commit(
         self,
         config: "DetailUpdateConfig",
