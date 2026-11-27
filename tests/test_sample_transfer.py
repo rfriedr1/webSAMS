@@ -67,8 +67,8 @@ def service(tmp_path: Path) -> SamsService:
     session.add(_target(20002, 1, 1, MAG, "1", fm, 0.002))
     # 20003: measured here and earlier in another magazine → choose
     sample(20003, c14_age=1000.0, c14_age_sig=20.0, av_fm=0.88, av_fm_sig=0.002, cal1s_min=900, cal1s_max=950)
-    session.add(_target(20003, 1, 1, OLD, "7", 0.300, 0.001))
-    session.add(_target(20003, 2, 1, MAG, "2", 0.302, 0.002, stop=1))
+    session.add(_target(20003, 1, 1, OLD, "7", 0.300, 0.001, calcset=OLD))
+    session.add(_target(20003, 2, 1, MAG, "2", 0.302, 0.002, stop=1, calcset=f"{MAG}_small"))
     session.add(_target(20003, 2, 2, MAG, "4"))  # in the magazine, not measured yet
     # 20004: near background → the legacy limit age
     sample(20004)
@@ -176,6 +176,15 @@ def test_choosing_several_targets_gives_a_mean(service):
     assert row["mode"] == "mean" and row["status"] == "replaces"
     assert row["result"]["cal1s_min"] is None
     assert [t["chosen"] for t in row["targets"]] == [True, True, False]
+
+
+def test_preview_names_the_calc_set_of_each_result(service):
+    rows = _rows(st.plan(service, MAG, json.dumps({"20003": ["1.1", "2.1"]})))
+    assert [t["calcset"] for t in rows[20003]["targets"]] == [OLD, f"{MAG}_small", None]
+    assert rows[20003]["calcsets"] == [OLD, f"{MAG}_small"]
+    assert rows[20001]["calcsets"] == []  # no calc set stored: nothing named
+    one = _rows(st.plan(service, MAG, json.dumps({"20003": ["2.1"]})))[20003]
+    assert one["calcsets"] == [f"{MAG}_small"]
 
 
 def test_unticking_the_only_target_leaves_the_sample_alone(service):

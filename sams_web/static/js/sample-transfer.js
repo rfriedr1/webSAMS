@@ -107,6 +107,9 @@
       } else if (row.targets.length > 1) {
         td.append(el("span", "sample-transfer-sub", `From target ${row.sample_nr}.${row.chosen[0]}`));
       }
+      if (row.calcsets.length) {
+        td.append(el("span", "sample-transfer-sub", `${row.calcsets.length > 1 ? "Calc sets" : "Calc set"} ${row.calcsets.join(", ")}`));
+      }
       if (row.limit) td.append(el("span", "sample-transfer-sub", "Near background: lower-limit age"));
       return td;
     };
@@ -129,6 +132,9 @@
       const magCell = el("td", "", target.magazine || "—");
       if (target.in_magazine) magCell.append(" ", chip("here", "this magazine"));
       tr.append(magCell);
+      const setCell = el("td", "sample-transfer-calcset", target.calcset || "");
+      if (target.calcset) setCell.title = `Calc set ${target.calcset}`;
+      tr.append(setCell);
       tr.append(el("td", "sample-transfer-num", target.measured ? age(target.c14_age, target.c14_age_sig) : "not measured"));
       tr.append(el("td", "sample-transfer-num", target.measured ? `FM ${fixed(target.fm, 4)} ± ${fixed(target.fm_sig, 4)}` : ""));
       const notes = el("td", "");
