@@ -25,9 +25,11 @@ from sams_web.import_settings import (
 from sams_web.ea_checks import ELEMENTS, EaCheckSettingsStore
 from sams_web.lab_staff import LabStaffStore
 from sams_web.lab_warning_thresholds import LAB_WARNING_THRESHOLD_FIELDS
+from sams_web.magazine_list import MAX_MAGAZINE_LIMIT, MIN_MAGAZINE_LIMIT, AnalysisSettingsStore
 from sams_web.sample_import.vocabulary import SAMPLE_COLUMN_SYNONYMS
 from sams_web.sample_photos import SamplePhotoSettingsStore
 from sams_web.setup_sections import (
+    SETUP_SECTION_ANALYSIS,
     SETUP_SECTION_EA_CHECKS,
     SETUP_SECTION_EMAIL,
     SETUP_SECTION_LAB_STAFF,
@@ -380,6 +382,29 @@ class LabStaffHandler(SetupSectionHandler):
         return context
 
 
+class AnalysisHandler(SetupSectionHandler):
+    kind = "analysis"
+
+    def context(self, service):
+        store = AnalysisSettingsStore(service.setup_store)
+        return {
+            "storage_section": store.section_key,
+            "magazine_limit": store.load()["magazine_limit"],
+            "magazine_limit_min": MIN_MAGAZINE_LIMIT,
+            "magazine_limit_max": MAX_MAGAZINE_LIMIT,
+        }
+
+    def read_form(self, form):
+        return {"magazine_limit": str(form.get("magazine_limit") or "")}
+
+    def save(self, service, payload):
+        AnalysisSettingsStore(service.setup_store).update(payload)
+
+    def keep_typed(self, context, payload):
+        context["magazine_limit"] = payload.get("magazine_limit", "")
+        return context
+
+
 SETUP_HANDLERS: dict[str, SetupSectionHandler] = {
     SETUP_SECTION_STANDARD_THRESHOLDS: StandardThresholdsHandler(),
     SETUP_SECTION_GRAPHITIZATION_SYSTEMS: GraphitizationSystemsHandler(),
@@ -389,6 +414,7 @@ SETUP_HANDLERS: dict[str, SetupSectionHandler] = {
     SETUP_SECTION_SAMPLE_PHOTOS: SamplePhotosHandler(),
     SETUP_SECTION_EA_CHECKS: EaChecksHandler(),
     SETUP_SECTION_LAB_STAFF: LabStaffHandler(),
+    SETUP_SECTION_ANALYSIS: AnalysisHandler(),
 }
 
 #: Sections registered in `setup_sections.py` without a handler render the

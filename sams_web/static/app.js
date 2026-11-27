@@ -28,6 +28,7 @@
     installers.installTargetSwap?.();
     installers.installMagazineRename?.();
     installers.installRawCurrents?.();
+    installers.installMagazineList?.();
     installers.installDetailEmptyFields?.();
     installers.installAnchorDetails?.();
     installers.installTabPanels?.();

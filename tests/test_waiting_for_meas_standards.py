@@ -4,10 +4,14 @@ the service is stubbed for the page."""
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from sams_web.dependencies import get_service
 from sams_web.main import app
+from sams_web.setup_store import SetupStore
 from sams_web.repositories import WAITING_FOR_MEAS_STANDARD_TYPES, SamsRepository
 
 STANDARDS_FILTER = "target_p.type NOT IN ('oxa2', 'blank', 'C1', 'C2', 'C3', 'C6', 'C7', 'C8')"
@@ -51,6 +55,15 @@ class _Service:
     def list_targets_by_magazine(self, magazine):
         return []
 
+    # The magazine list beside it (magazine_list.py).
+    setup_store = SetupStore(Path(tempfile.mkdtemp()) / "setup.json")
+
+    def list_recent_magazines(self, limit, find=None):
+        return [{"magazine": "MA261120", "last_changed": None, "target_count": 0, "measured_targets": 0}]
+
+    def count_magazines(self, find=None):
+        return 1
+
 
 def _get(url: str) -> tuple[_Service, str]:
     service = _Service()
@@ -79,4 +92,4 @@ def test_ticked_switch_lists_and_counts_standards_and_keeps_the_magazine():
     # The switch keeps the open magazine; the magazine lookup keeps the switch.
     assert '<input type="hidden" name="magazine" value="MA261120" />' in html
     assert '<input type="hidden" name="include_standards" value="true" />' in html
-    assert 'href="/lab/analysis?include_standards=true" class="magazine-clear"' in html
+    assert 'href="/lab/analysis?include_standards=true#tbl-magazine-targets" class="magazine-clear"' in html

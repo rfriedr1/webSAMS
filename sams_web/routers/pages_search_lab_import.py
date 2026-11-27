@@ -11,6 +11,7 @@ from sams_web.access import Permission, guarded
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from sams_web import magazine_rename, raw_currents
+from sams_web.magazine_list import build_magazine_list
 from sams_web.dependencies import get_service
 from sams_web.graphitization_bench import GraphitizationBench
 from sams_web.preparation_bench import PreparationBench
@@ -367,6 +368,7 @@ async def lab_graphitization_bench_save_batch(
 def lab_analysis_page(
     request: Request,
     magazine: str = Query(default=""),
+    find: str = Query(default=""),
     include_standards: bool = Query(default=False),
     service: SamsService = Depends(get_service),
 ):
@@ -374,16 +376,34 @@ def lab_analysis_page(
     standard_types = set(WAITING_FOR_MEAS_STANDARD_TYPES)
     standards_count = sum(1 for row in rows if row.get("type") in standard_types) if include_standards else 0
     magazine_query = magazine.strip()
+    find = find.strip()
     magazine_options = service.list_magazines()
     magazine_error: str | None = None
     magazine_rows: list[dict[str, object]] = []
-    if magazine_query:
-        resolved_magazine = service.resolve_existing_magazine(magazine_query)
-        if resolved_magazine is None:
-            magazine_error = "Magazine not found. Please choose an existing magazine."
-        else:
-            magazine_query = resolved_magazine
-            magazine_rows = service.list_targets_by_magazine(resolved_magazine)
+    resolved_magazine = service.resolve_existing_magazine(magazine_query) if magazine_query else None
+    if magazine_query and resolved_magazine is None and not find:
+        # Not a magazine's name: search the names for it instead (the
+        # legacy list's filter), and open it when exactly one matches.
+        find, magazine_query = magazine_query, ""
+        matches = service.list_recent_magazines(2, find)
+        if len(matches) == 1:
+            resolved_magazine = magazine_query = str(matches[0]["magazine"])
+        elif not matches:
+            magazine_error = f"No magazine name contains \u201c{find}\u201d."
+    elif magazine_query and resolved_magazine is None:
+        magazine_error = f"There is no magazine {magazine_query}."
+    if resolved_magazine is not None:
+        magazine_query = resolved_magazine
+        magazine_rows = [
+            # One linked Target ID instead of three number columns, like the
+            # Waiting for measurement table above, so the targets fit beside
+            # the magazine list.
+            {**row, "target_id": f"{row['sample_nr']}.{row['prep_nr']}.{row['target_nr']}"}
+            for row in service.list_targets_by_magazine(resolved_magazine)
+        ]
+    magazine_list = build_magazine_list(
+        service, current=magazine_query if resolved_magazine else "", find=find, include_standards=include_standards
+    )
     return templates.TemplateResponse(request, "lab_queue.html",
         {
             "request": request,
@@ -403,9 +423,7 @@ def lab_analysis_page(
             "magazine_query": magazine_query,
             "magazine_table_columns": (
                 "position",
-                "sample_nr",
-                "prep_nr",
-                "target_nr",
+                "target_id",
                 "user_label",
                 "c14_age",
                 "c14_age_sig",
@@ -417,6 +435,8 @@ def lab_analysis_page(
             "magazine_options": magazine_options,
             "magazine_error": magazine_error,
             "magazine_rows": magazine_rows,
+            "magazine_open": resolved_magazine is not None,
+            "magazine_list": magazine_list,
         },
     )
 
